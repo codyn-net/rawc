@@ -1,0 +1,274 @@
+% {{title: This is the plan for RawC}}
+
+% Introduction
+CpgRawC is an application that converts a high-level cpg network to a low level
+implementation suitable for execution on $\mu$-processors. This requires several
+layers of extracting information that is not explicitly encoded in the high
+level representation of the network (such as grouping common expressions in
+functions and detecting loopable code).
+
+The existing application (cpg-rawc) is written in C, but proves to be very
+error prone and hard to maintain. To improve the situation, a new application
+will be written from scratch using a higher level language (notably, C#).
+With previous experience collected from the C version of the program, it should
+be possible to architecture a better application for rawc. This document tries
+to outline the design specifications and requirements for this application.
+
+% Terminology
+The following section describes some of the terminology used throughout the
+document.
+
+	1) '''State''': A state is a CpgProperty on which one or more links act
+		1.1) '''Integrated State''': A '''State''' which needs to be
+		     integrated
+		1.2) '''Direct State''': A '''State''' which does not need to
+		     be integrated
+	2) '''Variable''': All other CpgProperty
+	3) '''Constant''': Numbers and symbols such as $\pi$
+	4) '''Temporary''': A common expression that is precalculated at each
+	   step
+
+% Requirements
+The application needs to convert the high level description of any network to a
+low level C implementation of that network. It should support the full
+functionality of the high level description, including custom functions,
+support for piecewise polynomials, groups, etc. Furthermore, it should try to
+optimize the resulting code, without requiring explicit organization of the
+network. Such optimizations include factoring computations into functions and
+grouping common equations into for loops. There are also lower level
+optimizations such as precomputation of expressions that are constant. However,
+this could possibly also be left for the compiler responsible for compiling the
+C code, since these are much better at doing such optimizations. This also
+holds for optimization of function calls and things such as loop unrolling.
+
+Ideally, the generated C code should use ``high-level'' concepts which are
+memory efficient. This means generating functions for common expressions and
+grouping state updates such that they can be looped. Then, the C compiler can
+still optimize for time efficiency by making functions inline, or unrolling
+loops.
+
+%% Data Table
+The data table is one big table containing all values that need to persist.
+These include the following:
+
+	1) States
+	2) '''In''', '''out''' variables
+	3) '''Once''' variables that depend on external inputs or variadic
+	   operators
+	4) Constants
+	5) Temporaries
+
+
+'''In''' variables need to be in the data table because they need to be
+'''written''' externally. Similarly, '''out''' variables need to be '''read'''
+externally. '''Once''' variables that depend on some kind of information that
+can vary over different runs need to be properly initialized depending on this
+information, and thus cannot be precalculated. Their value should be stored in
+the data table. The reason to include constants and temporary variables in the
+data table is so that loops can be generated more efficiently (substituting
+direct indices to constants with loop indices). Constants that are used outside
+of loops (or in a non loopable manner) should not be declared in the data table
+such that the C compiler can use proper optimizations.
+
+%% Initialization
+There are two types of initialization for each value in the data table. This
+depends on whether a value depends on varadic data input. Variadic input is
+either an '''in''' variable, or a value which initial expression (or any
+of its dependencies) contains a variadic operator (for example, '''rand''').
+Non-variadic values can be evaluated immediately and initialized directly in
+the data table declaration. Variadic values on the other hand will need to be
+initialized in a special init function that should be exported and externally
+called. This allows for setting '''in''' variables before initialization. See
+also section {{ref:sec:C-Interface}}.
+
+%% Expression Groups
+Expression groups are groups of all expressions used in the network that are
+equal in terms of their computation, and could thus be expressed as a function.
+This means that they do not need to be equal in their principle arguments as
+they can be provided as arguments to the function.
+
+Function calls are a tradeoff between time and space. Given
+enough space, you could inline all function calls, thus creating more
+efficient code because calling a function causes a certain overhead. That said,
+the C compiler will also again try to optimize whether or not to inline a
+particular function. Of course, for the C compiler to decide this, there need
+to exist functions first. The question then becomes when to decide to convert
+an expression into a function call.
+
+Each mathematical expression as used in the CPG network is decomposed into
+a set of operators that act on zero or more arguments. From such an expression,
+a tree can be constructed which defines all possible sub-expressions that this
+expression consists of. At the root is the full expression itself. This
+expression can then be split into a number equivalent expressions which consist
+of an operator and N sub-expressions, which can then be split further. At each
+level, the sub-expressions could be expressed as function calls. To decide the
+right level of sub-expression decomposition, the following needs to be
+considered:
+
+	1) The size of the expression in the function call
+	2) The number of function calls
+	3) The influence on the loopability of the expressions
+
+First, the loopability should be maximized. Furthermore, a simple heuristic can
+be used to decide what sub-expressions should be function calls by evaluating
+the approximate memory reduction of expressing such a function. There should be
+an option to tweak when a function call is generated.
+
+%% Temporary Variables
+Temporary variables are expressions that depend on varying inputs and which are
+used in multiple places during one step. These values can thus be
+precalculated.
+
+%% Loops
+Loops can be generated for certain state updates. When a set of states is
+updated by expressions that can be grouped (thus equal in terms of operators),
+they can be called in a loop by using an index table that stores for each state
+an index into the data table corresponding to the loop index.
+
+Care needs to be taken to generate loops in the best way possible. The same
+principles as outlined in the previous section can be used to determine whether
+or not expressions can be considered equal. The number of calculations done
+inside loops should be maximized.
+
+%% Functions
+Mathematical functions (such as '''cos''', '''sin''', '''rand''', etc.) should
+be allowed to be override by specific external low-level implementations. For
+example, the trigonometric functions can be implemented on a micro controller
+by using a lookup table, significantly increasing performance. This can be
+accomplished by generating macro's for each of these functions which can be
+easily overriden externally.
+
+%% Advanced Feature Support
+There are some more advanced features in the high level network that should be
+supported in the C implementation.
+
+%%% Integrators
+The high level CPG network supports multiple integration methods. These should
+also be supported in the low-level C implementation. However, these need to be
+separately implemented since the high level implementation uses concepts which
+are not available in the low level representation.
+
+%%% Custom Functions
+Custom functions should be generated as separate C functions that are called as
+such from the generated C code. This then allows overriding these functions in
+a low-level implementation, similar as to how builtin mathematical funtions can
+be overriden.
+
+%%% Piecewise Polynomials
+Piecewise polynomials are a special kind of custom function which needs special
+support. This support can be pre-coded in a support file to evaluate a
+piecewise polynomial, and a data structure to encode the piecewise polynomial.
+
+%%% Operators
+Operators are symbolic operations which work directly on expressions instead of
+values. Operators need to be reimplemented in the low-level generated C code.
+Luckily, at the time of writing only one operator exists (the '''lastof'''
+operator). This operator however does require special consideration because
+when used, a '''previous''' value needs to be stored somewhere.
+
+%%% Groups
+Groups are more or less an implementation detail which does not directly affect
+the generation of C code. Conceptually, networks can be unwrapped such that
+they do not contain groups anymore and generate the exact same behavior.
+Integrators inside libcpg-network are already group agnostic.
+
+%% Templates
+Templates are an implementation detail which becomes unimportant once the
+network has been generated. Since the C implementation will be generated from a
+parsed network, templates do not need to be handled explicitly in rawc.
+
+%% C-Interface
+The main interface consists of the following files and functions:
+
+	1) main.[ch]: the main network interface
+		1.1) cpg_rawc_initialize: initialize the network
+		1.2) cpg_rawc_step(step): integrate the network for one
+		     timestep
+		1.3) cpg_rawc_set_state(state, value): set the value of a
+		     state
+		1.4) cpg_rawc_get_state(state): get the value of a state
+	2) cmath.h: mathematical function definitions. Contains macros for
+	   all builtin functions which can be overriden.
+	3) cfuncs.[ch]: custom functions defined in the network. The
+	   functions are again specified as macros which can be overriden.
+	4) custom.h: custom file with overriden builtin functions.
+
+The main source and header contain the code to integrate and access the
+network. Names for '''in''' and '''out''' variables are exported and their
+values can be accessed using the set_state and get_state accessors.
+
+Builting mathematical functions are defined in the cmath.h header. Similarly,
+custom defined functions in the network are defined in the cfcuns.h header. All
+functions are defined as macros so that they can be easily overriden if needed.
+The approach taken to facilitate this is to define a flag at compile time
+indicating that a file named custom.h needs to be included before including the
+cmath.h and cfuncs.h headers. Each function defined in the latter two headers
+is guarded by ifndef/endif so that you can define your own functions easily in
+custom.h.
+
+% Implementation
+The following basic components need to be implemented:
+
+	1) Data table
+	2) Initialization
+	3) Step function
+	4) Math builtin functions
+	5) Custom functions
+
+The following advanced components need to be implemented, but are not required
+for basic functionality:
+
+	1) Integrators
+	2) Piecewise Polynomials
+	3) Operators
+
+%% Step function
+The step function performs one integration step of the network. In this step
+the following phases can be identified:
+
+	1) Precalculate temporary values
+	2) Calculate integrated state updates
+	3) Calculate direct state updates
+	4) Update integrated states in data table based on calculated updates
+	5) Update direct states in data table based on calculated updates
+
+%% Finding Loops
+At the core of generating the C code is determining how to group expressions
+and how to organize the loops. The expressions that need to be evaluated can be
+easily determined by concatenating for all states the links that act on the
+state. For each state, the resulting expression can then be expanded such that
+it only contains '''functions''', '''operators''', '''numbers''' and
+non-expandable '''variables'''. Non-expandable variables are those that are
+either states or variables marked as '''in''' or '''once'''.
+
+After the expansion, the largest set of loopable sub-expressions needs to be
+determined. First, for each expression an exthaustive set of possible
+sub-expressions can be generated. For example, the equation $a + b \cdot 2 - 1$,
+can be expressed as:
+
+	1) $a + b \cdot 2 - 1$
+	2) $a$ OP_PLUS $b \cdot 2 - 1$
+	3) $a + b \cdot 2$ OP_MIN $1$
+	4) $a$ OP_PLUS $b \cdot 2$ OP_MIN $1$
+	5) $a$ OP_PLUS $b$ OP_MULT $2$ OP_MIN $1$
+
+Each expression can then be uniquely captured by a hash, based on the operators
+in the expression. Each operator is represented by one byte, resulting in a
+maximum of 265 operators. Hashes can then be simply binary compared efficiently
+to determine whether two expressions are equal.
+
+For each combination of a particular level of expression decomposition for each
+state, the resulting generated code can then be computed. By minimizing the
+size of the code, the best solution can be found in a general fashion.
+
+To further optimize the process of finding smallest code, assumptions can be
+made on the organization of the network. Usually, users will organize the
+network in a structural manner where each link represents a functional
+computation. Thus, the first combinations to compute the code size for are
+those that resemble the structure of the network. In addition, early pruning
+of code sizes that are already larger than the current found minimum should
+prevent unnecessary branching.
+
+%% Expression Groups
+After determining the optimal loop strategy, code can be further reduced by
+grouping commonly used sub-expressions into function calls.
