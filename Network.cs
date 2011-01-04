@@ -19,8 +19,17 @@ namespace Cpg.RawC
 			// Initialize the knowledge
 			Knowledge.Initialize(d_network);
 
-			FindLoops(Knowledge.Instance.States.Integrated);
-			FindLoops(Knowledge.Instance.States.Direct);
+			//FindLoops(Knowledge.Instance.States.Integrated);
+			//FindLoops(Knowledge.Instance.States.Direct);
+			
+			ExpressionTree.Tree tree = new ExpressionTree.Tree();
+			
+			foreach (States.State state in Knowledge.Instance.States)
+			{
+				tree.Add(state);
+			}
+			
+			Console.WriteLine(tree);
 		}
 		
 		private void FindLoops(States.State[] states)
