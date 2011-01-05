@@ -56,6 +56,7 @@
     <Compile Include="ExpressionTree\Tree.cs" />
     <Compile Include="ExpressionTree\Node.cs" />
     <Compile Include="ExpressionTree\SubNode.cs" />
+    <Compile Include="ExpressionTree\SortedList.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

@@ -6,13 +6,13 @@ using System.IO;
 
 namespace Cpg.RawC.ExpressionTree
 {
-	public class Node : IEnumerable<SubNode>
+	public class Node : IEnumerable<SubNode>, IComparable<Node>
 	{
 		private byte d_code;
 		private List<SubNode> d_subnodes;
 		private Instruction d_instruction;
 		private bool d_isTerminal;
-		private List<States.State> d_states;
+		private SortedList<States.State> d_states;
 
 		public Node(Node other) : this(other.Instruction)
 		{
@@ -21,12 +21,22 @@ namespace Cpg.RawC.ExpressionTree
 		public Node() : this((Instruction)null)
 		{
 		}
+		
+		public int CompareTo(Node other)
+		{
+			if (other == null)
+			{
+				return 1;
+			}
+			
+			return d_code.CompareTo(other.Code);
+		}
 
 		public Node(Instruction instruction)
 		{
 			int size = 1;
 			
-			d_states = new List<States.State>();
+			d_states = new SortedList<States.State>();
 			
 			if (instruction != null)
 			{
@@ -51,7 +61,7 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
-		public List<States.State> States
+		public IEnumerable<States.State> States
 		{
 			get
 			{
@@ -195,15 +205,17 @@ namespace Cpg.RawC.ExpressionTree
 		
 		public virtual void Dot(TextWriter writer)
 		{
+			string[] names = Array.ConvertAll<States.State, string>(d_states.ToArray(), a => String.Format("{0}.{1}", a.Property.Object.FullId, a.Property.Name));
+			//string lbl = String.Join(", ", names);
+			string lbl = String.Format("{0}", Count);
+
 			if (IsTerminal)
 			{
-				writer.WriteLine("{0} [shape=circle,fontsize=9,label=\"{1}\"];", (uint)GetHashCode(), Count);
+				writer.WriteLine("{0} [shape=ellipse,fontsize=9,label=\"{1}\"];", (uint)GetHashCode(), lbl);
 			}
 			else
 			{
-				string[] names = Array.ConvertAll<States.State, string>(d_states.ToArray(), a => String.Format("{0}.{1}", a.Property.Object.FullId, a.Property.Name));
-
-				writer.WriteLine("{0} [shape=record,label=\"{1}|{{{2}|{3}}}\"];", (uint)GetHashCode(), DotInstruction(), Count, String.Join(", ", names));
+				writer.WriteLine("{0} [shape=record,label=\"{1}|{2}\"];", (uint)GetHashCode(), DotInstruction(), lbl);
 			}
 			
 			foreach (SubNode subnode in d_subnodes)

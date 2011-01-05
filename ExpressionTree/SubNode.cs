@@ -8,16 +8,16 @@ namespace Cpg.RawC.ExpressionTree
 {
 	public class SubNode : IEnumerable<Node>
 	{
-		private SortedList<byte, Node> d_nodes;
+		private SortedList<Node> d_nodes;
 
 		public SubNode()
 		{
-			d_nodes = new SortedList<byte, Node>();
+			d_nodes = new SortedList<Node>();
 		}
 		
 		public void Add(Node node)
 		{
-			d_nodes.Add(node.Code, node);
+			d_nodes.Add(node);
 		}
 		
 		public bool Empty
@@ -30,23 +30,14 @@ namespace Cpg.RawC.ExpressionTree
 		
 		public Node Find(Node node)
 		{
-			Node ret;
-
-			if (d_nodes.TryGetValue(node.Code, out ret))
-			{
-				return ret;
-			}
-			else
-			{
-				return null;
-			}
+			return d_nodes.Find(node);
 		}
 		
 		public IEnumerable<Node> Nodes
 		{
 			get
 			{
-				return d_nodes.Values;
+				return d_nodes;
 			}
 		}
 		
@@ -87,12 +78,12 @@ namespace Cpg.RawC.ExpressionTree
 		
 		IEnumerator IEnumerable.GetEnumerator()
 		{
-			return d_nodes.Values.GetEnumerator();
+			return d_nodes.GetEnumerator();
 		}
 		
 		public IEnumerator<Node> GetEnumerator()
 		{
-			return d_nodes.Values.GetEnumerator();
+			return d_nodes.GetEnumerator();
 		}
 	}
 }

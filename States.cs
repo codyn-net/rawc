@@ -6,16 +6,44 @@ namespace Cpg.RawC
 {
 	public class States : IEnumerable<States.State>
 	{
-		public class State
+		public class State : IComparable<State>
 		{
 			public Property Property;
 			public LinkAction[] Actions;
 			private Cpg.Expression d_expression;
-
+			private uint d_index;
+			
+			private static uint s_nextIndex;
+			
+			static State()
+			{
+				s_nextIndex = 0;
+			}
+			
+			public int CompareTo(State other)
+			{
+				if (other == null)
+				{
+					return 1;
+				}
+				
+				return d_index.CompareTo(other.Index);
+			}
+			
 			public State(Property property, LinkAction[] actions)
 			{
 				Property = property;
 				Actions = actions;
+				
+				d_index = s_nextIndex++;
+			}
+			
+			public uint Index
+			{
+				get
+				{
+					return d_index;
+				}
 			}
 			
 			private void Expand()
