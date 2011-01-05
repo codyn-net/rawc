@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace Cpg.RawC
 {
@@ -29,7 +30,13 @@ namespace Cpg.RawC
 				tree.Add(state);
 			}
 			
-			Console.WriteLine(tree);
+			FileStream stream = new FileStream(d_filename + ".dot", FileMode.Create);
+			StreamWriter writer = new StreamWriter(stream);
+			
+			tree.Dot(writer);
+			
+			writer.Flush();
+			writer.Close();
 		}
 		
 		private void FindLoops(States.State[] states)

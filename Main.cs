@@ -9,7 +9,7 @@ namespace Cpg.RawC
 			GLib.GType.Init();
 
 			OptionParser options = OptionParser.Initialize(args);
-			
+
 			foreach (string filename in options.Files)
 			{
 				Network network = new Network(filename);

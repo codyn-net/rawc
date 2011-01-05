@@ -43,32 +43,6 @@ namespace Cpg.RawC
 					return d_expression;
 				}
 			}
-			
-			private void Expand()
-			{
-				if (d_expression != null)
-				{
-					return;
-				}
-				
-				List<Cpg.Expression> exprs = new List<Cpg.Expression>();
-				
-				foreach (LinkAction action in Actions)
-				{
-					exprs.Add(action.Equation);
-				}
-				
-				d_expression = RawC.Expression.Expand(exprs.ToArray());
-			}
-			
-			public Cpg.Expression Expression
-			{
-				get
-				{
-					Expand();
-					return d_expression;
-				}
-			}
 		}
 
 		private IntegratorState d_state;

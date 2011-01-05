@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 
 namespace Cpg.RawC.ExpressionTree
 {
@@ -10,12 +11,22 @@ namespace Cpg.RawC.ExpressionTree
 		private byte d_code;
 		private List<SubNode> d_subnodes;
 		private Instruction d_instruction;
-		private uint d_count;
+		private bool d_isTerminal;
+		private List<States.State> d_states;
+
+		public Node(Node other) : this(other.Instruction)
+		{
+		}
+		
+		public Node() : this((Instruction)null)
+		{
+		}
 
 		public Node(Instruction instruction)
 		{
 			int size = 1;
-			d_count = 1;
+			
+			d_states = new List<States.State>();
 			
 			if (instruction != null)
 			{
@@ -28,6 +39,8 @@ namespace Cpg.RawC.ExpressionTree
 				{
 					size = ifunc.Arguments;
 				}
+				
+				d_isTerminal = (ifunc == null || ifunc.Arguments == 0);
 			}
 
 			d_subnodes = new List<SubNode>(size);
@@ -38,13 +51,21 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
+		public List<States.State> States
+		{
+			get
+			{
+				return d_states;
+			}
+		}
+
 		public override string ToString()
 		{
 			StringBuilder builder = new StringBuilder();
 			
 			if (d_instruction != null)
 			{
-				builder.AppendLine(String.Format("{0} [{1}]", d_instruction.ToString(), d_count));
+				builder.AppendLine(String.Format("{0} [{1}]", d_instruction.ToString(), Count));
 			}
 			
 			for (int i = 0; i < d_subnodes.Count; ++i)
@@ -71,21 +92,21 @@ namespace Cpg.RawC.ExpressionTree
 			return builder.ToString();
 		}
 		
-		public void Use()
+		public void Use(States.State state)
 		{
-			++d_count;
+			d_states.Add(state);
 		}
 		
-		public void Unuse()
+		public void Unuse(States.State state)
 		{
-			--d_count;
+			d_states.Remove(state);
 		}
 		
-		public uint Count
+		public int Count
 		{
 			get
 			{
-				return d_count;
+				return d_states.Count;
 			}
 		}
 		
@@ -121,6 +142,14 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
+		public bool IsTerminal
+		{
+			get
+			{
+				return d_isTerminal;
+			}
+		}
+		
 		public List<SubNode> SubNodes
 		{
 			get
@@ -144,6 +173,46 @@ namespace Cpg.RawC.ExpressionTree
 			get
 			{
 				return d_instruction;
+			}
+		}
+		
+		private string DotInstruction()
+		{
+			if (d_instruction == null)
+			{
+				return "#";
+			}
+
+			InstructionFunction ifunc = d_instruction as InstructionFunction;
+			
+			if (ifunc != null)
+			{
+				return ifunc.Name;
+			}
+			
+			return d_instruction.ToString();
+		}
+		
+		public virtual void Dot(TextWriter writer)
+		{
+			if (IsTerminal)
+			{
+				writer.WriteLine("{0} [shape=circle,fontsize=9,label=\"{1}\"];", (uint)GetHashCode(), Count);
+			}
+			else
+			{
+				string[] names = Array.ConvertAll<States.State, string>(d_states.ToArray(), a => String.Format("{0}.{1}", a.Property.Object.FullId, a.Property.Name));
+
+				writer.WriteLine("{0} [shape=record,label=\"{1}|{{{2}|{3}}}\"];", (uint)GetHashCode(), DotInstruction(), Count, String.Join(", ", names));
+			}
+			
+			foreach (SubNode subnode in d_subnodes)
+			{
+				if (!subnode.Empty)
+				{
+					subnode.Dot(writer);
+					writer.WriteLine("{0} -> {1};", (uint)GetHashCode(), (uint)subnode.GetHashCode());
+				}
 			}
 		}
 	}
