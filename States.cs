@@ -9,11 +9,38 @@ namespace Cpg.RawC
 		{
 			public Property Property;
 			public LinkAction[] Actions;
+			private Cpg.Expression d_expression;
 			
 			public State(Property property, LinkAction[] actions)
 			{
 				Property = property;
 				Actions = actions;
+			}
+			
+			private void Expand()
+			{
+				if (d_expression != null)
+				{
+					return;
+				}
+				
+				List<Cpg.Expression> exprs = new List<Cpg.Expression>();
+				
+				foreach (LinkAction action in Actions)
+				{
+					exprs.Add(action.Equation);
+				}
+				
+				d_expression = RawC.Expression.Expand(exprs.ToArray());
+			}
+			
+			public Cpg.Expression Expression
+			{
+				get
+				{
+					Expand();
+					return d_expression;
+				}
 			}
 		}
 
@@ -31,7 +58,10 @@ namespace Cpg.RawC
 			d_integrated = new List<State>();
 			d_direct = new List<State>();
 			d_mapping = new Dictionary<Property, State>();
-			
+		}
+		
+		public void Scan()
+		{
 			foreach (Property prop in d_state.IntegratedProperties())
 			{
 				State s = Add(prop);

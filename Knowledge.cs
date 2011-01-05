@@ -11,6 +11,8 @@ namespace Cpg.RawC
 		public static Knowledge Initialize(Cpg.Network network)
 		{
 			s_instance = new Knowledge(network);
+			s_instance.Init();
+
 			return s_instance;
 		}
 		
@@ -21,12 +23,16 @@ namespace Cpg.RawC
 				return s_instance;
 			}
 		}
+		
+		private void Init()
+		{
+			d_states = new States(d_network);
+			d_states.Scan();
+		}
 
 		public Knowledge(Cpg.Network network)
 		{
 			d_network = network;
-			
-			d_states = new States(d_network);
 		}
 		
 		public bool IsVariadic(Cpg.Expression expression)
