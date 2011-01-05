@@ -6,6 +6,8 @@ namespace Cpg.RawC
 	{
 		public static void Main (string[] args)
 		{
+			GLib.GType.Init();
+
 			OptionParser options = OptionParser.Initialize(args);
 			
 			foreach (string filename in options.Files)
