@@ -68,7 +68,7 @@ namespace Cpg.RawC
 			
 			if (state != null)
 			{
-				return false;
+				return true;
 			}
 			
 			if ((property.Flags & (PropertyFlags.In | PropertyFlags.Out)) != PropertyFlags.None)
