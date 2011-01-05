@@ -58,15 +58,43 @@ namespace Cpg.RawC
 			return false;
 		}
 		
-		private void ComputeHash()
+		public static byte InstructionCode(Instruction inst)
 		{
-			Instruction[] instructions = d_expression.Instructions;
-
 			InstructionFunction ifunc;
 			InstructionOperator iop;
 			InstructionCustomOperator icusop;
 			InstructionCustomFunction icusf;
-			
+
+			if (InstructionIs(inst, out icusf))
+			{
+				// Generate byte code for this function by name
+				return HashMap("f_" + icusf.Function.Id);
+			}
+			else if (InstructionIs(inst, out icusop))
+			{
+				throw new Exception(String.Format("Custom operators are currently not supported: {0}", icusop.Operator.Name));
+			}
+			else if (InstructionIs(inst, out iop))
+			{
+				// Operators store the id + number of functions
+				return (byte)(iop.Id + (uint)Cpg.MathFunctionType.Num);
+			}
+			else if (InstructionIs(inst, out ifunc))
+			{
+				// Functions just store the id
+				return (byte)ifunc.Id;
+			}
+			else
+			{
+				// Placeholder for numbers and properties
+				return PlaceholderCode;
+			}
+		}
+		
+		private void ComputeHash()
+		{
+			Instruction[] instructions = d_expression.Instructions;
+
 			List<byte> hash = new List<byte>();
 			
 			// Hash byte codes are layout like this:
@@ -77,30 +105,7 @@ namespace Cpg.RawC
 			
 			foreach (Instruction inst in instructions)
 			{
-				if (InstructionIs(inst, out icusf))
-				{
-					// Generate byte code for this function by name
-					hash.Add(HashMap("f_" + icusf.Function.Id));
-				}
-				else if (InstructionIs(inst, out icusop))
-				{
-					throw new Exception(String.Format("Custom operators are currently not supported: {0}", icusop.Operator.Name));
-				}
-				else if (InstructionIs(inst, out iop))
-				{
-					// Operators store the id + number of functions
-					hash.Add((byte)(iop.Id + (uint)Cpg.MathFunctionType.Num));
-				}
-				else if (InstructionIs(inst, out ifunc))
-				{
-					// Functions just store the id
-					hash.Add((byte)ifunc.Id);
-				}
-				else
-				{
-					// Placeholder for numbers and properties
-					hash.Add(PlaceholderCode);
-				}
+				hash.Add(InstructionCode(inst));
 			}
 			
 			d_hash = hash.ToArray();
