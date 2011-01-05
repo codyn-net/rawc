@@ -1,9 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Cpg.RawC
 {
-	public class States
+	public class States : IEnumerable<States.State>
 	{
 		public class State
 		{
@@ -123,6 +124,16 @@ namespace Cpg.RawC
 			{
 				return d_direct.ToArray();
 			}
+		}
+		
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return d_states.GetEnumerator();
+		}
+		
+		public IEnumerator<State> GetEnumerator()
+		{
+			return d_states.GetEnumerator();
 		}
 		
 		public State[] All
