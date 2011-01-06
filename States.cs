@@ -11,6 +11,7 @@ namespace Cpg.RawC
 			public Property Property;
 			public LinkAction[] Actions;
 			private Cpg.Expression d_expression;
+			private Instruction[] d_instructions;
 			private uint d_index;
 			
 			private static uint s_nextIndex;
@@ -69,6 +70,19 @@ namespace Cpg.RawC
 				{
 					Expand();
 					return d_expression;
+				}
+			}
+			
+			public Instruction[] Instructions
+			{
+				get
+				{
+					if (d_instructions == null)
+					{
+						d_instructions = Expression.Instructions;
+					}
+					
+					return d_instructions;
 				}
 			}
 		}
