@@ -13,6 +13,7 @@ namespace Cpg.RawC.ExpressionTree
 		private Instruction d_instruction;
 		private bool d_isTerminal;
 		private SortedList<States.State> d_states;
+		private SubNode d_parent;
 
 		public Node(Node other) : this(other.Instruction)
 		{
@@ -22,6 +23,18 @@ namespace Cpg.RawC.ExpressionTree
 		{
 		}
 		
+		public SubNode Parent
+		{
+			get
+			{
+				return d_parent;
+			}
+			set
+			{
+				d_parent = value;
+			}
+		}
+
 		public int CompareTo(Node other)
 		{
 			if (other == null)
@@ -57,7 +70,7 @@ namespace Cpg.RawC.ExpressionTree
 			
 			for (int i = 0; i < size; ++i)
 			{
-				d_subnodes.Add(new SubNode());
+				d_subnodes.Add(new SubNode(this));
 			}
 		}
 		

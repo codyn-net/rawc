@@ -9,14 +9,33 @@ namespace Cpg.RawC.ExpressionTree
 	public class SubNode : IEnumerable<Node>
 	{
 		private SortedList<Node> d_nodes;
+		private Node d_parent;
+		
+		public SubNode() : this(null)
+		{
+		}
 
-		public SubNode()
+		public SubNode(Node parent)
 		{
 			d_nodes = new SortedList<Node>();
+			d_parent = parent;
+		}
+		
+		public Node Parent
+		{
+			get
+			{
+				return d_parent;
+			}
+			set
+			{
+				d_parent = value;
+			}
 		}
 		
 		public void Add(Node node)
 		{
+			node.Parent = this;
 			d_nodes.Add(node);
 		}
 		
