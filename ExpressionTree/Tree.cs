@@ -22,20 +22,10 @@ namespace Cpg.RawC.ExpressionTree
 		{
 		}
 
-		private void Build(States.State state, uint idx, Stack<Item> stack)
+		private void Build(States.State state, int idx, Stack<Item> stack)
 		{
-			// Stopping condition
-			if (idx >= state.Expression.Instructions.Length)
-			{
-				stack.Push(new Item(0, this));
-				return;
-			}
-			
-			// Tail recursion
-			Build(state, idx + 1, stack);
-			
 			// Process instruction
-			Instruction instruction = state.Expression.Instructions[idx];
+			Instruction instruction = state.Instructions[idx];
 			InstructionFunction ifunc = instruction as InstructionFunction;
 			
 			// It's a terminal if it's not a function, or it has 0 arguments
@@ -102,7 +92,13 @@ namespace Cpg.RawC.ExpressionTree
 
 		public void Add(States.State state)
 		{
-			Build(state, 0, new Stack<Item>());
+			Stack<Item> stack = new Stack<Item>();
+			stack.Push(new Item(0, this));
+
+			for (int i = state.Instructions.Length - 1; i >= 0; --i)
+			{
+				Build(state, i, stack);
+			}
 		}
 		
 		public override void Dot(TextWriter writer)
