@@ -84,6 +84,7 @@ namespace Cpg.RawC.ExpressionTree
 				stack.Push(node);				
 			}
 			
+			ret.Sort();
 			
 			leafs.Reverse();
 			ret.Leafs.AddRange(leafs);

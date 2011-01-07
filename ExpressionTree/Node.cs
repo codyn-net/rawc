@@ -20,6 +20,7 @@ namespace Cpg.RawC.ExpressionTree
 		private uint d_degree;
 		private uint d_childCount;
 		private uint d_descendants;
+		private bool d_isCommutative;
 
 		public int CompareTo(Node other)
 		{
@@ -28,7 +29,33 @@ namespace Cpg.RawC.ExpressionTree
 				return 1;
 			}
 			
-			return d_label.CompareTo(other.Label);
+			int ret = d_label.CompareTo(other.Label);
+			
+			if (ret != 0)
+			{
+				return ret;
+			}
+			
+			// Equal, compare deeper
+			ret = d_children.Count.CompareTo(other.Children.Count);
+			
+			if (ret != 0)
+			{
+				return ret;
+			}
+			
+			// Same number of children, compare them left to right
+			for (int i = 0; i < d_children.Count; ++i)
+			{
+				ret = d_children[i].CompareTo(other.Children[i]);
+				
+				if (ret != 0)
+				{
+					return ret;
+				}
+			}
+			
+			return 0;
 		}
 		
 		public Node(uint label)
@@ -52,6 +79,21 @@ namespace Cpg.RawC.ExpressionTree
 				size = ifunc.Arguments;
 			}
 			
+			InstructionOperator iop = instruction as InstructionOperator;
+			
+			if (iop != null)
+			{
+				d_isCommutative = Cpg.Math.OperatorIsCommutative((Cpg.MathOperatorType)iop.Id);
+			}
+			else if (ifunc != null)
+			{
+				d_isCommutative = Cpg.Math.FunctionIsCommutative((Cpg.MathFunctionType)ifunc.Id);
+			}
+			else
+			{
+				d_isCommutative = false;
+			}			
+			
 			InstructionCustomFunction icfunc = instruction as InstructionCustomFunction;
 			
 			if (icfunc != null && icfunc.Arguments > 0)
@@ -72,6 +114,14 @@ namespace Cpg.RawC.ExpressionTree
 			set
 			{
 				d_isLeaf = value;
+			}
+		}
+		
+		public bool IsCommutative
+		{
+			get
+			{
+				return d_isCommutative;
 			}
 		}
 		
@@ -211,6 +261,22 @@ namespace Cpg.RawC.ExpressionTree
 					return this as Tree;
 				}
 			}
+		}
+		
+		public void Sort()
+		{
+			// Sort the node
+			foreach (Node child in d_children)
+			{
+				child.Sort();
+			}
+			
+			if (!d_isCommutative)
+			{
+				return;
+			}
+			
+			d_children.Sort();
 		}
 		
 		public override string ToString ()
