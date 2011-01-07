@@ -91,7 +91,7 @@ namespace Cpg.RawC.ExpressionTree
 			}
 			else
 			{
-				writer.WriteLine("{0} [shape=record,style=filled,label=\"{1}|{2}\",fillcolor=\"{3}\"];", Id(node), Label(node), node.Top.Leaves.IndexOf(node), Color(node));
+				writer.WriteLine("{0} [shape=record,style=filled,label=\"{1}|{2}\",fillcolor=\"{3}\"];", Id(node), Label(node), node.Top.Leafs.IndexOf(node), Color(node));
 			}
 		}
 		

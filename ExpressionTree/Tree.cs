@@ -7,7 +7,7 @@ namespace Cpg.RawC.ExpressionTree
 	public class Tree : Node
 	{
 		private States.State d_state;
-		private List<Node> d_leaves;
+		private List<Node> d_leafs;
 		
 		public Tree(States.State state) : this(state, null)
 		{
@@ -16,7 +16,7 @@ namespace Cpg.RawC.ExpressionTree
 		public Tree(States.State state, uint label): base(label)
 		{
 			d_state = state;
-			d_leaves = new List<Node>();
+			d_leafs = new List<Node>();
 		}
 		
 		public Tree(uint label) : this(null, label)
@@ -26,7 +26,7 @@ namespace Cpg.RawC.ExpressionTree
 		public Tree(States.State state, Instruction instruction) : base(instruction)
 		{
 			d_state = state;
-			d_leaves = new List<Node>();
+			d_leafs = new List<Node>();
 		}
 		
 		public States.State State
@@ -37,11 +37,11 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
-		public List<Node> Leaves
+		public List<Node> Leafs
 		{
 			get
 			{
-				return d_leaves;
+				return d_leafs;
 			}
 		}
 
@@ -49,7 +49,7 @@ namespace Cpg.RawC.ExpressionTree
 		{
 			Stack<Node> stack = new Stack<Node>();
 			Tree ret = null;
-			List<Node> leaves = new List<Node>();
+			List<Node> leafs = new List<Node>();
 			
 			for (int i = 0; i < state.Instructions.Length; ++i)
 			{
@@ -78,14 +78,15 @@ namespace Cpg.RawC.ExpressionTree
 
 				if (node.IsLeaf)
 				{
-					leaves.Add(node);
+					leafs.Add(node);
 				}
 
 				stack.Push(node);				
 			}
 			
-			leaves.Reverse();
-			ret.Leaves.AddRange(leaves);
+			
+			leafs.Reverse();
+			ret.Leafs.AddRange(leafs);
 
 			return ret;
 		}		

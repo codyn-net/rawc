@@ -32,7 +32,7 @@ namespace Cpg.RawC.ExpressionTree
 			
 			foreach (Tree tree in forest)
 			{
-				foreach (ExpressionTree.Node leaf in tree.Leaves)
+				foreach (ExpressionTree.Node leaf in tree.Leafs)
 				{
 					if (d_labeled && !lmap.ContainsKey(leaf.Label))
 					{
