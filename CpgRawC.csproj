@@ -55,8 +55,8 @@
     <Compile Include="Loop.cs" />
     <Compile Include="ExpressionTree\Tree.cs" />
     <Compile Include="ExpressionTree\Node.cs" />
-    <Compile Include="ExpressionTree\SubNode.cs" />
-    <Compile Include="ExpressionTree\SortedList.cs" />
+    <Compile Include="ExpressionTree\Graph.cs" />
+    <Compile Include="ExpressionTree\Dot.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

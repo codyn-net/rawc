@@ -6,110 +6,89 @@ namespace Cpg.RawC.ExpressionTree
 {
 	public class Tree : Node
 	{
-		private class Item
-		{
-			public int Position;
-			public Node[] Parents;
-			
-			public Item(int position, params Node[] parents)
-			{
-				Position = position;
-				Parents = parents;
-			}
-		}
-
-		public Tree() : base()
+		private States.State d_state;
+		private List<Node> d_leaves;
+		
+		public Tree(States.State state) : this(state, null)
 		{
 		}
-
-		private void Build(States.State state, int idx, Stack<Item> stack)
+		
+		public Tree(States.State state, uint label): base(label)
 		{
-			// Process instruction
-			Instruction instruction = state.Instructions[idx];
-			InstructionFunction ifunc = instruction as InstructionFunction;
-			
-			// It's a terminal if it's not a function, or it has 0 arguments
-			Node node = new Node(instruction);
-			List<Node> np = new List<Node>();
-			
-			np.Add(this);
-			
-			Item stacked = stack.Peek();
-			
-			foreach (Node parent in stacked.Parents)
-			{
-				int position = stacked.Position;
-				
-				// Check if this is the root parent, bit special case in terms of position
-				if (Object.ReferenceEquals(parent, this))
-				{
-					// Don't add terminals to the root
-					if (node.IsTerminal)
-					{
-						continue;
-					}
-
-					position = 0;
-				}
-				
-				// Find corresponding node in the subnode
-				Node other = parent.SubNodes[position].Find(node);
-				
-				if (other == null)
-				{
-					other = new Node(node);
-					
-					// Add the new node to the correct subnode on the parent
-					parent.SubNodes[position].Add(other);
-				}
-				
-				other.Use(state);
-
-				if (!node.IsTerminal)
-				{
-					// Add new parent if it's not a terminal
-					np.Add(other);
-				}
-			}
-			
-			if (stacked.Position != 0)
-			{
-				// Decrease argument position
-				--stacked.Position;
-			}
-			else
-			{
-				// Operator is done, pop the argument
-				stack.Pop();
-			}
-
-			if (!node.IsTerminal)
-			{
-				// Push a new position on the stack for the function
-				stack.Push(new Item(ifunc.Arguments - 1, np.ToArray()));
-			}
+			d_state = state;
+			d_leaves = new List<Node>();
 		}
-
-		public void Add(States.State state)
+		
+		public Tree(uint label) : this(null, label)
 		{
-			Stack<Item> stack = new Stack<Item>();
-			stack.Push(new Item(0, this));
-
-			for (int i = state.Instructions.Length - 1; i >= 0; --i)
+		}
+		
+		public Tree(States.State state, Instruction instruction) : base(instruction)
+		{
+			d_state = state;
+			d_leaves = new List<Node>();
+		}
+		
+		public States.State State
+		{
+			get
 			{
-				Build(state, i, stack);
+				return d_state;
 			}
 		}
 		
-		public override void Dot(TextWriter writer)
+		public List<Node> Leaves
 		{
-			writer.WriteLine("digraph G {");
-
-			// Generate all the nodes and relationships
-			base.Dot(writer);
-
-			writer.WriteLine("}");
+			get
+			{
+				return d_leaves;
+			}
 		}
+
+		public static Tree Create(States.State state)
+		{
+			Stack<Node> stack = new Stack<Node>();
+			Tree ret = null;
+			List<Node> leaves = new List<Node>();
+			
+			for (int i = 0; i < state.Instructions.Length; ++i)
+			{
+				Node node;
+				Instruction inst = state.Instructions[i];
+				
+				if (i == state.Instructions.Length - 1)
+				{
+					ret = new Tree(state, inst);
+					node = ret;
+				}
+				else
+				{				
+					node = new Node(inst);
+				}
+
+				InstructionFunction ifunc = inst as InstructionFunction;
+				
+				if (ifunc != null)
+				{
+					for (int j = 0; j < ifunc.Arguments; ++j)
+					{
+						node.Add(stack.Pop());
+					}				
+				}
+
+				if (node.IsLeaf)
+				{
+					leaves.Add(node);
+				}
+
+				stack.Push(node);				
+			}
+			
+			leaves.Reverse();
+			ret.Leaves.AddRange(leaves);
+
+			return ret;
+		}		
 	}
 }
 

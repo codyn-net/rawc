@@ -6,34 +6,20 @@ using System.IO;
 
 namespace Cpg.RawC.ExpressionTree
 {
-	public class Node : IEnumerable<SubNode>, IComparable<Node>
+	public class Node : IEnumerable<Node>, IComparable<Node>
 	{
-		private byte d_code;
-		private List<SubNode> d_subnodes;
+		private uint d_label;
 		private Instruction d_instruction;
-		private bool d_isTerminal;
-		private SortedList<States.State> d_states;
-		private SubNode d_parent;
 
-		public Node(Node other) : this(other.Instruction)
-		{
-		}
+		private List<Node> d_children;
+		private Node d_parent;
+
+		private bool d_isLeaf;
+		private uint d_height;
 		
-		public Node() : this((Instruction)null)
-		{
-		}
-		
-		public SubNode Parent
-		{
-			get
-			{
-				return d_parent;
-			}
-			set
-			{
-				d_parent = value;
-			}
-		}
+		private uint d_degree;
+		private uint d_childCount;
+		private uint d_descendants;
 
 		public int CompareTo(Node other)
 		{
@@ -42,155 +28,97 @@ namespace Cpg.RawC.ExpressionTree
 				return 1;
 			}
 			
-			return d_code.CompareTo(other.Code);
+			return d_label.CompareTo(other.Label);
+		}
+		
+		public Node(uint label)
+		{
+			d_label = label;
+			d_isLeaf = false;
+			d_children = new List<Node>();
 		}
 
 		public Node(Instruction instruction)
 		{
-			int size = 1;
-			
-			d_states = new SortedList<States.State>();
-			
-			if (instruction != null)
-			{
-				d_code = RawC.Expression.InstructionCode(instruction);
-				d_instruction = instruction;
-				
-				InstructionFunction ifunc = instruction as InstructionFunction;
-				
-				if (ifunc != null && ifunc.Arguments > 0)
-				{
-					size = ifunc.Arguments;
-				}
-				
-				d_isTerminal = (ifunc == null || ifunc.Arguments == 0);
-			}
+			int size = 0;
 
-			d_subnodes = new List<SubNode>(size);
-			
-			for (int i = 0; i < size; ++i)
-			{
-				d_subnodes.Add(new SubNode(this));
-			}
-		}
-		
-		public IEnumerable<States.State> States
-		{
-			get
-			{
-				return d_states;
-			}
-		}
-
-		public override string ToString()
-		{
-			StringBuilder builder = new StringBuilder();
-			
-			if (d_instruction != null)
-			{
-				builder.AppendLine(String.Format("{0} [{1}]", d_instruction.ToString(), Count));
-			}
-			
-			for (int i = 0; i < d_subnodes.Count; ++i)
-			{
-				SubNode sub = d_subnodes[i];
-				string n = sub.ToString();
+			d_label = RawC.Expression.InstructionCode(instruction);
+			d_instruction = instruction;
 				
-				if (!String.IsNullOrEmpty(n))
-				{
-					string[] lst = Array.ConvertAll(n.Split('\n'), a => String.Format("    {0}", a));
-					
-					lst[0] = String.Format("  {0}) {1}", i + 1, lst[0].Substring(6));
-					string s = String.Join("\n", lst);
-					
-					if (builder.Length != 0)
-					{
-						builder.AppendLine();
-					}
+			InstructionFunction ifunc = instruction as InstructionFunction;
+				
+			if (ifunc != null && ifunc.Arguments > 0)
+			{
+				size = ifunc.Arguments;
+			}
+			
+			InstructionCustomFunction icfunc = instruction as InstructionCustomFunction;
+			
+			if (icfunc != null && icfunc.Arguments > 0)
+			{
+				size = icfunc.Arguments;
+			}
+				
+			d_isLeaf = size == 0;
+			d_children = new List<Node>(size);
+		}
+		
+		public bool IsLeaf
+		{
+			get
+			{
+				return d_isLeaf;
+			}
+			set
+			{
+				d_isLeaf = value;
+			}
+		}
+		
+		public uint Degree
+		{
+			get
+			{
+				return d_degree;
+			}
+		}
+		
+		public uint Descendants
+		{
+			get
+			{
+				return d_descendants;
+			}
+		}
+		
+		public uint ChildCount
+		{
+			get
+			{
+				return d_childCount;
+			}
+			set
+			{
+				d_childCount = value;
+			}
+		}
+		
+		public uint Label
+		{
+			get
+			{
+				return d_label;
+			}
+		}
+		
+		public List<Node> Children
+		{
+			get
+			{
+				return d_children;
+			}
+		}
 
-					builder.Append(s);
-				}
-			}
-			
-			return builder.ToString();
-		}
-		
-		public void Use(States.State state)
-		{
-			d_states.Add(state);
-		}
-		
-		public void Unuse(States.State state)
-		{
-			d_states.Remove(state);
-		}
-		
-		public int Count
-		{
-			get
-			{
-				return d_states.Count;
-			}
-		}
-		
-		public override bool Equals(object other)
-		{
-			if (other == null)
-			{
-				return false;
-			}
-			
-			Node node = other as Node;
-			
-			if (node == null)
-			{
-				return false;
-			}
-			else
-			{
-				return node.Code == d_code;
-			}
-		}
-		
-		public override int GetHashCode()
-		{
-			return base.GetHashCode();
-		}
-		
-		public byte Code
-		{
-			get
-			{
-				return d_code;
-			}
-		}
-		
-		public bool IsTerminal
-		{
-			get
-			{
-				return d_isTerminal;
-			}
-		}
-		
-		public List<SubNode> SubNodes
-		{
-			get
-			{
-				return d_subnodes;
-			}
-		}
-		
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return d_subnodes.GetEnumerator();
-		}
-		
-		public IEnumerator<SubNode> GetEnumerator()
-		{
-			return d_subnodes.GetEnumerator();
-		}
-		
 		public Instruction Instruction
 		{
 			get
@@ -199,46 +127,120 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
-		private string DotInstruction()
+		private void PropagateHeight()
 		{
-			if (d_instruction == null)
+			if (d_parent == null)
 			{
-				return "#";
+				return;
 			}
 
-			InstructionFunction ifunc = d_instruction as InstructionFunction;
+			if (Height + 1 > d_parent.Height)
+			{
+				d_parent.Height = Height + 1;
+			}
+		}
+
+		public uint Height
+		{
+			get
+			{
+				return d_height;
+			}
+			set
+			{
+				d_height = value;
+				
+				PropagateHeight();
+			}
+		}
+
+		public Node Parent
+		{
+			get
+			{
+				return d_parent;
+			}
+			private set
+			{
+				d_parent = value;
+				
+				PropagateHeight();
+			}
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return d_children.GetEnumerator();
+		}
+		
+		public IEnumerator<Node> GetEnumerator()
+		{
+			return d_children.GetEnumerator();
+		}
+		
+		public void Add(Node child)
+		{
+			Add(child, true);
+		}
+
+		public void Add(Node child, bool setParent)
+		{
+			if (setParent)
+			{
+				child.Parent = this;
+			}
+
+			d_children.Add(child);
+			
+			++d_degree;
+			++d_childCount;
+			
+			d_descendants += child.Descendants + 1;
+		}
+		
+		public Tree Top
+		{
+			get
+			{
+				if (d_parent != null)
+				{
+					return d_parent.Top;
+				}
+				else
+				{
+					return this as Tree;
+				}
+			}
+		}
+		
+		public override string ToString ()
+		{
+			string lbl = "?";
+
+			InstructionFunction ifunc;
+			InstructionCustomFunction icfunc;
+			
+			ifunc = d_instruction as InstructionFunction;
+			icfunc = d_instruction as InstructionCustomFunction;
 			
 			if (ifunc != null)
 			{
-				return ifunc.Name;
+				lbl = ifunc.Name;
+			}
+			else if (icfunc != null)
+			{
+				lbl = icfunc.Function.Id;
 			}
 			
-			return d_instruction.ToString();
-		}
-		
-		public virtual void Dot(TextWriter writer)
-		{
-			string[] names = Array.ConvertAll<States.State, string>(d_states.ToArray(), a => String.Format("{0}.{1}", a.Property.Object.FullId, a.Property.Name));
-			//string lbl = String.Join(", ", names);
-			string lbl = String.Format("{0}", Count);
+			Tree top = Top;
+			string par = "";
+			
+			if (top != null)
+			{
+				par = String.Format("{0}.{1}", top.State.Property.Object.FullId, top.State.Property.Name);
+			}
 
-			if (IsTerminal)
-			{
-				writer.WriteLine("{0} [shape=ellipse,fontsize=9,label=\"{1}\"];", (uint)GetHashCode(), lbl);
-			}
-			else
-			{
-				writer.WriteLine("{0} [shape=record,label=\"{1}|{2}\"];", (uint)GetHashCode(), DotInstruction(), lbl);
-			}
-			
-			foreach (SubNode subnode in d_subnodes)
-			{
-				if (!subnode.Empty)
-				{
-					subnode.Dot(writer);
-					writer.WriteLine("{0} -> {1};", (uint)GetHashCode(), (uint)subnode.GetHashCode());
-				}
-			}
+			return string.Format("[{0}, {1}, ({2})]", par, lbl, Descendants);
 		}
 	}
 }

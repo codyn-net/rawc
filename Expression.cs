@@ -7,20 +7,20 @@ namespace Cpg.RawC
 	public class Expression
 	{
 		private Cpg.Expression d_expression;
-		private byte[] d_hash;
+		private uint[] d_hash;
 
-		private static Dictionary<string, byte> s_hashMapping;
-		private static byte s_nextMap;
+		private static Dictionary<string, uint> s_hashMapping;
+		private static uint s_nextMap;
 		
 		static Expression()
 		{
-			s_hashMapping = new Dictionary<string, byte>();
-			s_nextMap = (byte)MathFunctionType.Num + (byte)MathOperatorType.Num;
+			s_hashMapping = new Dictionary<string, uint>();
+			s_nextMap = (uint)MathFunctionType.Num + (uint)MathOperatorType.Num + 1;
 		}
 		
-		private static byte HashMap(string id)
+		private static uint HashMap(string id)
 		{
-			byte ret;
+			uint ret;
 
 			if (!s_hashMapping.TryGetValue(id, out ret))
 			{
@@ -58,7 +58,7 @@ namespace Cpg.RawC
 			return false;
 		}
 		
-		public static byte InstructionCode(Instruction inst)
+		public static uint InstructionCode(Instruction inst)
 		{
 			InstructionFunction ifunc;
 			InstructionOperator iop;
@@ -77,12 +77,12 @@ namespace Cpg.RawC
 			else if (InstructionIs(inst, out iop))
 			{
 				// Operators store the id + number of functions
-				return (byte)(iop.Id + (uint)Cpg.MathFunctionType.Num);
+				return (uint)(iop.Id + (uint)Cpg.MathFunctionType.Num + 1);
 			}
 			else if (InstructionIs(inst, out ifunc))
 			{
 				// Functions just store the id
-				return (byte)ifunc.Id;
+				return (uint)ifunc.Id + 1;
 			}
 			else
 			{
@@ -95,7 +95,7 @@ namespace Cpg.RawC
 		{
 			Instruction[] instructions = d_expression.Instructions;
 
-			List<byte> hash = new List<byte>();
+			List<uint> hash = new List<uint>();
 			
 			// Hash byte codes are layout like this:
 			// [MathFunctionNum]: Functions
@@ -111,7 +111,7 @@ namespace Cpg.RawC
 			d_hash = hash.ToArray();
 		}
 		
-		public byte[] Hash
+		public uint[] Hash
 		{
 			get
 			{
@@ -167,11 +167,11 @@ namespace Cpg.RawC
 			return true;
 		}
 		
-		public static byte PlaceholderCode
+		public static uint PlaceholderCode
 		{
 			get
 			{
-				return byte.MaxValue;
+				return 0;
 			}
 		}
 		
