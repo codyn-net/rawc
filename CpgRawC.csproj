@@ -46,20 +46,13 @@
     <Compile Include="Main.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Options.cs" />
-    <Compile Include="OptionParser.cs" />
-    <Compile Include="Network.cs" />
-    <Compile Include="States.cs" />
-    <Compile Include="Expression.cs" />
-    <Compile Include="Knowledge.cs" />
-    <Compile Include="LoopFinder.cs" />
-    <Compile Include="Loop.cs" />
-    <Compile Include="ExpressionTree\Tree.cs" />
-    <Compile Include="ExpressionTree\Node.cs" />
-    <Compile Include="ExpressionTree\Graph.cs" />
-    <Compile Include="ExpressionTree\Dot.cs" />
+    <Compile Include="Generator.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Folder Include="ExpressionTree\" />
+    <ProjectReference Include="libcpgrawc\libcpgrawc.csproj">
+      <Project>{BD4A016B-2BD3-4701-AEBA-6B1884EDC265}</Project>
+      <Name>libcpgrawc</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>

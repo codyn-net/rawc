@@ -1,28 +1,89 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Cpg.RawC.Plugins.Attributes;
+using Cpg.RawC.Plugins;
 
-namespace Cpg.RawC.ExpressionTree
+namespace Cpg.RawC.Tree.Collectors
 {
-	public class Graph
-	{		
+	[Plugin(Description="Valiente Algorithm", Author="Jesse van den Kieboom")]
+	public class Valiente : ICollector, IOptions
+	{
+		private class CustomOptions : CommandLine.OptionGroup
+		{
+			[Setting("labeled", true, Description="Whether to use labels")]
+			public bool Labeled;
+		}
+
 		private List<Node> d_nodes;
 		private Dictionary<Node, Node> d_mapping;
 		private Dictionary<Node, List<Node>> d_reverseMapping;
-		private bool d_labeled;
-
-		public Graph(bool labeled, params Tree[] forest)
+		private CustomOptions d_options;
+		
+		public Valiente()
 		{
+			d_options = new CustomOptions();
+
 			d_nodes = new List<Node>();
-			d_mapping = new Dictionary<ExpressionTree.Node, Node>();
+			d_mapping = new Dictionary<Node, Node>();
 			d_reverseMapping = new Dictionary<Node, List<Node>>();
-			d_labeled = labeled;
+		}
+		
+		public CommandLine.OptionGroup Options
+		{
+			get
+			{
+				return d_options;
+			}
+		}
+		
+		public Result Collect(Node[] forest)
+		{
+			Calculate(forest);
 			
+			// d_nodes is a list of all root nodes constituting the embeddings
+			// d_reverseMapping is a map from the roots to all the original nodes
+			// which are contained in that root
+			Result result = new Result();
+			
+			foreach (Node root in d_nodes)
+			{
+				List<Node> mapping = d_reverseMapping[root];
+				
+				// Replace the subexpression that was mapped on this root with an
+				// embedding
+				Node prototype = (Node)root.Clone();
+				List<NodePath> arguments = new List<NodePath>();
+				
+				// Calculate the placeholder nodes
+				foreach (Node node in prototype.Descendants)
+				{
+					if (Expression.InstructionCode(node.Instruction) == Expression.PlaceholderCode)
+					{
+						arguments.Add(node.Path);
+					}
+				}
+				
+				Embedding proto = result.Prototype(prototype, arguments);
+				
+				// Now we generate all the full expressions for this embedding
+				foreach (Node inst in mapping)
+				{
+					// Replace inst in top hiearchy with embedding node
+					proto.Embed((Node)inst.Top.Clone(), inst.Path);
+				}
+			}
+			
+			return result;
+		}
+		
+		public void Calculate(Node[] forest)
+		{
 			Dictionary<uint, Node> lmap = new Dictionary<uint, Node>();
-			Queue<ExpressionTree.Node> queue = new Queue<ExpressionTree.Node>();
+			Queue<Node> queue = new Queue<Node>();
 			
 			// Create initial mapping for leaves
-			if (!d_labeled)
+			if (!d_options.Labeled)
 			{
 				Node leaf = Add(0, 0);
 				leaf.IsLeaf = true;
@@ -30,11 +91,11 @@ namespace Cpg.RawC.ExpressionTree
 				lmap[0] = leaf;
 			}
 			
-			foreach (Tree tree in forest)
+			foreach (Node tree in forest)
 			{
-				foreach (ExpressionTree.Node leaf in tree.Leafs)
+				foreach (Node leaf in tree.Leafs)
 				{
-					if (d_labeled && !lmap.ContainsKey(leaf.Label))
+					if (d_options.Labeled && !lmap.ContainsKey(leaf.Label))
 					{
 						Node n = Add(leaf.Label, 0);
 						lmap[leaf.Label] = n;
@@ -46,18 +107,18 @@ namespace Cpg.RawC.ExpressionTree
 
 			while (queue.Count != 0)
 			{
-				ExpressionTree.Node node = queue.Dequeue();
+				Node node = queue.Dequeue();
 				
 				if (node.IsLeaf)
 				{
-					Map(node, lmap[d_labeled ? node.Label : 0]);
+					Map(node, lmap[d_options.Labeled ? node.Label : 0]);
 				}
 				else
 				{
 					bool found = false;
 					List<Node> children = new List<Node>();
 					
-					foreach (ExpressionTree.Node child in node.Children)
+					foreach (Node child in node.Children)
 					{
 						children.Add(d_mapping[child]);
 					}
@@ -70,7 +131,7 @@ namespace Cpg.RawC.ExpressionTree
 						{
 							break;
 						}
-						else if (node.Degree != g.Degree || (d_labeled && node.Label != g.Label))
+						else if (node.Degree != g.Degree || (d_options.Labeled && node.Label != g.Label))
 						{
 							continue;
 						}
@@ -98,7 +159,7 @@ namespace Cpg.RawC.ExpressionTree
 					{
 						Node w = Add(node);
 					
-						foreach (ExpressionTree.Node child in node)
+						foreach (Node child in node)
 						{
 							// Explicitly directly on children instead of the Add method because
 							// we want to avoid side-effects (like parenting, and height recalculation)
@@ -140,7 +201,7 @@ namespace Cpg.RawC.ExpressionTree
 		{
 			get
 			{
-				return d_labeled;
+				return d_options.Labeled;
 			}
 		}
 		
@@ -191,11 +252,11 @@ namespace Cpg.RawC.ExpressionTree
 		{
 			StringBuilder builder = new StringBuilder();
 
-			foreach (ExpressionTree.Node node in d_nodes)
+			foreach (Node node in d_nodes)
 			{
 				if (d_reverseMapping.ContainsKey(node))
 				{
-					string[] parts = Array.ConvertAll<ExpressionTree.Node, string>(d_reverseMapping[node].ToArray(), a => a.ToString());
+					string[] parts = Array.ConvertAll<Node, string>(d_reverseMapping[node].ToArray(), a => a.ToString());
 					builder.AppendFormat("{0} -> {1}\n", node.Height, string.Join(", ", parts));
 				}
 			}

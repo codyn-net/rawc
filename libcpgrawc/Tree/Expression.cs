@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Cpg.RawC
+namespace Cpg.RawC.Tree
 {
 	public class Expression
 	{

@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Cpg.RawC.ExpressionTree
+namespace Cpg.RawC.Tree
 {
 	public class Dot
 	{
-		private List<ExpressionTree.Node> d_nodes;
+		private List<Node> d_nodes;
 
-		public Dot(params ExpressionTree.Node[] nodes)
+		public Dot(params Node[] nodes)
 		{
 			d_nodes = new List<Node>(nodes);
 		}
@@ -20,7 +20,7 @@ namespace Cpg.RawC.ExpressionTree
 			
 			writer.WriteLine("digraph {");
 			
-			foreach (ExpressionTree.Node node in d_nodes)
+			foreach (Node node in d_nodes)
 			{
 				writer.WriteLine("subgraph {");
 				Write(writer, node);
@@ -33,7 +33,7 @@ namespace Cpg.RawC.ExpressionTree
 			writer.Close();
 		}
 
-		private string Label(ExpressionTree.Node node)
+		private string Label(Node node)
 		{
 			if (node.Instruction is InstructionFunction)
 			{
@@ -61,12 +61,12 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
-		private uint Id(ExpressionTree.Node node)
+		private uint Id(Node node)
 		{
 			return (uint)node.GetHashCode();
 		}
 		
-		private string Color(ExpressionTree.Node node)
+		private string Color(Node node)
 		{
 			if (node.IsLeaf)
 			{
@@ -78,14 +78,13 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
-		private void WriteNode(TextWriter writer, ExpressionTree.Tree tree)
+		private void WriteNode(TextWriter writer, Node node)
 		{
-			writer.WriteLine("{0} [shape=record,style=filled,fillcolor=lightblue,label=\"{1}|{2}.{3}\"];", Id(tree), Label(tree), tree.State.Property.Object.FullId, tree.State.Property.Name);
-		}
-		
-		private void WriteNode(TextWriter writer, ExpressionTree.Node node)
-		{
-			if (node.Instruction is InstructionFunction || node.Instruction is InstructionCustomFunction)
+			if (node.Parent == null)
+			{
+				writer.WriteLine("{0} [shape=record,style=filled,fillcolor=lightblue,label=\"{1}|{2}.{3}\"];", Id(node), Label(node), node.State.Property.Object.FullId, node.State.Property.Name);
+			}
+			else if (node.Instruction is InstructionFunction || node.Instruction is InstructionCustomFunction)
 			{
 				writer.WriteLine("{0} [shape=record,width=0.75,style=filled,label=\"{1}|{2}|{3}\",fillcolor=\"{4}\"];", Id(node), Label(node), node.Degree, node.Height, Color(node));
 			}
@@ -95,16 +94,9 @@ namespace Cpg.RawC.ExpressionTree
 			}
 		}
 		
-		private void Write(TextWriter writer, ExpressionTree.Node node)
+		private void Write(TextWriter writer, Node node)
 		{
-			if (node is ExpressionTree.Tree)
-			{
-				WriteNode(writer, (ExpressionTree.Tree)node);
-			}
-			else
-			{
-				WriteNode(writer, node);
-			}
+			WriteNode(writer, node);
 			
 			foreach (var child in node.Children)
 			{
