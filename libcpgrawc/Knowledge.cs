@@ -83,20 +83,29 @@ namespace Cpg.RawC
 			ScanProperties(d_network);
 			
 			// Sort initialize list on dependencies
-			d_initialize.Sort(delegate (State a, State b) {
-				if (Array.IndexOf(a.Property.Expression.Dependencies, b.Property) != -1)
+			List<State> initialize = new List<State>();
+			
+			foreach (State st in d_initialize)
+			{
+				bool found = false;
+
+				for (int i = 0; i < initialize.Count; ++i)
 				{
-					return 1;
+					if (Array.IndexOf(initialize[i].Property.Expression.Dependencies, st.Property) != -1)
+					{
+						initialize.Insert(i, st);
+						found = true;
+						break;
+					}
 				}
-				else if (Array.IndexOf(b.Property.Expression.Dependencies, a.Property) != -1)
+				
+				if (!found)
 				{
-					return -1;
+					initialize.Add(st);
 				}
-				else
-				{
-					return 0;
-				}
-			});
+			}
+
+			d_initialize = initialize;
 			
 			IntegratorState state = d_network.Integrator.State;
 			
