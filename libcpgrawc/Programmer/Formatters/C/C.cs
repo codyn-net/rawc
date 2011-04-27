@@ -522,7 +522,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 			WriteDefine(writer, rdef2, "(a, b)", "(({0})(a + (random () / (double)RAND_MAX) * (b - a)))", null, ValueType);
 			WriteDefine(writer, rdef1, "(a)", rdef2 + "(0, a)");
-			WriteDefine(writer, rdef0, "", rdef1 + "(1)");
+			WriteDefine(writer, rdef0, "()", rdef1 + "(1)");
 			
 			Dictionary<string, bool> generated = new Dictionary<string, bool>();
 			
