@@ -304,6 +304,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 				item.Alias = enumname;
 				
+				if (d_program.IntegrateTable.Contains(prop))
+				{
+					d_program.IntegrateTable[prop].Alias = enumname;
+				}
+				
 				d_enumMap.Add(new EnumItem(prop, shortname, enumname));
 			}
 			
