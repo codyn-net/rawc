@@ -27,6 +27,9 @@ namespace Cpg.RawC
 		[CommandLine.Option("compile", ArgumentName="PROGRAM", Description="Compile a test program integrating the network")]
 		private string d_compile;
 		
+		[CommandLine.Option("print-compile-source", Description="Print source code of test program")]
+		private bool d_printCompileSource;
+		
 		[CommandLine.Option("validate", Description="Validate generated network")]
 		private bool d_validate;
 		
@@ -164,6 +167,14 @@ namespace Cpg.RawC
 			get
 			{
 				return d_validatePrecision;
+			}
+		}
+		
+		public bool PrintCompileSource
+		{
+			get
+			{
+				return d_printCompileSource;
 			}
 		}
 		

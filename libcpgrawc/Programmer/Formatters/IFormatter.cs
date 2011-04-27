@@ -8,6 +8,7 @@ namespace Cpg.RawC.Programmer.Formatters
 		void Write(Program program);
 		
 		void Compile(string filename, bool verbose);
+		string CompileSource();
 	}
 }
 

@@ -53,39 +53,12 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		public void Compile(string filename, bool verbose)
+		public string CompileSource()
 		{
-			if (String.IsNullOrEmpty(d_sourceFilename))
-			{
-				throw new Exception("The program is not compiled yet!");
-			}
-			
-			// Compile source file
-			Process process = new Process();
-			process.StartInfo.FileName = "gcc";
-			process.StartInfo.UseShellExecute = true;
-			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-			process.StartInfo.Arguments = String.Format("{0} -Wall -I. -c -o {1}.o {2}", d_options.CFlags, CPrefixDown, d_sourceFilename);
-			
-			if (verbose)
-			{
-				Console.Error.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
-			}
-			
-			process.Start();
-			process.WaitForExit();
-			
-			if (process.ExitCode != 0)
-			{
-				Environment.Exit(process.ExitCode);
-			}
-			
-			// Then compile test program
 			Stream program = Assembly.GetExecutingAssembly().GetManifestResourceStream("Cpg.RawC.Programmer.Formatters.C.TestProgram.resources");
 			StreamReader reader = new StreamReader(program);
 			
-			string tempfile = Path.GetTempFileName();
-			StreamWriter writer = new StreamWriter(tempfile + ".c");
+			StringWriter writer = new StringWriter();
 			
 			writer.WriteLine("#include \"{0}.h\"", CPrefixDown);
 			writer.WriteLine();
@@ -122,6 +95,43 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			prog = prog.Replace("${statemap}", statemap.ToString());
 
 			writer.WriteLine(prog);
+			return writer.ToString();
+		}
+		
+		public void Compile(string filename, bool verbose)
+		{
+			if (String.IsNullOrEmpty(d_sourceFilename))
+			{
+				throw new Exception("The program is not compiled yet!");
+			}
+			
+			// Compile source file
+			Process process = new Process();
+			process.StartInfo.FileName = "gcc";
+			process.StartInfo.UseShellExecute = true;
+			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+			process.StartInfo.Arguments = String.Format("{0} -Wall -I. -c -o {1}.o {2}", d_options.CFlags, CPrefixDown, d_sourceFilename);
+			
+			if (verbose)
+			{
+				Console.Error.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
+			}
+			
+			process.Start();
+			process.WaitForExit();
+			
+			if (process.ExitCode != 0)
+			{
+				Environment.Exit(process.ExitCode);
+			}
+			
+			// Then compile test program
+			string source = CompileSource();
+			
+			string tempfile = Path.GetTempFileName();
+			StreamWriter writer = new StreamWriter(tempfile + ".c");
+			
+			writer.WriteLine(source);
 			writer.Close();
 			
 			process.StartInfo.Arguments = String.Format("{0} -I. -Wall -c -o {1}.o {2}.c", d_options.CFlags, tempfile, tempfile);

@@ -37,6 +37,10 @@ namespace Cpg.RawC
 			// Write program
 			Options.Instance.Formatter.Write(program);
 			
+			if (Options.Instance.PrintCompileSource)
+			{
+				Console.WriteLine(Options.Instance.Formatter.CompileSource());
+			}
 			if (Options.Instance.Validate)
 			{
 				Validate();
