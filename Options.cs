@@ -40,7 +40,7 @@ namespace Cpg.RawC
 		
 		public Options() : base("cpgrawc", "raw cpg network generator", "[FILE...]")
 		{
-			d_formatter = new Programmer.Formatters.C();
+			d_formatter = new Programmer.Formatters.C.C();
 			AddOptionsForPlugin(d_formatter);
 		}
 		
@@ -54,7 +54,7 @@ namespace Cpg.RawC
 			}
 			catch (Exception e)
 			{
-				Console.Error.WriteLine("Could not parse options: {0}", e.Message);
+				Console.Error.WriteLine("Could not parse options: {0}\n\nTrace:\n{1}", e.GetBaseException().Message, e.GetBaseException().StackTrace);
 				Environment.Exit(1);
 			}
 			

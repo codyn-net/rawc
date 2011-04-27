@@ -7,43 +7,53 @@ namespace Cpg.RawC.Programmer
 	{
 		private Options d_options;
 
-		private List<IComputationNode> d_direct;
-		private List<IComputationNode> d_integrated;
+		private List<Computation.INode> d_source;
 		private List<Function> d_functions;
 		private List<Tree.Embedding> d_embeddings;
-		private List<IComputationNode> d_initialization;
+		private List<Computation.INode> d_initialization;
 		private List<Cpg.Function> d_usedCustomFunctions;
 		private Dictionary<string, Function> d_functionMap;
 
-		private DataTable d_datatable;
+		private DataTable d_statetable;
+		private DataTable d_integratetable;
 		private Dictionary<State, Tree.Node> d_equations;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
 			// Write out equations and everything
-			d_datatable = new DataTable("ss");
+			d_statetable = new DataTable("ss");
+			d_integratetable = new DataTable("si");
+
 			d_functions = new List<Function>();
 			d_embeddings = new List<Tree.Embedding>(embeddings);
-			d_direct = new List<IComputationNode>();
-			d_integrated = new List<IComputationNode>();
-			d_initialization = new List<IComputationNode>();
+			d_source = new List<Computation.INode>();
+			d_initialization = new List<Computation.INode>();
 			d_usedCustomFunctions = new List<Cpg.Function>();
 			d_functionMap = new Dictionary<string, Function>();
 
 			d_equations = equations;
 			d_options = options;
 			
-			ProgramDataTable();			
+			ProgramDataTables();			
 			ProgramFunctions();
 			ProgramCustomFunctions();
-			ProgramBody();
+			ProgramInitialization();
+			ProgramSource();
 		}
 		
-		public DataTable DataTable
+		public DataTable StateTable
 		{
 			get
 			{
-				return d_datatable;
+				return d_statetable;
+			}
+		}
+		
+		public DataTable IntegrateTable
+		{
+			get
+			{
+				return d_integratetable;
 			}
 		}
 		
@@ -71,30 +81,31 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
-		private void ProgramDataTable()
+		private void ProgramDataTables()
 		{
 			// Add integrated state variables
 			foreach (State state in Knowledge.Instance.IntegratedStates)
 			{
-				d_datatable.Add(state);
+				d_statetable.Add(state);
+				d_integratetable.Add(state);
 			}
 			
 			// Add direct state variables
 			foreach (State state in Knowledge.Instance.DirectStates)
 			{
-				d_datatable.Add(state);
+				d_statetable.Add(state);
 			}
 			
 			// Add in variables
 			foreach (Cpg.Property prop in Knowledge.Instance.InProperties)
 			{
-				d_datatable.Add(prop);
+				d_statetable.Add(prop);
 			}
 			
 			// Add out variables
 			foreach (Cpg.Property prop in Knowledge.Instance.OutProperties)
 			{
-				d_datatable.Add(prop);
+				d_statetable.Add(prop);
 			}
 		}
 		
@@ -121,7 +132,8 @@ namespace Cpg.RawC.Programmer
 				
 				foreach (Tree.Embedding.Instance instance in embedding.Instances)
 				{
-					Nodes.Function node = new Nodes.Function(instance, function);
+					Instructions.Function instruction = new Instructions.Function(instance, function);
+					Tree.Node node = new Tree.Node(instance.State, instruction);
 					
 					if (instance.Path.Count == 0)
 					{
@@ -129,7 +141,7 @@ namespace Cpg.RawC.Programmer
 					}
 					else
 					{
-						instance.Top.Replace(instance.Path, node);
+						instance.Replace(node);
 					}
 				}
 
@@ -201,7 +213,7 @@ namespace Cpg.RawC.Programmer
 					}
 					
 					// Create new embedding argument
-					args.Add(new Tree.Embedding.Argument(node.RelPath(child), (uint)idx));
+					args.Add(new Tree.Embedding.Argument(child.RelPath(node), (uint)idx));
 				}
 				
 				// Here it's a little messy, maybe can be improved. For now we create an
@@ -224,29 +236,67 @@ namespace Cpg.RawC.Programmer
 						inst.FromPath(arg.Path).Replace(nn.Children[(int)arg.Index]);
 					}
 
-					Nodes.Function f = new Nodes.Function(embedding.Embed(inst, new Tree.NodePath()), func);
-					nn.Replace(f);
+					Instructions.Function f = new Instructions.Function(embedding.Embed(inst, new Tree.NodePath()), func);
+					nn.Replace(new Tree.Node(inst.State, f));
 				}
 			}
 		}
 		
-		private void ProgramBody()
+		private void ProgramSource()
 		{
+			bool makeempty = false;
+			bool first = true;
+
 			// Set direct and integration lists of computations
 			foreach (State state in Knowledge.Instance.DirectStates)
 			{
 				if (d_equations.ContainsKey(state))
 				{
-					d_direct.Add(new Assignment(d_datatable[state], d_equations[state]));
+					makeempty = true;
+					
+					if (first)
+					{
+						d_source.Add(new Computation.Comment("Direct equations"));
+						first = false;
+					}
+
+					d_source.Add(new Computation.Assignment(d_statetable[state], d_equations[state]));
 				}
 			}
+			
+			first = true;
 			
 			foreach (State state in Knowledge.Instance.IntegratedStates)
 			{
 				if (d_equations.ContainsKey(state))
 				{
-					d_integrated.Add(new Addition(d_datatable[state], d_equations[state]));
+					if (makeempty)
+					{
+						d_source.Add(new Computation.Empty());
+						makeempty = false;
+					}
+					
+					if (first)
+					{
+						d_source.Add(new Computation.Comment("Clear integration update table"));
+						d_source.Add(new Computation.ZeroTable(d_integratetable));
+						d_source.Add(new Computation.Empty());
+
+						d_source.Add(new Computation.Comment("Integration equations"));
+
+						first = false;
+					}
+
+					d_source.Add(new Computation.Addition(d_integratetable[state], d_equations[state]));
 				}
+			}
+			
+			// Copy integration stuff to the state table
+			if (!first)
+			{
+				d_source.Add(new Computation.Empty());
+				d_source.Add(new Computation.Comment("Copy integrated values to state table"));
+				d_source.Add(new Computation.CopyTable(d_integratetable, d_statetable, d_integratetable.Count));
 			}
 		}
 		
@@ -254,12 +304,12 @@ namespace Cpg.RawC.Programmer
 		{
 			foreach (State state in Knowledge.Instance.InitializeStates)
 			{
-				if (!d_datatable.Contains(state))
+				if (!d_statetable.Contains(state))
 				{
 					continue;
 				}
 
-				d_initialization.Add(new Assignment(d_datatable[state], d_equations[state]));
+				d_initialization.Add(new Computation.Assignment(d_statetable[state], d_equations[state]));
 			}
 		}
 		
@@ -268,6 +318,31 @@ namespace Cpg.RawC.Programmer
 			get
 			{
 				return d_usedCustomFunctions;
+			}
+		}
+		
+		public IEnumerable<Computation.INode> InitializationNodes
+		{
+			get
+			{
+				return d_initialization;
+			}
+		}
+		
+		public IEnumerable<Computation.INode> SourceNodes
+		{
+			get
+			{
+				return d_source;
+			}
+		}
+		
+		public IEnumerable<DataTable> DataTables
+		{
+			get
+			{
+				yield return d_statetable;
+				yield return d_integratetable;
 			}
 		}
 	}

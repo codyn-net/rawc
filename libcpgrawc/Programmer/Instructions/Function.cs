@@ -1,8 +1,8 @@
 using System;
 
-namespace Cpg.RawC.Programmer.Nodes
+namespace Cpg.RawC.Programmer.Instructions
 {
-	public class Function : Tree.Node
+	public class Function : Instruction
 	{
 		private Tree.Embedding.Instance d_embedding;
 		private Programmer.Function d_function;
@@ -26,6 +26,14 @@ namespace Cpg.RawC.Programmer.Nodes
 			get
 			{
 				return d_function;
+			}
+		}
+		
+		public static new GLib.GType GType
+		{
+			get
+			{
+				return Instruction.GType;
 			}
 		}
 	}

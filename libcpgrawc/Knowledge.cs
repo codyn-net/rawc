@@ -270,6 +270,22 @@ namespace Cpg.RawC
 			}
 		}
 		
+		public int DirectStatesCount
+		{
+			get
+			{
+				return d_direct.Count;
+			}
+		}
+		
+		public int IntegratedStatesCount
+		{
+			get
+			{
+				return d_integrated.Count;
+			}
+		}
+		
 		public IEnumerable<State> InitializeStates
 		{
 			get

@@ -1,8 +1,8 @@
 using System;
 
-namespace Cpg.RawC.Programmer
+namespace Cpg.RawC.Programmer.Computation
 {
-	public class Assignment : IComputationNode
+	public class Assignment : INode
 	{
 		private DataTable.DataItem d_item;
 		private Tree.Node d_equation;

@@ -38,25 +38,26 @@ namespace Cpg.RawC.Tree
 				
 				Node node = new Node(state, inst);
 
+				int numargs = 0;
+				
 				InstructionFunction ifunc = inst as InstructionFunction;
+				InstructionCustomFunction icfunc = inst as InstructionCustomFunction;
 				
 				if (ifunc != null)
 				{
-					for (int j = 0; j < ifunc.Arguments; ++j)
-					{
-						node.Add(stack.Pop());
-					}				
+					numargs = ifunc.Arguments;
 				}
-				
-				InstructionCustomFunction icfunc = inst as InstructionCustomFunction;
-				
-				if (icfunc != null)
+				else if (icfunc != null)
 				{
-					for (int j = 0; j < icfunc.Arguments; ++j)
-					{
-						node.Add(stack.Pop());
-					}
+					numargs = icfunc.Arguments;
 				}
+				
+				for (int j = 0; j < numargs; ++j)
+				{
+					node.Add(stack.Pop());
+				}
+				
+				node.d_children.Reverse();
 
 				stack.Push(node);
 			}
@@ -227,7 +228,7 @@ namespace Cpg.RawC.Tree
 		
 		public NodePath RelPath(Node parent)
 		{
-			if (d_parent == null || d_parent == parent)
+			if (d_parent == null || this == parent)
 			{
 				return new NodePath();
 			}
@@ -442,12 +443,25 @@ namespace Cpg.RawC.Tree
 		
 		public void Replace(NodePath path, Node node, bool reconnect)
 		{
-			path = new NodePath(path);
-			uint idx = path.Pop();
-			Node parent = FromPath(path);
-			Node orig = parent.Children[(int)idx];
+			Node parent;
+			int idx;
 			
-			parent.Children[(int)idx] = node;
+			if (path.Count == 0)
+			{
+				parent = Parent;
+				idx = Parent.Children.IndexOf(this);
+			}
+			else
+			{
+				path = new NodePath(path);
+
+				idx = (int)path.Pop();
+				parent = FromPath(path);
+			}
+
+			Node orig = parent.Children[idx];
+			
+			parent.Children[idx] = node;
 			node.Parent = parent;
 			
 			if (reconnect)

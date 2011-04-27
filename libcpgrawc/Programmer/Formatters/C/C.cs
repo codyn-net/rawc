@@ -2,44 +2,23 @@ using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.Reflection;
 
-namespace Cpg.RawC.Programmer.Formatters
+namespace Cpg.RawC.Programmer.Formatters.C
 {
 	[Plugins.Attributes.Plugin(Name="C",
 	                           Description="Write compact C file",
 	                           Author="Jesse van den Kieboom")]
 	public class C : IFormatter, Plugins.IOptions
 	{
-		private class CustomOptions : CommandLine.OptionGroup
-		{
-			public enum PrecisionType
-			{
-				Double,
-				Float
-			}
-
-			[CommandLine.Option("precision", Description="Type of precision to use (double/float)")]
-			public PrecisionType Precision = PrecisionType.Double;
-			
-			[CommandLine.Option("custom-header", ArgumentName="FILENAME", Description="Custom header to include")]
-			public string CustomHeader;
-			
-			[CommandLine.Option("no-separate-math-header", Description="Whether or not to use a separate header for math defines")]
-			public bool NoSeparateMathHeader;
-			
-			public CustomOptions(string name) : base(name)
-			{
-			}
-		}
-		
-		private CustomOptions d_options;
+		private Options d_options;
 		private Programmer.Program d_program;
 		private string d_cprefix;
 		private string d_cprefixup;
 
 		public C()
 		{
-			d_options = new CustomOptions("C Formatter");
+			d_options = new Options("C Formatter");
 		}
 		
 		public void Write(Program program)
@@ -116,25 +95,17 @@ namespace Cpg.RawC.Programmer.Formatters
 			}
 		}
 		
-		private string Precision
+		private string ValueType
 		{
 			get
 			{
-				switch (d_options.Precision)
-				{
-					case CustomOptions.PrecisionType.Double:
-						return "double";
-					case CustomOptions.PrecisionType.Float:
-						return "float";
-				}
-				
-				return "double";
+				return d_options.ValueType;
 			}
 		}
 		
 		private void WriteAccessorEnum(TextWriter writer)
 		{
-			if (d_program.DataTable.Count == 0)
+			if (d_program.StateTable.Count == 0)
 			{
 				return;
 			}
@@ -144,7 +115,7 @@ namespace Cpg.RawC.Programmer.Formatters
 			
 			bool first = true;
 
-			foreach (DataTable.DataItem item in d_program.DataTable)
+			foreach (DataTable.DataItem item in d_program.StateTable)
 			{
 				Cpg.Property prop = item.Key as Cpg.Property;
 				
@@ -203,13 +174,13 @@ namespace Cpg.RawC.Programmer.Formatters
  			// Write interface
  			WriteAccessorEnum(writer);
  			
- 			writer.WriteLine("{0} {1}_get (int idx);", Precision, CPrefixDown);
- 			writer.WriteLine("void {0}_set (int idx, {1} val);", CPrefixDown, Precision);
+ 			writer.WriteLine("{0} {1}_get (int idx);", ValueType, CPrefixDown);
+ 			writer.WriteLine("void {0}_set (int idx, {1} val);", CPrefixDown, ValueType);
  			
  			writer.WriteLine();
  			
  			writer.WriteLine("void {0}_initialize (void);", CPrefixDown);
- 			writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, Precision);
+ 			writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
  			
  			writer.WriteLine();
 
@@ -226,64 +197,11 @@ namespace Cpg.RawC.Programmer.Formatters
 			writer.Close();
 		}
 		
-		private string MathFunctionDefine(Cpg.InstructionFunction instruction)
-		{
-			return MathFunctionDefine((Cpg.MathFunctionType)instruction.Id, instruction.Arguments);
-		}
-		
-		private string MathFunctionDefine(Cpg.MathFunctionType type, int arguments)
-		{
-			string name = Enum.GetName(typeof(Cpg.MathFunctionType), type);
-			string val;
-
-			switch (type)
-			{
-				case MathFunctionType.Abs:
-				case MathFunctionType.Acos:
-				case MathFunctionType.Asin:
-				case MathFunctionType.Atan:
-				case MathFunctionType.Atan2:
-				case MathFunctionType.Ceil:
-				case MathFunctionType.Cos:
-				case MathFunctionType.Cosh:
-				case MathFunctionType.Exp:
-				case MathFunctionType.Exp2:
-				case MathFunctionType.Floor:
-				case MathFunctionType.Hypot:
-				case MathFunctionType.Invsqrt:
-				case MathFunctionType.Lerp:
-				case MathFunctionType.Ln:
-				case MathFunctionType.Log10:
-				case MathFunctionType.Max:
-				case MathFunctionType.Min:
-				case MathFunctionType.Pow:
-				case MathFunctionType.Round:
-				case MathFunctionType.Sin:
-				case MathFunctionType.Sinh:
-				case MathFunctionType.Sqrt:
-				case MathFunctionType.Sqsum:
-				case MathFunctionType.Tan:
-				case MathFunctionType.Tanh:
-				case MathFunctionType.Rand:
-					val = name.ToUpper();
-				break;
-				default:
-					throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
-			}
-			
-			if (Cpg.Math.FunctionIsVariable(type))
-			{
-				val = String.Format("{0}{1}", val, arguments);
-			}
-			
-			return val;
-		}
-		
 		public bool IsDouble
 		{
 			get
 			{
-				return d_options.Precision == CustomOptions.PrecisionType.Double;
+				return d_options.ValueType == "double";
 			}
 		}
 		
@@ -360,11 +278,11 @@ namespace Cpg.RawC.Programmer.Formatters
 				case MathFunctionType.Lerp:
 					return "(x0 + (x1 - x0) * x2)";
 				case MathFunctionType.Max:
-					return NestedImplementation("MAX", arguments, "(x0 > x1 ? x0 : x1)");
+					return NestedImplementation("CPG_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
 				case MathFunctionType.Min:
-					return NestedImplementation("MIN", arguments, "(x0 < x1 ? x0 : x1)");
+					return NestedImplementation("CPG_MATH_MIN", arguments, "(x0 < x1 ? x0 : x1)");
 				case MathFunctionType.Sqsum:
-					return NestedImplementation("SQSUM", arguments, "x0 * x0 + x1 * x1");
+					return NestedImplementation("CPG_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
 				case MathFunctionType.Invsqrt:
 					return IsDouble ? "1 / sqrt(x0)" : "1 / sqrtf(x0)";
 				default:
@@ -377,7 +295,7 @@ namespace Cpg.RawC.Programmer.Formatters
 		
 		private void WriteCustomMathDefine(TextWriter writer, Cpg.MathFunctionType type, int arguments, Dictionary<string, bool> generated)
 		{
-			string def = MathFunctionDefine(type, arguments);
+			string def = Context.MathFunctionDefine(type, arguments);
 			
 			if (generated.ContainsKey(def))
 			{
@@ -425,15 +343,19 @@ namespace Cpg.RawC.Programmer.Formatters
 		private void WriteCustomMathDefines(TextWriter writer)
 		{
 			// Always define random stuff, it's a bit special...
-			WriteDefine(writer, "RAND2", "(a, b)", "(({0})(a + (random () / (double)RAND_MAX) * (b - a)))", null, Precision);
-			WriteDefine(writer, "RAND1", "(a)", "RAND2(0, a)");
-			WriteDefine(writer, "RAND0", "", "RAND1(1)");
+			string rdef2 = Context.MathFunctionDefine(Cpg.MathFunctionType.Rand, 2);
+			string rdef1 = Context.MathFunctionDefine(Cpg.MathFunctionType.Rand, 1);
+			string rdef0 = Context.MathFunctionDefine(Cpg.MathFunctionType.Rand, 0);
+
+			WriteDefine(writer, rdef2, "(a, b)", "(({0})(a + (random () / (double)RAND_MAX) * (b - a)))", null, ValueType);
+			WriteDefine(writer, rdef1, "(a)", rdef2 + "(0, a)");
+			WriteDefine(writer, rdef0, "", rdef1 + "(1)");
 			
 			Dictionary<string, bool> generated = new Dictionary<string, bool>();
 			
-			generated["RAND2"] = true;
-			generated["RAND1"] = true;
-			generated["RAND0"] = true;
+			generated[rdef2] = true;
+			generated[rdef1] = true;
+			generated[rdef0] = true;
 
 			foreach (Cpg.InstructionFunction inst in d_program.CollectInstructions<Cpg.InstructionFunction>())
 			{
@@ -455,138 +377,23 @@ namespace Cpg.RawC.Programmer.Formatters
 			}
 		}
 		
-		private string ExpressionToC(Tree.Node node)
+		private Dictionary<Tree.NodePath, string> GenerateMapping(string format, IEnumerable<Tree.Embedding.Argument> args)
 		{
-			return ExpressionToC(node, node, new Dictionary<string, string>());
-		}
-		
-		private string ExpressionToC(Tree.Node node, string format, IEnumerable<Tree.Embedding.Argument> args)
-		{
-			Dictionary<string, string> mapping = new Dictionary<string, string>();
+			Dictionary<Tree.NodePath, string> mapping = new Dictionary<Tree.NodePath, string>();
 
-			if (args != null && format != null)
+			foreach (Tree.Embedding.Argument arg in args)
 			{
-				foreach (Tree.Embedding.Argument arg in args)
-				{
-					mapping[arg.Path.ToString()] = String.Format(format, arg.Index);
-				}
+				mapping[arg.Path] = String.Format(format, arg.Index);
 			}
 			
-			return ExpressionToC(node, node, mapping);
+			return mapping;
 		}
 		
-		private bool As<T>(object o, out T ret)
+		private string FunctionToC(Function function)
 		{
-			if (o is T)
-			{
-				ret = (T)o;
-				return true;
-			}
-			else
-			{
-				ret = default(T);
-				return false;
-			}
-		}
-		
-		private string SimpleOperator(Tree.Node root, Tree.Node node, string glue, Dictionary<string, string> mapping)
-		{
-			string[] args = new string[node.Children.Count];
+			Context context = new Context(d_program, d_options, function.Expression, GenerateMapping("x{0}", function.Arguments));
 			
-			for (int i = 0; i < args.Length; ++i)
-			{
-				args[i] = ExpressionToC(root, node.Children[i], mapping);
-			}
-			
-			return String.Format("({0})", String.Join(glue, args).Trim());
-		}
-		
-		private string OperatorToC(Tree.Node root, Tree.Node node, Cpg.InstructionOperator instop, Dictionary<string, string> mapping)
-		{
-			switch ((Cpg.MathOperatorType)instop.Id)
-			{
-				case MathOperatorType.And:
-					return SimpleOperator(root, node, " && ", mapping);
-				case MathOperatorType.Divide:
-					return SimpleOperator(root, node, " / ", mapping);
-				case MathOperatorType.Equal:
-					return SimpleOperator(root, node, " == ", mapping);
-				case MathOperatorType.Greater:
-					return SimpleOperator(root, node, " > ", mapping);
-				case MathOperatorType.GreaterOrEqual:
-					return SimpleOperator(root, node, " >= ", mapping);
-				case MathOperatorType.Less:
-					return SimpleOperator(root, node, " < ", mapping);
-				case MathOperatorType.LessOrEqual:
-					return SimpleOperator(root, node, " <= ", mapping);
-				case MathOperatorType.Minus:
-					return SimpleOperator(root, node, " -", mapping);
-				case MathOperatorType.Multiply:
-					return SimpleOperator(root, node, " * ", mapping);
-				case MathOperatorType.Negate:
-					return SimpleOperator(root, node, " !", mapping);
-				case MathOperatorType.Or:
-					return SimpleOperator(root, node, " || ", mapping);
-				case MathOperatorType.Plus:
-					return SimpleOperator(root, node, " + ", mapping);
-				case MathOperatorType.Power:
-					return String.Format("{0}{1}",
-					                     MathFunctionDefine(Cpg.MathFunctionType.Pow, node.Children.Count),
-					                     SimpleOperator(root, node, ", ", mapping));
-				case MathOperatorType.Ternary:
-					return String.Format("({0} ? {1} : {2})",
-					                     ExpressionToC(root, node.Children[0], mapping),
-					                     ExpressionToC(root, node.Children[1], mapping),
-					                     ExpressionToC(root, node.Children[2], mapping));
-			}
-			
-			throw new NotImplementedException(String.Format("The operator `{0}' is not implemented", instop.Name));
-		}
-		
-		private string ExpressionToC(Tree.Node root, Tree.Node node, Dictionary<string, string> mapping)
-		{
-			if (mapping.Count != 0)
-			{
-				string path = node.RelPath(root).ToString();
-				string ret;
-				
-				if (mapping.TryGetValue(path, out ret))
-				{
-					return ret;
-				}
-			}
-			
-			Cpg.InstructionNumber instnum;
-			Cpg.InstructionOperator instop;
-			Cpg.InstructionProperty instprop;
-			
-			if (As<Cpg.InstructionNumber>(node.Instruction, out instnum))
-			{
-				return instnum.Value.ToString();
-			}
-			else if (As<Cpg.InstructionOperator>(node.Instruction, out instop))
-			{
-				return OperatorToC(root, node, instop, mapping);
-			}
-			else if (As<Cpg.InstructionProperty>(node.Instruction, out instprop))
-			{
-				Cpg.Property prop = instprop.Property;
-				
-				if (!d_program.DataTable.Contains(prop))
-				{
-					throw new NotImplementedException(String.Format("The property `{0}' is not implemented", prop.FullName));
-				}
-				
-				DataTable.DataItem item = d_program.DataTable[prop];
-				return String.Format("{0}[{1}]", d_program.DataTable.Name, item.Index);
-			}
-			
-			throw new NotImplementedException(String.Format("The instruction `{0}' is not yet supported", node.Instruction));
-		}
-		
-		private string FunctionToC(Programmer.Function function)
-		{
-			return ExpressionToC(function.Expression, "x{0}", function.Arguments); 
+			return InstructionTranslator.QuickTranslate(context);
 		}
 		
 		private void WriteFunctions(TextWriter writer)
@@ -595,7 +402,7 @@ namespace Cpg.RawC.Programmer.Formatters
 			foreach (Programmer.Function function in d_program.Functions)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-				writer.WriteLine("static {0} {1} ({2});", Precision, function.Name, GenerateArgsList("x", function.NumArguments, 0, Precision));
+				writer.WriteLine("static {0} {1} ({2}) GNUC_PURE;", ValueType, function.Name, GenerateArgsList("x", function.NumArguments, 0, ValueType));
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
 				writer.WriteLine();
 			}
@@ -603,12 +410,152 @@ namespace Cpg.RawC.Programmer.Formatters
 			foreach (Programmer.Function function in d_program.Functions)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-				writer.WriteLine("static {0} {1} ({2})", Precision, function.Name, GenerateArgsList("x", function.NumArguments, 0, Precision));
+				writer.WriteLine("static {0} {1} ({2})", ValueType, function.Name, GenerateArgsList("x", function.NumArguments, 0, ValueType));
 				writer.WriteLine("{");
 				writer.WriteLine("\treturn {0};", FunctionToC(function));
 				writer.WriteLine("}");
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
 				writer.WriteLine();
+			}
+		}
+		
+		private string Reindent(string s, string indent)
+		{
+			string[] lines = s.Split('\n');
+			return indent + String.Join("\n" + indent, lines).Replace("\n" + indent + "\n", "\n\n");
+		}
+		
+		private void WriteComputationNode(TextWriter writer, Computation.INode node)
+		{
+			Context context = new Context(d_program, d_options);
+			writer.WriteLine(Reindent(ComputationNodeTranslator.Translate(node, context), "\t"));
+		}
+		
+		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
+		{
+			foreach (Computation.INode node in nodes)
+			{
+				WriteComputationNode(writer, node);
+			}
+		}
+		
+		private void WriteInitialization(TextWriter writer)
+		{
+			writer.WriteLine("void");
+			writer.WriteLine("{0}_initialize (void)", CPrefixDown);
+			writer.WriteLine("{");
+			
+			WriteComputationNodes(writer, d_program.InitializationNodes);
+			
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+		
+		private void WriteAccessors(TextWriter writer)
+		{
+			writer.WriteLine("{0}", ValueType);
+			writer.WriteLine("{0}_get (int idx)", CPrefixDown);
+			writer.WriteLine("{");
+			
+			writer.WriteLine("\treturn {0}[idx];", d_program.StateTable.Name);
+			
+			writer.WriteLine("}");
+			writer.WriteLine();
+			
+			writer.WriteLine("void");
+			writer.WriteLine("{0}_set (int idx, {1} val)", CPrefixDown, ValueType);
+			writer.WriteLine("{");
+			
+			writer.WriteLine("\t{0}[idx] = val;", d_program.StateTable.Name);
+			
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+		
+		private void WriteStep(TextWriter writer)
+		{
+			writer.WriteLine("void");
+			writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
+			writer.WriteLine("{");
+			
+			WriteComputationNodes(writer, d_program.SourceNodes);
+			
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+		
+		private void WriteDataTable(TextWriter writer, DataTable table)
+		{
+			writer.WriteLine("static {0} {1}[] =", ValueType, table.Name);
+			writer.WriteLine("{");
+			
+			int cols = System.Math.Min(10, table.Count);
+			int rows = (int)System.Math.Ceiling(table.Count / (double)cols);
+			int[,] colsize = new int[cols, 2];
+
+			string[,] vals = new string[rows, cols];
+			InitialValueTranslator translator = new InitialValueTranslator();
+			
+			for (int i = 0; i < table.Count; ++i)
+			{
+				int row = i / cols;
+				int col = i % cols;
+				
+				string val = translator.Translate(table[i].Key);
+				vals[row, col] = val;
+				
+				int pos = val.IndexOf('.');
+
+				colsize[col, 0] = System.Math.Max(colsize[col, 0], pos == -1 ? val.Length : pos);
+				colsize[col, 1] = System.Math.Max(colsize[col, 1], pos == -1 ? 0 : (val.Length - pos));
+			}
+			
+			for (int i = 0; i < table.Count; ++i)
+			{
+				int row = i / cols;
+				int col = i % cols;
+				
+				if (col == 0)
+				{
+					writer.Write("\t");
+				}
+				
+				string val = vals[row, col];
+				string[] parts = val.Split('.');
+				
+				if (parts.Length == 1)
+				{
+					writer.Write("{0}{1}", val.PadLeft(colsize[col, 0] + 1), "".PadRight(colsize[col, 1]));
+				}
+				else
+				{
+					writer.Write("{0}.{1}", parts[0].PadLeft(colsize[col, 0] + 1), parts[1].PadRight(colsize[col, 1] - 1));
+				}
+				
+				if (i != table.Count - 1)
+				{
+					writer.Write(",");
+					
+					if (col == cols - 1)
+					{
+						writer.WriteLine();
+					}
+				}
+				else
+				{
+					writer.WriteLine();
+				}
+			}
+
+			writer.WriteLine("};");
+			writer.WriteLine();
+		}
+		
+		private void WriteDataTables(TextWriter writer)
+		{
+			foreach (DataTable table in d_program.DataTables)
+			{
+				WriteDataTable(writer, table);
 			}
 		}
 		
@@ -619,12 +566,22 @@ namespace Cpg.RawC.Programmer.Formatters
 			
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine("#include <math.h>");
+			writer.WriteLine("#include <stdlib.h>");
+			writer.WriteLine("#include <string.h>");
 			
 			writer.WriteLine();
 			
-			if (!String.IsNullOrEmpty(d_options.CustomHeader))
+			writer.WriteLine("#if __GNUC__ >= 2 && __GNUC_MINOR__ > 96");
+			writer.WriteLine("#define GNUC_PURE __attribute__ (pure)");
+			writer.WriteLine("#else");
+			writer.WriteLine("#define GNUC_PURE");
+			writer.WriteLine("#endif");
+			
+			writer.WriteLine();
+			
+			foreach (string header in d_options.CustomHeaders)
 			{
-				writer.WriteLine("#include \"{0}\"", d_options.CustomHeader);
+				writer.WriteLine("#include \"{0}\"", header);
 			}
 			
 			TextWriter math;
@@ -659,7 +616,11 @@ namespace Cpg.RawC.Programmer.Formatters
 				math.Close();
 			}
 			
+			WriteDataTables(writer);
 			WriteFunctions(writer);
+			WriteInitialization(writer);
+			WriteAccessors(writer);
+			WriteStep(writer);
 
 			writer.Close();
 		}

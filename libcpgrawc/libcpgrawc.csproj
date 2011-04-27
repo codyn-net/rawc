@@ -58,23 +58,34 @@
     <Compile Include="Tree\Collectors\Result.cs" />
     <Compile Include="Tree\Instructions\Embedding.cs" />
     <Compile Include="Programmer\DataTable.cs" />
-    <Compile Include="Programmer\IComputationNode.cs" />
     <Compile Include="Programmer\Function.cs" />
     <Compile Include="Programmer\Program.cs" />
-    <Compile Include="Programmer\Loop.cs" />
     <Compile Include="Programmer\Options.cs" />
-    <Compile Include="Programmer\Nodes\Function.cs" />
     <Compile Include="Plugins\IOptions.cs" />
     <Compile Include="Tree\Filters\Default.cs" />
-    <Compile Include="Programmer\Formatters\C.cs" />
     <Compile Include="Programmer\Formatters\IFormatter.cs" />
-    <Compile Include="Programmer\Assignment.cs" />
-    <Compile Include="Programmer\Addition.cs" />
     <Compile Include="State.cs" />
     <Compile Include="CommandLine\Options.cs" />
     <Compile Include="CommandLine\OptionAttribute.cs" />
     <Compile Include="CommandLine\OptionException.cs" />
     <Compile Include="CommandLine\OptionGroup.cs" />
+    <Compile Include="Programmer\Instructions\Function.cs" />
+    <Compile Include="Programmer\Computation\Addition.cs" />
+    <Compile Include="Programmer\Computation\Assignment.cs" />
+    <Compile Include="Programmer\Computation\IComputationNode.cs" />
+    <Compile Include="Programmer\Computation\Loop.cs" />
+    <Compile Include="Programmer\Computation\Empty.cs" />
+    <Compile Include="Programmer\Formatters\C\C.cs" />
+    <Compile Include="Programmer\Formatters\C\DynamicVisitor.cs" />
+    <Compile Include="Programmer\Formatters\C\InstructionTranslator.cs" />
+    <Compile Include="Programmer\Formatters\C\Context.cs" />
+    <Compile Include="Programmer\Formatters\C\ComputationNodeTranslator.cs" />
+    <Compile Include="Programmer\Computation\ZeroTable.cs" />
+    <Compile Include="Programmer\Computation\Comment.cs" />
+    <Compile Include="Programmer\Computation\CopyTable.cs" />
+    <Compile Include="Programmer\Formatters\C\Options.cs" />
+    <Compile Include="Programmer\Formatters\C\InitialValueTranslator.cs" />
+    <Compile Include="Programmer\Formatters\C\NumberTranslator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
@@ -84,9 +95,11 @@
     <Folder Include="Tree\Filters\" />
     <Folder Include="Tree\Instructions\" />
     <Folder Include="Programmer\" />
-    <Folder Include="Programmer\Nodes\" />
     <Folder Include="Programmer\Formatters\" />
     <Folder Include="CommandLine\" />
+    <Folder Include="Programmer\Instructions\" />
+    <Folder Include="Programmer\Computation\" />
+    <Folder Include="Programmer\Formatters\C\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

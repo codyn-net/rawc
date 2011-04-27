@@ -1,6 +1,6 @@
 using System;
 
-namespace Cpg.RawC.Programmer
+namespace Cpg.RawC.Programmer.Computation
 {
 	public class Addition : Assignment
 	{

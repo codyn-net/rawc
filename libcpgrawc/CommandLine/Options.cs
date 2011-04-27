@@ -167,13 +167,13 @@ namespace Cpg.RawC.CommandLine
 			}
 		}
 		
-		private void ParseOption(string[] args, string arg, Info info, bool canarg, string argument, ref int idx)
+		private void ParseOption(OptionGroup opt, string[] args, string arg, Info info, bool canarg, string argument, ref int idx)
 		{
 			if (info.ValueType == typeof(bool))
 			{
-				info.Set(this, true);
+				info.Set(opt, true);
 			}
-			else if (canarg && (argument != null || idx < args.Length - 1))
+			else if (canarg && (argument != null || idx < args.Length))
 			{
 				if (argument == null)
 				{
@@ -181,11 +181,11 @@ namespace Cpg.RawC.CommandLine
 					++idx;
 				}
 
-				info.Set(this, argument);
+				info.Set(opt, argument);
 			}
 			else if (info.Option.OptionalArgument)
 			{
-				info.Set(this, info.Option.DefaultArgument);
+				info.Set(opt, info.Option.DefaultArgument);
 			}
 			else
 			{
@@ -197,11 +197,11 @@ namespace Cpg.RawC.CommandLine
 		{
 			Info info;
 			
-			foreach (Options opt in d_groups)
+			foreach (OptionGroup opt in d_groups)
 			{
 				if (opt.LongName(arg, out info))
 				{
-					ParseOption(args, arg, info, true, argument, ref idx);
+					ParseOption(opt, args, arg, info, true, argument, ref idx);
 					return true;
 				}
 			}
@@ -222,7 +222,7 @@ namespace Cpg.RawC.CommandLine
 						throw new OptionException("Expected value for option `{0}'...", arg);
 					}
 
-					ParseOption(args, arg, info, islast, argument, ref idx);
+					ParseOption(opt, args, arg, info, islast, argument, ref idx);
 					return true;
 				}
 			}
