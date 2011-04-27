@@ -80,6 +80,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 					return SimpleOperator(context, " <= ");
 				case MathOperatorType.Minus:
 					return SimpleOperator(context, " -");
+				case MathOperatorType.UnaryMinus:
+					return SimpleOperator(context, " -");
 				case MathOperatorType.Multiply:
 					return SimpleOperator(context, " * ");
 				case MathOperatorType.Negate:
