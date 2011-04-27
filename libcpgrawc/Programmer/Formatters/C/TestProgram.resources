@@ -60,6 +60,17 @@ main (int argc, char *argv[])
 		print_states (stdout);
 		return 0;
 	}
+	
+	if (argc == 2 && (strcmp (argv[1], "help") == 0 || strcmp (argv[1], "--help") == 0 || strcmp (argv[1], "-h") == 0))
+	{
+		printf ("\nThis program runs and monitors the CPG network.\n");
+		printf ("Specify a time range to monitor (from step to) as arguments on the command line.\n");
+		printf ("States to monitor can be specified (one per line) on standard in.\n");
+		printf ("State values are written to standard out (tab separated).\n");
+		printf ("Use `%s list' to show available states to monitor.\n\n", argv[0]);
+
+		return 0;
+	}
 
 	if (argc == 2)
 	{
