@@ -246,6 +246,15 @@ namespace Cpg.RawC.Programmer
 		{
 			bool makeempty = false;
 			bool first = true;
+			
+			Cpg.Property dtprop = Knowledge.Instance.Network.Integrator.Property("dt");
+			DataTable.DataItem dt = d_statetable[dtprop];
+			Tree.Node dteq = new Tree.Node(null, new Instructions.Variable("timestep"));
+			
+			// Set dt
+			d_source.Add(new Computation.Comment("Set timestep"));
+			d_source.Add(new Computation.Assignment(dt, dteq));
+			d_source.Add(new Computation.Empty());
 
 			// Set direct and integration lists of computations
 			foreach (State state in Knowledge.Instance.DirectStates)
@@ -279,15 +288,22 @@ namespace Cpg.RawC.Programmer
 					if (first)
 					{
 						d_source.Add(new Computation.Comment("Clear integration update table"));
-						d_source.Add(new Computation.ZeroTable(d_integratetable));
+						d_source.Add(new Computation.CopyTable(d_statetable, d_integratetable, d_integratetable.Count));
 						d_source.Add(new Computation.Empty());
 
 						d_source.Add(new Computation.Comment("Integration equations"));
 
 						first = false;
 					}
+					
+					Tree.Node node = new Tree.Node(null, new InstructionOperator((uint)Cpg.MathOperatorType.Multiply, "*", 2));
+					Tree.Node left = d_equations[state];
+					Tree.Node right = new Tree.Node(null, new Instructions.Variable("timestep"));
+					
+					node.Add(left);
+					node.Add(right);
 
-					d_source.Add(new Computation.Addition(d_integratetable[state], d_equations[state]));
+					d_source.Add(new Computation.Addition(d_integratetable[state], node));
 				}
 			}
 			
@@ -298,6 +314,14 @@ namespace Cpg.RawC.Programmer
 				d_source.Add(new Computation.Comment("Copy integrated values to state table"));
 				d_source.Add(new Computation.CopyTable(d_integratetable, d_statetable, d_integratetable.Count));
 			}
+			
+			// Increase time
+			DataTable.DataItem t = d_statetable[Knowledge.Instance.Network.Integrator.Property("t")];
+			Tree.Node eq = new Tree.Node(null, new InstructionProperty(dtprop, InstructionPropertyBinding.None));
+
+			d_source.Add(new Computation.Empty());
+			d_source.Add(new Computation.Comment("Increase time"));
+			d_source.Add(new Computation.Addition(t, eq));
 		}
 		
 		private void ProgramInitialization()

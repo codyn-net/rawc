@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace Cpg.RawC.Programmer.Formatters.C
 {
@@ -15,10 +16,28 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private Programmer.Program d_program;
 		private string d_cprefix;
 		private string d_cprefixup;
+		private string d_sourceFilename;
+		
+		private class EnumItem
+		{
+			public Cpg.Property Property;
+			public string ShortName;
+			public string CName;
+			
+			public EnumItem(Cpg.Property property, string shortname, string cname)
+			{
+				Property = property;
+				ShortName = shortname;
+				CName = cname;
+			}
+		}
+
+		private List<EnumItem> d_enumMap;
 
 		public C()
 		{
 			d_options = new Options("C Formatter");
+			d_enumMap = new List<EnumItem>();
 		}
 		
 		public void Write(Program program)
@@ -27,6 +46,117 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 			WriteHeader();
 			WriteSource();
+			
+			if (d_options.GenerateCppWrapper)
+			{
+				WriteCppWrapper();
+			}
+		}
+		
+		public void Compile(string filename, bool verbose)
+		{
+			if (String.IsNullOrEmpty(d_sourceFilename))
+			{
+				throw new Exception("The program is not compiled yet!");
+			}
+			
+			// Compile source file
+			Process process = new Process();
+			process.StartInfo.FileName = "gcc";
+			process.StartInfo.UseShellExecute = true;
+			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+			process.StartInfo.Arguments = String.Format("{0} -Wall -I. -c -o {1}.o {2}", d_options.CFlags, CPrefixDown, d_sourceFilename);
+			
+			if (verbose)
+			{
+				Console.Error.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
+			}
+			
+			process.Start();
+			process.WaitForExit();
+			
+			if (process.ExitCode != 0)
+			{
+				Environment.Exit(process.ExitCode);
+			}
+			
+			// Then compile test program
+			Stream program = Assembly.GetExecutingAssembly().GetManifestResourceStream("Cpg.RawC.Programmer.Formatters.C.TestProgram.resources");
+			StreamReader reader = new StreamReader(program);
+			
+			string tempfile = Path.GetTempFileName();
+			StreamWriter writer = new StreamWriter(tempfile + ".c");
+			
+			writer.WriteLine("#include \"{0}.h\"", CPrefixDown);
+			writer.WriteLine();
+			
+			string prog = reader.ReadToEnd();
+			prog = prog.Replace("${name}", CPrefixDown);
+			prog = prog.Replace("${NAME}", CPrefixUp);
+			
+			// Generate state map
+			StringBuilder statemap = new StringBuilder();
+			
+			for (int i = 0; i < d_enumMap.Count; ++i)
+			{
+				if (i != 0)
+				{
+					statemap.AppendLine(",");
+				}
+				
+				EnumItem item = d_enumMap[i];
+				string name;
+				
+				if (item.Property.Object is Cpg.Integrator || item.Property.Object is Cpg.Network)
+				{
+					name = item.Property.Name;
+				}
+				else
+				{
+					name = item.Property.FullName;
+				}
+				
+				statemap.AppendFormat("\t{{{0}, \"{1}\"}}", d_enumMap[i].CName, name);
+			}
+			
+			prog = prog.Replace("${statemap}", statemap.ToString());
+
+			writer.WriteLine(prog);
+			writer.Close();
+			
+			process.StartInfo.Arguments = String.Format("{0} -I. -Wall -c -o {1}.o {2}.c", d_options.CFlags, tempfile, tempfile);
+			
+			if (verbose)
+			{
+				Console.Error.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
+			}
+
+			process.Start();
+			process.WaitForExit();
+			
+			if (process.ExitCode != 0)
+			{
+				Environment.Exit(process.ExitCode);
+			}
+			
+			process.StartInfo.Arguments = String.Format("-Wall {0} -o {1} {2}.o {3}.o -lm", d_options.Libs, filename, tempfile, CPrefixDown);
+			
+			if (verbose)
+			{
+				Console.Error.WriteLine("Linking: gcc {0}", process.StartInfo.Arguments);
+			}
+
+			process.Start();
+			process.WaitForExit();
+			
+			if (process.ExitCode != 0)
+			{
+				Environment.Exit(process.ExitCode);
+			}
+			
+			File.Delete(tempfile + ".c");
+			File.Delete(tempfile + ".o");
+			File.Delete(CPrefixDown + ".o");
 		}
 		
 		public CommandLine.OptionGroup Options
@@ -113,8 +243,15 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine("typedef enum");
 			writer.WriteLine("{");
 			
-			bool first = true;
-
+			Dictionary<string, bool> unique = new Dictionary<string, bool>();
+			
+			List<string> names = new List<string>();
+			List<string> values = new List<string>();
+			List<string> comments = new List<string>();
+			
+			int maxname = 0;
+			int maxval = 0;
+			
 			foreach (DataTable.DataItem item in d_program.StateTable)
 			{
 				Cpg.Property prop = item.Key as Cpg.Property;
@@ -124,18 +261,9 @@ namespace Cpg.RawC.Programmer.Formatters.C
 					continue;
 				}
 				
-				if (!first)
-				{
-					writer.WriteLine(",");
-				}
-				else
-				{
-					first = false;
-				}
-				
 				string fullname;
 				
-				if (prop.Object == d_program.Options.Network)
+				if (prop.Object == d_program.Options.Network || prop.Object == d_program.Options.Network.Integrator)
 				{
 					fullname = prop.Name;
 				}
@@ -144,9 +272,44 @@ namespace Cpg.RawC.Programmer.Formatters.C
 					fullname = prop.FullName;
 				}
 				
-				fullname =  ToAsciiOnly(fullname).ToUpper();
+				string orig = ToAsciiOnly(fullname).ToUpper();
 
-				writer.Write("\t{0}_STATE_{1} = {2}", CPrefixUp, fullname, item.Index);
+				string enumname = String.Format("{0}_STATE_{1}", CPrefixUp, orig);
+				string shortname = orig;
+
+				int id = 0;
+				
+				while (unique.ContainsKey(enumname))
+				{
+					enumname = String.Format("{0}_STATE_{1}_{2}", CPrefixUp, orig, ++id);
+					shortname = String.Format("{0}_{1}", orig, id);
+				}
+				
+				names.Add(enumname);
+				values.Add(item.Index.ToString());
+				comments.Add(fullname);
+				
+				maxname = System.Math.Max(maxname, enumname.Length);
+				maxval = System.Math.Max(maxval, item.Index.ToString().Length);
+
+				item.Alias = enumname;
+				
+				d_enumMap.Add(new EnumItem(prop, shortname, enumname));
+			}
+			
+			for (int i = 0; i < names.Count; ++i)
+			{
+				if (i != 0)
+				{
+					writer.WriteLine(", /* {0} */", comments[i - 1]);
+				}
+
+				writer.Write("\t{0} = {1}", names[i].PadRight(maxname), values[i].PadLeft(maxval));
+				
+				if (i == names.Count - 1)
+				{
+					writer.WriteLine("  /* {0} */", comments[i]);
+				}
 			}
 			
 			writer.WriteLine();
@@ -561,8 +724,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private void WriteSource()
 		{
-			string filename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".c");
-			TextWriter writer = new StreamWriter(filename);
+			d_sourceFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".c");
+			TextWriter writer = new StreamWriter(d_sourceFilename);
 			
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine("#include <math.h>");
@@ -590,7 +753,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			if (!d_options.NoSeparateMathHeader)
 			{
 				string mathbase = d_program.Options.Basename + "_math.h";
-				filename = Path.Combine(d_program.Options.Output, mathbase);
+				string filename = Path.Combine(d_program.Options.Output, mathbase);
 				
 				writer.WriteLine("#include \"{0}\"", mathbase);
 				writer.WriteLine();
@@ -622,6 +785,86 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			WriteAccessors(writer);
 			WriteStep(writer);
 
+			writer.Close();
+		}
+		
+		private void WriteCppWrapper()
+		{
+			string filename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".hh");
+			TextWriter writer = new StreamWriter(filename);
+			
+			writer.WriteLine("#ifndef __{0}_HH__", CPrefixUp);
+			writer.WriteLine("#define __{0}_HH__", CPrefixUp);
+			
+			writer.WriteLine();
+			writer.WriteLine("#include \"{0}.h\"", CPrefixDown);
+			writer.WriteLine();
+			
+			writer.WriteLine("namespace cpg");
+			writer.WriteLine("{");
+			writer.WriteLine("namespace {0}", CPrefixDown);
+			writer.WriteLine("{");
+			
+			if (d_enumMap.Count > 0)
+			{
+				writer.WriteLine("\tstruct State");
+				writer.WriteLine("\t{");
+				writer.WriteLine("\t\tenum Values");
+				writer.WriteLine("\t\t{");
+				
+				for (int i = 0; i < d_enumMap.Count; ++i)
+				{
+					if (i != 0)
+					{
+						writer.WriteLine(",");
+					}
+
+					writer.Write("\t\t\t{0} = {1}", d_enumMap[i].ShortName, d_enumMap[i].CName);
+				}
+				
+				writer.WriteLine();
+
+				writer.WriteLine("\t\t};");
+				writer.WriteLine("\t};");
+				writer.WriteLine();
+			}
+			
+			writer.WriteLine("\tclass Network");
+			writer.WriteLine("\t{");
+			writer.WriteLine("\t\tpublic:");
+			writer.WriteLine("\t\t\tstatic void initialize()");
+			writer.WriteLine("\t\t\t{");
+			writer.WriteLine("\t\t\t\t{0}_initialize ();", CPrefixDown);
+			writer.WriteLine("\t\t\t}");
+			writer.WriteLine();
+
+			writer.WriteLine("\t\t\tstatic void step({0} timestep)", ValueType);
+			writer.WriteLine("\t\t\t{");
+			writer.WriteLine("\t\t\t\t{0}_step (timestep);", CPrefixDown);
+			writer.WriteLine("\t\t\t}");
+			writer.WriteLine();
+
+			writer.WriteLine("\t\t\tstatic void set(State::Values idx, {0} val);", ValueType);
+			writer.WriteLine("\t\t\t{");
+			writer.WriteLine("\t\t\t\t{0}_set (static_cast<int>(idx), val);", CPrefixDown);
+			writer.WriteLine("\t\t\t}");
+			writer.WriteLine();
+
+			writer.WriteLine("\t\t\tstatic {0} get(State::Values idx);", ValueType);
+			writer.WriteLine("\t\t\t{");
+			writer.WriteLine("\t\t\t\treturn {0}_get (static_cast<int>(idx));", CPrefixDown);
+			writer.WriteLine("\t\t\t}");
+			writer.WriteLine();
+			
+			writer.WriteLine("\t};");
+			
+			writer.WriteLine("}");
+			writer.WriteLine("}");
+
+			writer.WriteLine();
+			
+			writer.WriteLine("#endif /* __{0}_HH__ */", CPrefixUp);
+			
 			writer.Close();
 		}
 	}

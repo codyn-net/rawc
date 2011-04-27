@@ -112,7 +112,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			}
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
-			return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.Index);
+			return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
 		}
 		
 		private string Translate(InstructionFunction instruction, Context context)
@@ -140,6 +140,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			}
 			
 			return String.Format("{0} ({1})", name, String.Join(", ", args));
+		}
+		
+		private string Translate(Instructions.Variable instruction, Context context)
+		{
+			return instruction.Name;
 		}
 	}
 }

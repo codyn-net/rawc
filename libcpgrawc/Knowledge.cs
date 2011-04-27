@@ -77,8 +77,11 @@ namespace Cpg.RawC
 		
 		private void Scan()
 		{
-			ScanProperties(d_network);
+			// We also scan the integrator because the 't' and 'dt' properties are defined there
+			ScanProperties(d_network.Integrator);
 
+			ScanProperties(d_network);
+			
 			// Sort initialize list on dependencies
 			d_initialize.Sort(delegate (State a, State b) {
 				if (Array.IndexOf(a.Property.Expression.Dependencies, b.Property) != -1)

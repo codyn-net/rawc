@@ -37,7 +37,31 @@ namespace Cpg.RawC
 			foreach (string filename in options.Files)
 			{
 				Generator generator = new Generator(filename);
-				generator.Generate();
+				
+				try
+				{
+					generator.Generate();
+				}
+				catch (Exception e)
+				{
+					Exception b = e.GetBaseException();
+					
+					if (!(b is NotImplementedException))
+					{
+						throw e;
+					}
+
+					Console.Error.WriteLine("You are using a feature which is not yet implemented in rawc:");
+					Console.Error.WriteLine();
+					Console.Error.WriteLine("“{0}”", b.Message);
+
+					Console.Error.WriteLine();
+					Console.Error.WriteLine();
+					Console.Error.WriteLine("Trace:");
+					Console.Error.WriteLine("======");
+					Console.Error.WriteLine("  - {0}", String.Join("\n  - ", b.StackTrace.Split('\n')));
+					Environment.Exit(1);
+				}
 			}
 		}
 		

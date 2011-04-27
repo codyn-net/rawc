@@ -14,6 +14,15 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		[CommandLine.Option("no-separate-math-header", Description="Whether or not to use a separate header for math defines")]
 		public bool NoSeparateMathHeader;
 		
+		[CommandLine.Option("generate-cpp-wrapper", Description="Specify to generate a simple C++ wrapper")]
+		public bool GenerateCppWrapper;
+		
+		[CommandLine.Option("cflags", Description="Specify compiler flags")]
+		public string CFlags;
+		
+		[CommandLine.Option("libs", Description="Specify linker flags")]
+		public string Libs;
+
 		public Options(string name) : base(name)
 		{
 			CustomHeaders = new List<string>();

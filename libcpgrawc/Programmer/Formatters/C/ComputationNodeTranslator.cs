@@ -23,7 +23,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			return String.Format("{0}[{1}] = {2};",
 			                     node.Item.Table.Name,
-			                     node.Item.Index,
+			                     node.Item.AliasOrIndex,
 			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.Equation)));
 		}
 		
@@ -31,7 +31,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			return String.Format("{0}[{1}] += {2};",
 			                     node.Item.Table.Name,
-			                     node.Item.Index,
+			                     node.Item.AliasOrIndex,
 			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.Equation)));
 		}
 		

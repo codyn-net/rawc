@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Cpg.RawC
 {
@@ -35,6 +36,98 @@ namespace Cpg.RawC
 			
 			// Write program
 			Options.Instance.Formatter.Write(program);
+			
+			if (Options.Instance.Validate)
+			{
+				Validate();
+			}
+			else if (Options.Instance.Compile != null)
+			{
+				Options.Instance.Formatter.Compile(Options.Instance.Compile, Options.Instance.Verbose);
+			}
+		}
+		
+		private void Validate()
+		{
+			string tmpprog = Path.GetTempFileName();
+			
+			Options opts = Options.Instance;
+			opts.Formatter.Compile(tmpprog, opts.Verbose);
+			
+			Process process = new Process();
+			process.StartInfo.FileName = tmpprog;
+			process.StartInfo.Arguments = String.Format("{0} {1} {2}", opts.ValidateRange[0], opts.ValidateRange[1], opts.ValidateRange[2]);
+			process.StartInfo.RedirectStandardOutput = true;
+			process.StartInfo.RedirectStandardInput = true;
+			process.StartInfo.UseShellExecute = false;
+
+			process.Start();
+			
+			process.StandardInput.WriteLine("t");
+			List<Cpg.Monitor> monitors = new List<Cpg.Monitor>();
+			
+			monitors.Add(new Cpg.Monitor(Knowledge.Instance.Network, Knowledge.Instance.Network.Integrator.Property("t")));
+			
+			foreach (State state in Knowledge.Instance.IntegratedStates)
+			{
+				process.StandardInput.WriteLine(state.Property.FullName);
+				monitors.Add(new Cpg.Monitor(Knowledge.Instance.Network, state.Property));
+			}
+			
+			process.StandardInput.Close();
+
+			string output = process.StandardOutput.ReadToEnd();
+			process.WaitForExit();
+			
+			List<List<double>> data = new List<List<double>>();
+
+			string[] lines = output.Split('\n');
+			
+			foreach (string line in lines)
+			{
+				if (String.IsNullOrEmpty(line))
+				{
+					continue;
+				}
+
+				try
+				{
+					data.Add(new List<double>(Array.ConvertAll<string, double>(line.Split('\t'), a => Double.Parse(a))));
+				}
+				catch
+				{
+					Console.Error.WriteLine("Could not parse number:");
+					Console.Error.WriteLine(line);
+					Environment.Exit(1);
+				}
+			}
+			
+			// Now simulate network internally also
+			Knowledge.Instance.Network.Run(opts.ValidateRange[0], opts.ValidateRange[1], opts.ValidateRange[2]);
+			
+			// Compare values
+			List<double[]> monitored = new List<double[]>();
+			
+			for (int i = 0; i < monitors.Count; ++i)
+			{
+				monitored.Add(monitors[i].GetData());
+			}
+
+			for (int i = 0; i < data.Count; ++i)
+			{
+				List<double> raw = data[i];
+				
+				for (int j = 0; j < raw.Count; ++j)
+				{
+					if (System.Math.Abs(monitored[j][i] - raw[j]) > opts.ValidatePrecision)
+					{
+						Console.Error.WriteLine("Discrepancy detected in {0} (got {1} but expected {2})", monitors[j].Property.FullName, raw[j], monitored[j][i]);
+						Environment.Exit(1);
+					}
+				}
+			}
+			
+			Console.WriteLine("Network {0} successfully validated...", d_network.Filename);
 		}
 		
 		private Programmer.Options ProgrammerOptions()

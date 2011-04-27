@@ -15,6 +15,7 @@ namespace Cpg.RawC.Programmer
 			private DataTable d_table;
 			private int d_index;
 			private object d_key;
+			private string d_alias;
 			
 			public DataItem(DataTable table, object key, int index)
 			{
@@ -44,6 +45,26 @@ namespace Cpg.RawC.Programmer
 				get
 				{
 					return d_key;
+				}
+			}
+			
+			public string Alias
+			{
+				get
+				{
+					return d_alias;
+				}
+				set
+				{
+					d_alias = value;
+				}
+			}
+			
+			public string AliasOrIndex
+			{
+				get
+				{
+					return d_alias != null ? d_alias : d_index.ToString();
 				}
 			}
 		}

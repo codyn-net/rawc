@@ -86,6 +86,7 @@
     <Compile Include="Programmer\Formatters\C\Options.cs" />
     <Compile Include="Programmer\Formatters\C\InitialValueTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\NumberTranslator.cs" />
+    <Compile Include="Programmer\Instructions\Variable.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
@@ -102,4 +103,7 @@
     <Folder Include="Programmer\Formatters\C\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <EmbeddedResource Include="Programmer\Formatters\C\TestProgram.resources" />
+  </ItemGroup>
 </Project>

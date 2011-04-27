@@ -23,6 +23,20 @@ namespace Cpg.RawC
 		
 		[CommandLine.Option("basename", 'b', ArgumentName="NAME", Description="The basename of the generated files")]
 		private string d_basename;
+		
+		[CommandLine.Option("compile", ArgumentName="PROGRAM", Description="Compile a test program integrating the network")]
+		private string d_compile;
+		
+		[CommandLine.Option("validate", Description="Validate generated network")]
+		private bool d_validate;
+		
+		[CommandLine.Option("validate-precision", Description="Allowed precision for validation")]
+		private double d_validatePrecision = 10e-6;
+		
+		[CommandLine.Option("verbose", 'V', Description="Allowed precision for validation")]
+		private bool d_verbose;
+		
+		private double[] d_validateRange;
 
 		private Programmer.Formatters.IFormatter d_formatter;		
 		private List<string> d_files;
@@ -42,6 +56,8 @@ namespace Cpg.RawC
 		{
 			d_formatter = new Programmer.Formatters.C.C();
 			AddOptionsForPlugin(d_formatter);
+			
+			d_validateRange = new double[] {0, 0.001, 1};
 		}
 		
 		public override void Parse(ref string[] args)
@@ -95,6 +111,14 @@ namespace Cpg.RawC
 			}
 		}
 		
+		public string Compile
+		{
+			get
+			{
+				return d_compile;
+			}
+		}
+		
 		public string Output
 		{
 			get
@@ -111,6 +135,14 @@ namespace Cpg.RawC
 			}
 		}
 		
+		public bool Verbose
+		{
+			get
+			{
+				return d_verbose;
+			}
+		}
+		
 		public string Filter
 		{
 			get
@@ -124,6 +156,59 @@ namespace Cpg.RawC
 			get
 			{
 				return d_basename;
+			}
+		}
+		
+		public double ValidatePrecision
+		{
+			get
+			{
+				return d_validatePrecision;
+			}
+		}
+		
+		[CommandLine.Option("validate-range", Description="Range to validate network on (from:step:to)")]
+		private string ValidateRangeOption
+		{
+			set
+			{
+				string[] parts = value.Split(':');
+				
+				if (parts.Length == 1)
+				{
+					d_validateRange[1] = Double.Parse(parts[0]);
+				}
+				else if (parts.Length == 2)
+				{
+					d_validateRange[1] = Double.Parse(parts[0]);
+					d_validateRange[2] = Double.Parse(parts[1]);
+				}
+				else if (parts.Length == 3)
+				{
+					d_validateRange[0] = Double.Parse(parts[0]);
+					d_validateRange[1] = Double.Parse(parts[1]);
+					d_validateRange[2] = Double.Parse(parts[2]);
+				}
+				else
+				{
+					throw new Exception(String.Format("Invalid range: {0}", value));
+				}
+			}
+		}
+		
+		public double[] ValidateRange
+		{
+			get
+			{
+				return d_validateRange;
+			}
+		}
+		
+		public bool Validate
+		{
+			get
+			{
+				return d_validate;
 			}
 		}
 		
