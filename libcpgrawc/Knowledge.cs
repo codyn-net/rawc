@@ -136,7 +136,7 @@ namespace Cpg.RawC
 					d_outproperties.Add(prop);
 				}
 				
-				if (IsVariadic(prop.Expression))
+				if (IsVariadic(prop.Expression) && !(obj is Cpg.Link))
 				{
 					State state = new State(prop);
 					state.Type |= Cpg.RawC.State.Flags.Initialization;
