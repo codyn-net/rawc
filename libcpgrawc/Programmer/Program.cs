@@ -107,6 +107,12 @@ namespace Cpg.RawC.Programmer
 			{
 				d_statetable.Add(prop);
 			}
+			
+			// Add intialized variables
+			foreach (State state in Knowledge.Instance.InitializeStates)
+			{
+				d_statetable.Add(state);
+			}
 		}
 		
 		private string GenerateFunctionName(string templ)
