@@ -125,7 +125,11 @@ namespace Cpg.RawC
 				{
 					if (System.Math.Abs(monitored[j][i] - raw[j]) > opts.ValidatePrecision)
 					{
-						Console.Error.WriteLine("Discrepancy detected in {0} (got {1} but expected {2})", monitors[j].Property.FullName, raw[j], monitored[j][i]);
+						Console.Error.WriteLine("Discrepancy detected at t = {0} in {1} (got {2} but expected {3})",
+						                        opts.ValidateRange[0] + (i * opts.ValidateRange[1]),
+						                        monitors[j].Property.FullName,
+						                        raw[j],
+						                        monitored[j][i]);
 						Environment.Exit(1);
 					}
 				}
