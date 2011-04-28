@@ -197,11 +197,6 @@ namespace Cpg.RawC
 				ResolveState(state, embeddings, mapping, ret);
 			}
 			
-			foreach (State state in Knowledge.Instance.InitializeStates)
-			{
-				ResolveState(state, embeddings, mapping, ret);
-			}
-			
 			return ret;
 		}
 		
@@ -291,12 +286,6 @@ namespace Cpg.RawC
 			{
 				Tree.Node tree = Tree.Node.Create(state);
 				forest.Add(tree);
-			}
-			
-			// Add dummies for initialization (because they can use generated functions too!)
-			foreach (State state in Knowledge.Instance.InitializeStates)
-			{
-				forest.Add(Tree.Node.Create(state));
 			}
 			
 			return collector.Collect(forest.ToArray());

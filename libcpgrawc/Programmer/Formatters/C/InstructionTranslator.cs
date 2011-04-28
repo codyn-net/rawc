@@ -57,7 +57,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(InstructionNumber instruction, Context context)
 		{
-			return instruction.Value.ToString();
+			return NumberTranslator.Translate(instruction.Value);
 		}
 		
 		private string Translate(InstructionOperator instruction, Context context)
@@ -147,6 +147,21 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private string Translate(Instructions.Variable instruction, Context context)
 		{
 			return instruction.Name;
+		}
+		
+		public string Translate(InstructionConstant instruction, Context context)
+		{
+			switch (instruction.Symbol)
+			{
+				case "pi":
+				case "PI":
+					return "M_PI";
+				case "e":
+				case "E":
+					return "M_E";
+			}
+			
+			throw new NotImplementedException(String.Format("The symbol `{0}' is not yet supported...", instruction.Symbol));
 		}
 	}
 }

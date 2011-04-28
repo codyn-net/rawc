@@ -18,7 +18,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			if (precision == 0)
 			{
-				return ((long)number).ToString();
+				return Translate(System.Math.Floor(number));
 			}
 			else
 			{
@@ -28,25 +28,41 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 		public static string Translate(double number)
 		{
-			return number.ToString();
+			string val = number.ToString();
+			
+			if (val.IndexOf('.') == -1)
+			{
+				return val + ".0";
+			}
+			else
+			{
+				return val;
+			}
 		}
 
 		public static string Translate(Cpg.Property property)
 		{
 			Instruction[] instructions = property.Expression.Instructions;
 			
-			if (instructions.Length == 1 && instructions[0] is InstructionNumber)
+			if (instructions.Length == 1)
 			{
-				string val = property.Expression.AsString;
-				int pos = val.IndexOf('.');
-				
-				if (pos == -1)
+				if (instructions[0] is InstructionConstant)
 				{
-					return Translate(property.Value, 0);
+					return (new InstructionTranslator()).Translate(instructions[0] as InstructionConstant, null);
 				}
-				else
+				else if (instructions[0] is InstructionNumber)
 				{
-					return Translate(property.Value, val.Length - pos - 1);
+					string val = property.Expression.AsString;
+					int pos = val.IndexOf('.');
+					
+					if (pos == -1)
+					{
+						return Translate(property.Value);
+					}
+					else
+					{
+						return Translate(property.Value, val.Length - pos - 1);
+					}
 				}
 			}
 

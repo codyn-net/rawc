@@ -87,6 +87,7 @@
     <Compile Include="Programmer\Formatters\C\InitialValueTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\NumberTranslator.cs" />
     <Compile Include="Programmer\Instructions\Variable.cs" />
+    <Compile Include="Options.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

@@ -21,9 +21,9 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(Cpg.Property property)
 		{
-			if (Knowledge.Instance.IsVariadic(property.Expression))
+			if (Knowledge.Instance.NeedsInitialization(property, RawC.Options.Instance.AlwaysInitializeDynamically))
 			{
-				return "NAN";
+				return NotInitialized;
 			}
 			else
 			{
@@ -35,6 +35,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			return NumberTranslator.Translate(number);
 		}
+		
+		public const string NotInitialized = "NINIT";
 	}
 }
 

@@ -9,6 +9,7 @@ namespace Cpg.RawC.Programmer
 		private string d_name;
 		private Dictionary<object, DataItem> d_items;
 		private List<DataItem> d_list;
+		private bool d_needsInitialization;
 		
 		public class DataItem
 		{
@@ -69,11 +70,20 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
-		public DataTable(string name)
+		public DataTable(string name, bool needsInitialization)
 		{
 			d_name = name;
 			d_items = new Dictionary<object, DataItem>();
 			d_list = new List<DataItem>();
+			d_needsInitialization = needsInitialization;
+		}
+		
+		public bool NeedsInitialization
+		{
+			get
+			{
+				return d_needsInitialization;
+			}
 		}
 		
 		IEnumerator IEnumerable.GetEnumerator()
@@ -125,13 +135,13 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
-		public DataItem Add(object key)
+		public bool Add(object key)
 		{
 			object b = BaseKey(key);
 			
 			if (d_items.ContainsKey(b))
 			{
-				return d_items[b];
+				return false;
 			}
 			
 			DataItem ret = new DataItem(this, b, d_list.Count);
@@ -139,7 +149,7 @@ namespace Cpg.RawC.Programmer
 			d_items.Add(b, ret);
 			d_list.Add(ret);
 
-			return ret;
+			return true;
 		}
 		
 		public DataItem this[int idx]
@@ -158,7 +168,8 @@ namespace Cpg.RawC.Programmer
 				
 				if (!d_items.ContainsKey(basekey))
 				{
-					return Add(basekey);
+					Add(basekey);
+					return d_items[basekey];
 				}
 				else
 				{

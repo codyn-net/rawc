@@ -39,6 +39,9 @@ namespace Cpg.RawC
 		[CommandLine.Option("verbose", 'V', Description="Allowed precision for validation")]
 		private bool d_verbose;
 		
+		[CommandLine.Option("always-initialize-dynamically", Description="Force dynamic intialization instead of static initialization of states")]
+		private bool d_alwaysInitializeDynamically;
+		
 		private double[] d_validateRange;
 
 		private Programmer.Formatters.IFormatter d_formatter;		
@@ -204,6 +207,14 @@ namespace Cpg.RawC
 				{
 					throw new Exception(String.Format("Invalid range: {0}", value));
 				}
+			}
+		}
+		
+		public bool AlwaysInitializeDynamically
+		{
+			get
+			{
+				return d_alwaysInitializeDynamically;
 			}
 		}
 		

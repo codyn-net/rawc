@@ -7,9 +7,13 @@ namespace Cpg.RawC
 	{
 		public enum Flags
 		{
+			None,
 			Integrated,
 			Direct,
-			Initialization
+			Initialization,
+			BeforeDirect,
+			BeforeIntegrated,
+			AfterIntegrated
 		}
 
 		public Property Property;
@@ -18,7 +22,11 @@ namespace Cpg.RawC
 		private Instruction[] d_instructions;
 		private Flags d_type;
 		
-		public State(Property property, params LinkAction[] actions)
+		public State(Property property, params LinkAction[] actions) : this(property, Flags.None, actions)
+		{
+		}
+		
+		public State(Property property, Flags type, params LinkAction[] actions)
 		{
 			Property = property;
 			Actions = actions;
@@ -31,6 +39,8 @@ namespace Cpg.RawC
 			{
 				d_type = Flags.Direct;
 			}
+			
+			d_type |= type;
 		}
 		
 		private void Expand()

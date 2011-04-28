@@ -17,11 +17,14 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		[CommandLine.Option("generate-cpp-wrapper", Description="Specify to generate a simple C++ wrapper")]
 		public bool GenerateCppWrapper;
 		
-		[CommandLine.Option("cflags", Description="Specify compiler flags")]
+		[CommandLine.Option("cflags", Description="Specify compiler flags for compilation (used with --compile and --validate)")]
 		public string CFlags;
 		
-		[CommandLine.Option("libs", Description="Specify linker flags")]
+		[CommandLine.Option("libs", Description="Specify linker flags for compilation (used with --compile and --validate)")]
 		public string Libs;
+		
+		[CommandLine.Option("symbolic-names", Description="Use symbolic names for state indices in the source code")]
+		public bool SymbolicNames;
 
 		public Options(string name) : base(name)
 		{

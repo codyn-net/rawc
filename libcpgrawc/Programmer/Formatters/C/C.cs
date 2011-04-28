@@ -302,11 +302,14 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				maxname = System.Math.Max(maxname, enumname.Length);
 				maxval = System.Math.Max(maxval, item.Index.ToString().Length);
 
-				item.Alias = enumname;
-				
-				if (d_program.IntegrateTable.Contains(prop))
+				if (d_options.SymbolicNames)
 				{
-					d_program.IntegrateTable[prop].Alias = enumname;
+					item.Alias = enumname;
+				
+					if (d_program.IntegrateTable.Contains(prop))
+					{
+						d_program.IntegrateTable[prop].Alias = enumname;
+					}
 				}
 				
 				d_enumMap.Add(new EnumItem(prop, shortname, enumname));
@@ -679,7 +682,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				int row = i / cols;
 				int col = i % cols;
 				
-				string val = translator.Translate(table[i].Key);
+				string val = table.NeedsInitialization ? translator.Translate(table[i].Key) : InitialValueTranslator.NotInitialized;
 				vals[row, col] = val;
 				
 				int pos = val.IndexOf('.');
@@ -753,6 +756,12 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine("#define GNUC_PURE __attribute__ (pure)");
 			writer.WriteLine("#else");
 			writer.WriteLine("#define GNUC_PURE");
+			writer.WriteLine("#endif");
+			
+			writer.WriteLine();
+
+			writer.WriteLine("#ifndef NINIT");
+			writer.WriteLine("#define NINIT NAN");
 			writer.WriteLine("#endif");
 			
 			writer.WriteLine();

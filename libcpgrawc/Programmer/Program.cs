@@ -21,8 +21,8 @@ namespace Cpg.RawC.Programmer
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
 			// Write out equations and everything
-			d_statetable = new DataTable("ss");
-			d_integratetable = new DataTable("si");
+			d_statetable = new DataTable("ss", true);
+			d_integratetable = new DataTable("si", false);
 
 			d_functions = new List<Function>();
 			d_embeddings = new List<Tree.Embedding>(embeddings);
@@ -248,11 +248,20 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
+		private List<Computation.INode> AssignmentStates(IEnumerable<State> states)
+		{
+			List<Computation.INode> ret = new List<Computation.INode>();
+
+			foreach (State state in states)
+			{
+				ret.Add(new Computation.Assignment(d_statetable[state], d_equations[state]));
+			}
+			
+			return ret;
+		}
+		
 		private void ProgramSource()
 		{
-			bool makeempty = false;
-			bool first = true;
-			
 			Cpg.Property dtprop = Knowledge.Instance.Network.Integrator.Property("dt");
 			DataTable.DataItem dt = d_statetable[dtprop];
 			Tree.Node dteq = new Tree.Node(null, new Instructions.Variable("timestep"));
@@ -261,71 +270,71 @@ namespace Cpg.RawC.Programmer
 			d_source.Add(new Computation.Comment("Set timestep"));
 			d_source.Add(new Computation.Assignment(dt, dteq));
 			d_source.Add(new Computation.Empty());
-
-			// Set direct and integration lists of computations
-			foreach (State state in Knowledge.Instance.DirectStates)
+			
+			// Precompute for out properties
+			if (Knowledge.Instance.PrecomputeBeforeDirectStatesCount != 0)
 			{
-				if (d_equations.ContainsKey(state))
-				{
-					makeempty = true;
-					
-					if (first)
-					{
-						d_source.Add(new Computation.Comment("Direct equations"));
-						first = false;
-					}
-
-					d_source.Add(new Computation.Assignment(d_statetable[state], d_equations[state]));
-				}
+				d_source.Add(new Computation.Comment("Out properties that depend on IN states and are needed by direct calculations"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeBeforeDirectStates));
+				d_source.Add(new Computation.Empty());
 			}
 			
-			first = true;
-			
-			foreach (State state in Knowledge.Instance.IntegratedStates)
+			// Direct links	
+			if (Knowledge.Instance.DirectStatesCount != 0)
 			{
-				if (d_equations.ContainsKey(state))
+				d_source.Add(new Computation.Comment("Direct equations"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.IntegratedStates));
+				d_source.Add(new Computation.Empty());
+			}
+			
+			// Precompute for out properties
+			if (Knowledge.Instance.PrecomputeBeforeIntegratedStatesCount != 0)
+			{
+				d_source.Add(new Computation.Comment("Out properties that depend on direct states and are needed by integration calculations"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeBeforeIntegratedStates));
+				d_source.Add(new Computation.Empty());
+			}
+			
+			// Integrated links			
+			if (Knowledge.Instance.IntegratedStatesCount != 0)
+			{
+				d_source.Add(new Computation.Comment("Clear integration update table"));
+				d_source.Add(new Computation.CopyTable(d_statetable, d_integratetable, d_integratetable.Count));
+				d_source.Add(new Computation.Empty());
+
+				d_source.Add(new Computation.Comment("Integration equations"));
+
+				foreach (State state in Knowledge.Instance.IntegratedStates)
 				{
-					if (makeempty)
-					{
-						d_source.Add(new Computation.Empty());
-						makeempty = false;
-					}
-					
-					if (first)
-					{
-						d_source.Add(new Computation.Comment("Clear integration update table"));
-						d_source.Add(new Computation.CopyTable(d_statetable, d_integratetable, d_integratetable.Count));
-						d_source.Add(new Computation.Empty());
-
-						d_source.Add(new Computation.Comment("Integration equations"));
-
-						first = false;
-					}
-					
 					Tree.Node node = new Tree.Node(null, new InstructionOperator((uint)Cpg.MathOperatorType.Multiply, "*", 2));
 					Tree.Node left = d_equations[state];
 					Tree.Node right = new Tree.Node(null, new Instructions.Variable("timestep"));
-					
+				
 					node.Add(left);
 					node.Add(right);
 
 					d_source.Add(new Computation.Addition(d_integratetable[state], node));
 				}
-			}
-			
-			// Copy integration stuff to the state table
-			if (!first)
-			{
+
 				d_source.Add(new Computation.Empty());
 				d_source.Add(new Computation.Comment("Copy integrated values to state table"));
 				d_source.Add(new Computation.CopyTable(d_integratetable, d_statetable, d_integratetable.Count));
+				
+				d_source.Add(new Computation.Empty());
+			}
+			
+			// Postcompute for out properties
+			if (Knowledge.Instance.PrecomputeAfterIntegratedStatesCount != 0)
+			{
+				d_source.Add(new Computation.Comment("Out properties that depend on integrated states or IN states"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeAfterIntegratedStates));
+				d_source.Add(new Computation.Empty());
 			}
 			
 			// Increase time
 			DataTable.DataItem t = d_statetable[Knowledge.Instance.Network.Integrator.Property("t")];
 			Tree.Node eq = new Tree.Node(null, new InstructionProperty(dtprop, InstructionPropertyBinding.None));
 
-			d_source.Add(new Computation.Empty());
 			d_source.Add(new Computation.Comment("Increase time"));
 			d_source.Add(new Computation.Addition(t, eq));
 		}

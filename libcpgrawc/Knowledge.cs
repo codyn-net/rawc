@@ -11,6 +11,10 @@ namespace Cpg.RawC
 		private List<State> d_integrated;
 		private List<State> d_direct;
 		private List<State> d_initialize;
+		private List<State> d_precomputeBeforeDirect;
+		private List<State> d_precomputeBeforeIntegrated;
+		private List<State> d_precomputeAfterIntegrated;
+
 		private Dictionary<Cpg.Property, State> d_stateMap;
 
 		private List<Cpg.Property> d_properties;
@@ -38,6 +42,9 @@ namespace Cpg.RawC
 			d_integrated = new List<State>();
 			d_direct = new List<State>();
 			d_initialize = new List<State>();
+			d_precomputeBeforeDirect = new List<State>();
+			d_precomputeBeforeIntegrated = new List<State>();
+			d_precomputeAfterIntegrated = new List<State>();
 			
 			d_stateMap = new Dictionary<Property, State>();
 
@@ -77,9 +84,20 @@ namespace Cpg.RawC
 		
 		private void Scan()
 		{
+			IntegratorState state = d_network.Integrator.State;
+			
+			foreach (Property prop in state.IntegratedProperties())
+			{
+				d_integrated.Add(AddState(prop));
+			}
+			
+			foreach (Property prop in state.DirectProperties())
+			{
+				d_direct.Add(AddState(prop));
+			}
+
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
 			ScanProperties(d_network.Integrator);
-
 			ScanProperties(d_network);
 			
 			// Sort initialize list on dependencies
@@ -106,20 +124,73 @@ namespace Cpg.RawC
 			}
 
 			d_initialize = initialize;
-			
-			IntegratorState state = d_network.Integrator.State;
-			
-			foreach (Property prop in state.IntegratedProperties())
-			{
-				d_integrated.Add(AddState(prop));
-			}
-			
-			foreach (Property prop in state.DirectProperties())
-			{
-				d_direct.Add(AddState(prop));
-			}
 		}
 		
+		private bool DependsOn(Cpg.Expression expression, Cpg.RawC.State.Flags flags)
+		{
+			// Check if the expression depends on any other property that has direct actors
+			foreach (Cpg.Property dependency in expression.Dependencies)
+			{
+				State state;
+
+				if (d_stateMap.TryGetValue(dependency, out state))
+				{
+					if ((state.Type & flags) != 0)
+					{
+						return true;
+					}
+				}
+				
+				if (DependsOn(dependency.Expression, flags))
+				{
+					return true;
+				}
+			}
+			
+			return false;
+		}
+		
+		public bool DependsDirect(Cpg.Expression expression)
+		{
+			return DependsOn(expression, Cpg.RawC.State.Flags.Direct);
+		}
+		
+		public bool DependsIntegrated(Cpg.Expression expression)
+		{
+			return DependsOn(expression, Cpg.RawC.State.Flags.Integrated);
+		}
+		
+		public bool DependsIn(Cpg.Expression expression)
+		{
+			foreach (Cpg.Property dependency in expression.Dependencies)
+			{
+				if ((dependency.Flags & Cpg.PropertyFlags.In) != 0)
+				{
+					return true;
+				}
+				
+				if (DependsIn(dependency.Expression))
+				{
+					return true;
+				}
+			}
+			
+			return false;
+		}
+		
+		private bool AnyStateDepends(IEnumerable<State> states, Cpg.Property property)
+		{
+			foreach (State state in states)
+			{
+				if (Array.IndexOf(state.Expression.Dependencies, property) != -1)
+				{
+					return true;
+				}
+			}
+			
+			return false;
+		}
+
 		private void ScanProperties(Cpg.Object obj)
 		{
 			d_properties.AddRange(obj.Properties);
@@ -134,14 +205,35 @@ namespace Cpg.RawC
 				if ((prop.Flags & Cpg.PropertyFlags.Out) != 0)
 				{
 					d_outproperties.Add(prop);
+
+					if ((prop.Flags & Cpg.PropertyFlags.In) == 0 && !d_stateMap.ContainsKey(prop))
+					{
+						bool dependsdirect = DependsDirect(prop.Expression);
+						bool dependsintegrated = DependsIntegrated(prop.Expression);
+						bool dependsin = DependsIn(prop.Expression);
+						
+						bool beforedirect = dependsin && AnyStateDepends(d_direct, prop);
+
+						if (beforedirect)
+						{
+							d_precomputeBeforeDirect.Add(new State(prop, RawC.State.Flags.BeforeDirect));
+						}
+
+						if (dependsdirect && AnyStateDepends(d_integrated, prop))
+						{
+							d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
+						}
+					
+						if (dependsintegrated || (dependsin && !beforedirect))
+						{
+							d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
+						}
+					}
 				}
 				
-				if (IsVariadic(prop.Expression) && !(obj is Cpg.Link))
+				if (NeedsInitialization(prop, Options.Instance.AlwaysInitializeDynamically))
 				{
-					State state = new State(prop);
-					state.Type |= Cpg.RawC.State.Flags.Initialization;
-					
-					d_initialize.Add(state);
+					d_initialize.Add(new State(prop, RawC.State.Flags.Initialization));
 				}
 			}
 			
@@ -194,11 +286,23 @@ namespace Cpg.RawC
 			
 			return state;
 		}
+		
+		public bool IsVariadic(Cpg.Property property)
+		{
+			// A property is variadic if it is acted upon, or if it is an IN
+			State state = State(property);
+			
+			if (state != null)
+			{
+				return true;
+			}
+			
+			return (property.Flags & Cpg.PropertyFlags.In) != 0;
+		}
 
-		public bool IsVariadic(Cpg.Expression expression)
+		public bool IsVariadic(Cpg.Expression expression, bool samestep)
 		{
 			// See if the expression is variadic. An expression is variadic if it depends on a variadic operator/function
-			// or if it depends on a persistent property
 			foreach (Instruction inst in expression.Instructions)
 			{
 				if (inst is InstructionVariadicFunction)
@@ -207,9 +311,15 @@ namespace Cpg.RawC
 				}
 			}
 			
+			// Check if any of its dependencies are then variadic maybe
 			foreach (Property property in expression.Dependencies)
 			{
-				if (IsVariadic(property))
+				if (IsVariadic(property.Expression, samestep))
+				{
+					return true;
+				}
+				
+				if (!samestep && IsVariadic(property))
 				{
 					return true;
 				}
@@ -218,18 +328,13 @@ namespace Cpg.RawC
 			return false;
 		}
 		
-		public bool IsVariadic(Property property)
-		{
-			return IsPersist(property) || IsVariadic(property.Expression);
-		}
-		
 		public bool IsPersist(Property property)
 		{
 			// A property is persistent (i.e. needs a persistent storage) if:
 			//
 			// 1) it is a state (has links that act on it)
 			// 2) is either IN or OUT
-			// 3) is ONCE and variadic (meaning it needs separate initialization)
+			// 3) needs separate initialization
 			State state = State(property);
 			
 			if (state != null)
@@ -242,12 +347,27 @@ namespace Cpg.RawC
 				return true;
 			}
 			
-			if ((property.Flags & PropertyFlags.Once) != PropertyFlags.None)
+			return NeedsInitialization(property, false);
+		}
+		
+		public bool NeedsInitialization(Property property, bool alwaysDynamic)
+		{
+			if (property.Object is Cpg.Link)
 			{
-				return IsVariadic(property.Expression);
+				return false;
 			}
-			
-			return false;
+
+			if (alwaysDynamic)
+			{
+				// Always initialize dynamically if the property is persistent
+				return IsPersist(property);
+			}
+			else
+			{
+				// Dynamic initialization is needed only if the property is variadic within the same
+				// step
+				return IsVariadic(property.Expression, true);
+			}
 		}
 		
 		public IEnumerable<State> States
@@ -263,9 +383,29 @@ namespace Cpg.RawC
 				{
 					yield return state;
 				}
+				
+				foreach (State state in d_initialize)
+				{
+					yield return state;
+				}
+				
+				foreach (State state in d_precomputeBeforeDirect)
+				{
+					yield return state;
+				}
+				
+				foreach (State state in d_precomputeBeforeIntegrated)
+				{
+					yield return state;
+				}
+				
+				foreach (State state in d_precomputeAfterIntegrated)
+				{
+					yield return state;
+				}
 			}
 		}
-		
+
 		public IEnumerable<State> IntegratedStates
 		{
 			get
@@ -303,6 +443,62 @@ namespace Cpg.RawC
 			get
 			{
 				return d_initialize;
+			}
+		}
+		
+		public int InitializeStatesCount
+		{
+			get
+			{
+				return d_initialize.Count;
+			}
+		}
+		
+		public IEnumerable<State> PrecomputeBeforeDirectStates
+		{
+			get
+			{
+				return d_precomputeBeforeDirect;
+			}
+		}
+		
+		public int PrecomputeBeforeDirectStatesCount
+		{
+			get
+			{
+				return d_precomputeBeforeDirect.Count;
+			}
+		}
+		
+		public IEnumerable<State> PrecomputeBeforeIntegratedStates
+		{
+			get
+			{
+				return d_precomputeBeforeIntegrated;
+			}
+		}
+		
+		public int PrecomputeBeforeIntegratedStatesCount
+		{
+			get
+			{
+				return d_precomputeBeforeIntegrated.Count;
+			}
+		}
+		
+		public IEnumerable<State> PrecomputeAfterIntegratedStates
+		{
+			get
+			{
+				return d_precomputeAfterIntegrated;
+			}
+		}
+		
+		public int PrecomputeAfterIntegratedStatesCount
+		{
+			get
+			{
+				return d_precomputeAfterIntegrated.Count;
 			}
 		}
 		
