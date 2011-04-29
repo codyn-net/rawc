@@ -218,7 +218,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(Instructions.Function instruction, Context context)
 		{
-			string name = instruction.FunctionCall.Name;
+			string name = instruction.FunctionCall.Name.ToUpper();
 			List<string> args = new List<string>();
 			
 			foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
