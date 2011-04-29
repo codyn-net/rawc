@@ -76,16 +76,21 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 			return Invoke<string>(context.Node.Instruction, context);
 		}
-		
-		public string Translate(Context context, int child)
+
+		public string Translate(Context context, Tree.Node child)
 		{
 			string ret;
 
-			context.Push(context.Node.Children[child]);
+			context.Push(child);
 			ret = Translate(context);
 			context.Pop();
 
 			return ret;
+		}
+		
+		public string Translate(Context context, int child)
+		{
+			return Translate(context, context.Node.Children[child]);
 		}
 
 		private bool HasPriority(Cpg.MathOperatorType a, Cpg.MathOperatorType b)
@@ -214,15 +219,14 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private string Translate(Instructions.Function instruction, Context context)
 		{
 			string name = instruction.FunctionCall.Name;
-			int num = instruction.FunctionCall.NumArguments;
-			string[] args = new string[num];
+			List<string> args = new List<string>();
 			
-			for (int i = 0; i < num; ++i)
+			foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
 			{
-				args[i] = Translate(context, i);
+				args.Add(Translate(context, context.Node.FromPath(argument.Path)));
 			}
-			
-			return String.Format("{0} ({1})", name, String.Join(", ", args));
+
+			return String.Format("{0} ({1})", name, String.Join(", ", args.ToArray()));
 		}
 		
 		private string Translate(Instructions.Variable instruction, Context context)

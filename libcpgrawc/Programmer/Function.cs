@@ -9,7 +9,7 @@ namespace Cpg.RawC.Programmer
 
 		private Tree.Node d_expression;
 		private List<Tree.Embedding.Argument> d_arguments;
-		private int d_numArguments;
+		private List<Tree.Embedding.Argument> d_orderedArguments;
 
 		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments)
 		{
@@ -17,13 +17,18 @@ namespace Cpg.RawC.Programmer
 			d_arguments = new List<Tree.Embedding.Argument>(arguments);
 			d_name = name;
 			
-			d_numArguments = 0;
+			d_orderedArguments = new List<Tree.Embedding.Argument>();
 			
 			foreach (Tree.Embedding.Argument arg in d_arguments)
 			{
-				if (arg.Index >= d_numArguments)
+				while (arg.Index >= d_orderedArguments.Count)
 				{
-					d_numArguments = ((int)arg.Index) + 1;
+					d_orderedArguments.Add(null);
+				}
+				
+				if (d_orderedArguments[(int)arg.Index] == null)
+				{
+					d_orderedArguments[(int)arg.Index] = arg;
 				}
 			}
 		}
@@ -48,6 +53,14 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
+		public IEnumerable<Tree.Embedding.Argument> OrderedArguments
+		{
+			get
+			{
+				return d_orderedArguments;
+			}
+		}
+		
 		public IEnumerable<Tree.Embedding.Argument> Arguments
 		{
 			get
@@ -60,7 +73,7 @@ namespace Cpg.RawC.Programmer
 		{
 			get
 			{
-				return d_numArguments;
+				return d_orderedArguments.Count;
 			}
 		}
 	}

@@ -37,7 +37,7 @@ namespace Cpg.RawC.Tree
 			}
 		}
 
-		private List<Embedding.Instance> d_instances;
+		private List<Node> d_instances;
 		private List<Argument> d_arguments;
 		private List<NodePath> d_potentialArguments;
 		private Node d_expression;
@@ -45,9 +45,9 @@ namespace Cpg.RawC.Tree
 		
 		public struct InstanceArgs
 		{
-			public Instance Instance;
+			public Node Instance;
 			
-			public InstanceArgs(Instance instance)
+			public InstanceArgs(Node instance)
 			{
 				Instance = instance;
 			}
@@ -57,41 +57,43 @@ namespace Cpg.RawC.Tree
 		public event InstanceHandler InstanceAdded = delegate {};
 		public event InstanceHandler InstanceRemoved = delegate {};
 		
-		public class Instance : Node
+		public class Instance : Instruction
 		{
 			private Embedding d_prototype;
 			private List<ulong> d_embeddedIds;
-
-			private Node d_rootNode;
-			
-			public Instance(Embedding prototype, Node node, NodePath root) : base(node.State, new Instructions.Embedding(prototype))
+	
+			public Instance(Tree.Embedding prototype, IEnumerable<ulong> embeddedIds)
 			{
 				d_prototype = prototype;
-				d_embeddedIds = new SortedList<ulong>();
-				
-				d_rootNode = node.FromPath(root);
-				
-				foreach (Node child in prototype.Expression.Collect(d_rootNode))
-				{
-					d_embeddedIds.Add(child.TreeId);
-				}
+				d_embeddedIds = new List<ulong>(embeddedIds);
 			}
 			
-			public Node RootNode
+			public Instance() : this(null, new List<ulong>())
+			{
+			}
+			
+			public List<ulong> EmbeddedIds
 			{
 				get
 				{
-					return d_rootNode;
+					return d_embeddedIds;
 				}
 			}
-		
+			
+			public Embedding Prototype
+			{
+				get
+				{
+					return d_prototype;
+				}
+				set
+				{
+					d_prototype = value;
+				}
+			}
+
 			public bool Conflicts(Embedding.Instance other)
 			{
-				if (State != other.State)
-				{
-					return false;
-				}
-
 				// Compare overlap in embedded ids
 				int i = 0;
 				int j = 0;
@@ -115,11 +117,11 @@ namespace Cpg.RawC.Tree
 				return false;
 			}
 			
-			public Embedding Prototype
+			public static new GLib.GType GType
 			{
 				get
 				{
-					return d_prototype;
+					return Instruction.GType;
 				}
 			}
 		}
@@ -134,7 +136,7 @@ namespace Cpg.RawC.Tree
 			d_potentialArguments = new List<NodePath>(arguments);
 
 			d_arguments = new List<Argument>();
-			d_instances = new List<Instance>();
+			d_instances = new List<Node>();
 			d_expression = (Node)node.Clone();
 			
 			d_argumentIdx = 0;
@@ -142,11 +144,19 @@ namespace Cpg.RawC.Tree
 		
 		public bool Conflicts(Embedding other)
 		{
-			foreach (Instance instance in d_instances)
+			foreach (Node node in d_instances)
 			{
-				foreach (Instance otherinst in other.Instances)
+				foreach (Node othernode in other.Instances)
 				{
-					if (instance.Conflicts(otherinst))
+					if (node.State != othernode.State)
+					{
+						continue;
+					}
+					
+					Instance a = (Instance)node.Instruction;
+					Instance b = (Instance)othernode.Instruction;
+
+					if (a.Conflicts(b))
 					{
 						return true;
 					}
@@ -164,16 +174,16 @@ namespace Cpg.RawC.Tree
 			}
 		}
 		
-		public Instance Embed(Node instance, NodePath root)
+		public void Embed(Node embed)
 		{
-			Instance inst = new Instance(this, instance, root);
-			Add(inst);
+			List<ulong> embeddedIds = new List<ulong>();
 			
-			instance.FromPath(root).Replace(inst);
-			return inst;
+			embed.Instruction = new Instance(this, embeddedIds);
+
+			Add(embed);
 		}
 		
-		public void Remove(Embedding.Instance instance)
+		public void Remove(Node instance)
 		{
 			d_instances.Remove(instance);
 			InstanceRemoved(this, new InstanceArgs(instance));
@@ -225,7 +235,7 @@ namespace Cpg.RawC.Tree
 		{
 			NodePath orig = argument.Path;
 			
-			foreach (Instance instance in d_instances)
+			foreach (Node instance in d_instances)
 			{
 				if (!SameArguments(instance.FromPath(orig), instance.FromPath(path)))
 				{
@@ -264,7 +274,7 @@ namespace Cpg.RawC.Tree
 			return false;
 		}
 		
-		private void VerifyArguments(Instance added)
+		private void VerifyArguments(Node added)
 		{
 			d_potentialArguments.RemoveAll(delegate (NodePath path) {
 				bool needarg = d_instances.Count > 1 && !SameArguments(d_instances[0], added, path);
@@ -278,8 +288,13 @@ namespace Cpg.RawC.Tree
 			});
 		}
 		
-		public void Add(Embedding.Instance instance)
+		public void Add(Node instance)
 		{
+			if (!(instance.Instruction is Instance))
+			{
+				throw new Exception("Cannot add embedding instance which is not a real embedding");
+			}
+
 			d_instances.Add(instance);
 
 			VerifyArguments(instance);
@@ -287,7 +302,7 @@ namespace Cpg.RawC.Tree
 			InstanceAdded(this, new InstanceArgs(instance));
 		}
 
-		public IEnumerable<Instance> Instances
+		public IEnumerable<Node> Instances
 		{
 			get
 			{

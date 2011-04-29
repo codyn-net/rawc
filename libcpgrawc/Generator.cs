@@ -159,9 +159,9 @@ namespace Cpg.RawC
 			return ret;
 		}
 		
-		private void ResolveState(State state, Tree.Embedding[] embeddings, Dictionary<State, List<Tree.Embedding.Instance>> mapping, Dictionary<State, Tree.Node> ret)
+		private void ResolveState(State state, Tree.Embedding[] embeddings, Dictionary<State, List<Tree.Node>> mapping, Dictionary<State, Tree.Node> ret)
 		{
-			List<Tree.Embedding.Instance> instances;
+			List<Tree.Node> instances;
 			Tree.Node node = Tree.Node.Create(state);
 
 			if (mapping.TryGetValue(state, out instances))
@@ -169,7 +169,7 @@ namespace Cpg.RawC
 				// Otherwise, merge all the embeddings into the equation
 				instances.Sort(SortDeepestFirst);
 			
-				foreach (Tree.Embedding.Instance instance in instances)
+				foreach (Tree.Node instance in instances)
 				{
 					Tree.NodePath path = instance.Path;
 					
@@ -191,7 +191,7 @@ namespace Cpg.RawC
 		private Dictionary<State, Tree.Node> ResolveEquations(Tree.Embedding[] embeddings)
 		{
 			// Create a map from state to all non-conflicting embedding instances for that state
-			Dictionary<State, List<Tree.Embedding.Instance>> mapping;			
+			Dictionary<State, List<Tree.Node>> mapping;			
 			mapping = Collect(embeddings);
 			
 			Dictionary<State, Tree.Node> ret = new Dictionary<State, Tree.Node>();
@@ -204,7 +204,7 @@ namespace Cpg.RawC
 			return ret;
 		}
 		
-		private int SortDeepestFirst(Tree.Embedding.Instance a, Tree.Embedding.Instance b)
+		private int SortDeepestFirst(Tree.Node a, Tree.Node b)
 		{
 			if (a.Path.Count == 0)
 			{
@@ -220,19 +220,19 @@ namespace Cpg.RawC
 			}
 		}
 		
-		private Dictionary<State, List<Tree.Embedding.Instance>> Collect(Tree.Embedding[] embeddings)
+		private Dictionary<State, List<Tree.Node>> Collect(Tree.Embedding[] embeddings)
 		{
-			Dictionary<State, List<Tree.Embedding.Instance>> mapping = new Dictionary<State, List<Tree.Embedding.Instance>>();
+			Dictionary<State, List<Tree.Node>> mapping = new Dictionary<State, List<Tree.Node>>();
 			
 			foreach (Tree.Embedding embedding in embeddings)
 			{
-				foreach (Tree.Embedding.Instance instance in embedding.Instances)
+				foreach (Tree.Node instance in embedding.Instances)
 				{
-					List<Tree.Embedding.Instance> inst;
+					List<Tree.Node> inst;
 
 					if (!mapping.TryGetValue(instance.State, out inst))
 					{
-						inst = new List<Tree.Embedding.Instance>();
+						inst = new List<Tree.Node>();
 						mapping[instance.State] = inst;
 					}
 					

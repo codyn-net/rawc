@@ -56,7 +56,6 @@
     <Compile Include="Tree\Filters\IFilter.cs" />
     <Compile Include="Tree\Filters\Optimal.cs" />
     <Compile Include="Tree\Collectors\Result.cs" />
-    <Compile Include="Tree\Instructions\Embedding.cs" />
     <Compile Include="Programmer\DataTable.cs" />
     <Compile Include="Programmer\Function.cs" />
     <Compile Include="Programmer\Program.cs" />

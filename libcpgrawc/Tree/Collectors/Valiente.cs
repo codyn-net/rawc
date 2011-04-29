@@ -70,7 +70,7 @@ namespace Cpg.RawC.Tree.Collectors
 				foreach (Node inst in mapping)
 				{
 					// Replace inst in top hiearchy with embedding node
-					proto.Embed((Node)inst.Top.Clone(), inst.Path);
+					proto.Embed(((Node)inst.Top.Clone()).FromPath(inst.Path));
 				}
 			}
 			

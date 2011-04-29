@@ -5,13 +5,13 @@ namespace Cpg.RawC.Tree.Collectors
 {
 	public class Result
 	{
-		private Dictionary<State, List<Embedding.Instance>> d_embeddings;
+		private Dictionary<State, List<Node>> d_embeddings;
 		private List<Embedding> d_prototypes;
 
 		public Result()
 		{
 			d_prototypes = new List<Embedding>();
-			d_embeddings = new Dictionary<State, List<Embedding.Instance>>();
+			d_embeddings = new Dictionary<State, List<Node>>();
 		}
 		
 		public void Add(Embedding embedding)
@@ -30,11 +30,11 @@ namespace Cpg.RawC.Tree.Collectors
 		
 		private void PrototypeInstanceAdded(object source, Embedding.InstanceArgs args)
 		{
-			List<Embedding.Instance> items;
+			List<Node> items;
 
 			if (!d_embeddings.TryGetValue(args.Instance.State, out items))
 			{
-				items = new List<Embedding.Instance>();
+				items = new List<Node>();
 				d_embeddings[args.Instance.State] = items;
 			}
 			
@@ -49,9 +49,9 @@ namespace Cpg.RawC.Tree.Collectors
 			}
 		}
 		
-		public IEnumerable<Embedding.Instance> Embeddings(State state)
+		public IEnumerable<Node> Embeddings(State state)
 		{
-			List<Embedding.Instance> instances;
+			List<Node> instances;
 			
 			if (d_embeddings.TryGetValue(state, out instances))
 			{

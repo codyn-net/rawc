@@ -133,22 +133,12 @@ namespace Cpg.RawC.Programmer
 			// Generate functions for all the embeddings
 			foreach (Tree.Embedding embedding in d_embeddings)
 			{
-				string name = GenerateFunctionName(String.Format("f_{0}", d_functions.Count));
+				string name = GenerateFunctionName(String.Format("f_{0}", d_functions.Count + 1));
 				Function function = new Function(name, embedding);
 				
-				foreach (Tree.Embedding.Instance instance in embedding.Instances)
+				foreach (Tree.Node instance in embedding.Instances)
 				{
-					Instructions.Function instruction = new Instructions.Function(instance, function);
-					Tree.Node node = new Tree.Node(instance.State, instruction);
-					
-					if (instance.Path.Count == 0)
-					{
-						d_equations[instance.State] = node;
-					}
-					else
-					{
-						instance.Replace(node);
-					}
+					instance.Instruction = new Instructions.Function(instance, function);
 				}
 
 				d_functions.Add(function);
@@ -242,7 +232,9 @@ namespace Cpg.RawC.Programmer
 						inst.FromPath(arg.Path).Replace(nn.Children[(int)arg.Index]);
 					}
 
-					Instructions.Function f = new Instructions.Function(embedding.Embed(inst, new Tree.NodePath()), func);
+					embedding.Embed(inst);
+
+					Instructions.Function f = new Instructions.Function(inst, func);
 					nn.Replace(new Tree.Node(inst.State, f));
 				}
 			}
