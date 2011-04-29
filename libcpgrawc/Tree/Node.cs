@@ -585,6 +585,27 @@ namespace Cpg.RawC.Tree
 				}
 			}
 		}
+		
+		public string Serialize()
+		{
+			StringBuilder ret = new StringBuilder();
+			ret.Append(Label);
+			ret.Append("(");
+			
+			for (int i = 0; i < d_children.Count; ++i)
+			{
+				if (i != 0)
+				{
+					ret.Append(", ");
+				}
+				
+				ret.Append(d_children[i].Serialize());
+			}
+			
+			ret.Append(")");
+			
+			return ret.ToString();
+		}
 	}
 }
 
