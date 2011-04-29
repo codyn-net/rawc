@@ -61,14 +61,16 @@ namespace Cpg.RawC.Tree
 		{
 			private Embedding d_prototype;
 			private List<ulong> d_embeddedIds;
+			private Instruction d_originalInstruction;
 	
-			public Instance(Tree.Embedding prototype, IEnumerable<ulong> embeddedIds)
+			public Instance(Tree.Embedding prototype, IEnumerable<ulong> embeddedIds, Instruction originalInstruction)
 			{
 				d_prototype = prototype;
 				d_embeddedIds = new List<ulong>(embeddedIds);
+				d_originalInstruction = originalInstruction;
 			}
 			
-			public Instance() : this(null, new List<ulong>())
+			public Instance() : this(null, new List<ulong>(), null)
 			{
 			}
 			
@@ -89,6 +91,14 @@ namespace Cpg.RawC.Tree
 				set
 				{
 					d_prototype = value;
+				}
+			}
+			
+			public Instruction OriginalInstruction
+			{
+				get
+				{
+					return d_originalInstruction;
 				}
 			}
 
@@ -180,14 +190,24 @@ namespace Cpg.RawC.Tree
 		{
 			List<ulong> embeddedIds = new List<ulong>();
 			
-			embed.Instruction = new Instance(this, embeddedIds);
+			embed.Instruction = new Instance(this, embeddedIds, embed.Instruction);
 
 			Add(embed);
 		}
 		
+		public void Revert()
+		{
+			while (d_instances.Count > 0)
+			{
+				Remove(d_instances[0]);
+			}
+		}
+		
 		public void Remove(Node instance)
 		{
+			instance.Instruction = ((Instance)instance.Instruction).OriginalInstruction;
 			d_instances.Remove(instance);
+
 			InstanceRemoved(this, new InstanceArgs(instance));
 		}
 		
