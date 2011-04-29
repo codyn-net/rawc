@@ -11,6 +11,8 @@ namespace Cpg.RawC.CommandLine
 		{
 			private OptionAttribute d_option;
 			private object d_iscollection;
+			private Type d_collectionType;
+			private MethodInfo d_collectionAddMethod;
 
 			public Info(OptionAttribute option)
 			{
@@ -25,36 +27,36 @@ namespace Cpg.RawC.CommandLine
 				}
 			}
 			
+			private object ConvertEnum(object val)
+			{
+				Array vals = Enum.GetValues(ValueType);
+				string[] names = Enum.GetNames(ValueType);
+				string cmpname = val.ToString().ToLower();
+
+				for (int i = 0; i < names.Length; ++i)
+				{
+					if (names[i].ToLower() == cmpname)
+					{
+						return vals.GetValue(i);
+					}
+				}
+				
+				throw new InvalidCastException(String.Format("Could not cast `{0}' to `{1}'", val, ValueType.Name));
+			}
+			
 			protected object Convert(object val)
 			{
 				if (ValueType == typeof(Enum))
 				{
-					Array vals = Enum.GetValues(ValueType);
-					string[] names = Enum.GetNames(ValueType);
-					string cmpname = val.ToString().ToLower();
-
-					for (int i = 0; i < names.Length; ++i)
-					{
-						if (names[i].ToLower() == cmpname)
-						{
-							return vals.GetValue(i);
-						}
-					}
-					
-					throw new InvalidCastException(String.Format("Could not cast `{0}' to `{1}'", val, ValueType.Name));
+					return ConvertEnum(val);
+				}
+				else if (IsCollection)
+				{
+					return System.Convert.ChangeType(val, d_collectionType);
 				}
 				else
 				{
-					Type iface = ValueType.GetInterface(typeof(ICollection<string>).FullName);
-					
-					if (iface == null)
-					{
-						return System.Convert.ChangeType(val, ValueType);
-					}
-					else
-					{
-						return val.ToString();
-					}
+					return System.Convert.ChangeType(val, ValueType);
 				}
 			}
 
@@ -71,26 +73,45 @@ namespace Cpg.RawC.CommandLine
 				{
 					if (d_iscollection == null)
 					{
-						d_iscollection = ValueType.GetInterface(typeof(ICollection<string>).FullName) != null;
+						d_iscollection = false;
+
+						foreach (Type type in ValueType.GetInterfaces())
+						{
+							if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ICollection<>))
+							{
+								d_iscollection = true;
+								d_collectionType = type.GetGenericArguments()[0];
+								d_collectionAddMethod = ValueType.GetMethod("Add", new Type[] {d_collectionType});
+								
+								break;
+							}
+						}
 					}
 					
 					return (bool)d_iscollection;
 				}
 			}
 			
+			public Type CollectionType
+			{
+				get
+				{
+					return d_collectionType;
+				}
+			}
+			
 			public void AddCollection(object instance, object val)
 			{
-				ICollection<string> collection = Get(instance) as ICollection<string>;
+				object collection = Get(instance);
 				
 				if (collection == null)
 				{
-					collection = ValueType.GetConstructor(new Type[] {}).Invoke(new object[] {}) as ICollection<string>;
+					collection = ValueType.GetConstructor(new Type[] {}).Invoke(new object[] {});
+
 					Set(instance, collection);
 				}
-				else
-				{
-					collection.Add(val.ToString());
-				}
+				
+				d_collectionAddMethod.Invoke(collection, new object[] {val});
 			}
 		}
 		
@@ -110,9 +131,16 @@ namespace Cpg.RawC.CommandLine
 			
 			public override void Set(object instance, object val)
 			{
-				if (IsCollection && (val as ICollection<string>) == null)
+				if (IsCollection)
 				{
-					AddCollection(instance, val);
+					if (val.GetType().IsSubclassOf(CollectionType) || val.GetType() == CollectionType)
+					{
+						AddCollection(instance, val);
+					}
+					else
+					{
+						d_info.SetValue(instance, val);
+					}
 				}
 				else
 				{
@@ -140,14 +168,21 @@ namespace Cpg.RawC.CommandLine
 
 			public override object Get(object instance)
 			{
-				return d_info.GetValue(instance, null);
+				if (d_info.CanRead)
+				{
+					return d_info.GetValue(instance, null);
+				}
+				else
+				{
+					return null;
+				}
 			}
 			
 			public override void Set(object instance, object val)
 			{
 				if (IsCollection && (val as ICollection<string>) == null)
 				{
-					AddCollection(instance, val);
+					AddCollection(instance, Convert(val));
 				}
 				else
 				{
@@ -323,10 +358,26 @@ namespace Cpg.RawC.CommandLine
 			
 			for (int i = 0; i < d_optionstrs.Count; ++i)
 			{
-				writer.WriteLine("  {0}    {1}", d_optionstrs[i].PadRight(maxname), d_optiondescs[i]);
+				object val = d_options[i].Get(this);
+				string def = "";
+				
+				if (val != null)
+				{
+					def = String.Format(" (default: {0})", val.ToString());
+				}
+
+				writer.WriteLine("  {0}    {1}{2}", d_optionstrs[i].PadRight(maxname), d_optiondescs[i], def);
 			}
 			
 			writer.WriteLine();
+		}
+		
+		internal IEnumerable<Info> Infos
+		{
+			get
+			{
+				return d_options;
+			}
 		}
 	}
 }

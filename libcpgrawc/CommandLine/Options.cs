@@ -130,6 +130,29 @@ namespace Cpg.RawC.CommandLine
 			}
 		}
 		
+		public string ShowOptions()
+		{
+			List<string> opts = new List<string>();
+
+			foreach (OptionGroup grp in d_groups)
+			{
+				foreach (Info info in grp.Infos)
+				{
+					if (info.Option.ShortName != null)
+					{
+						opts.Add(String.Format("-{0}", info.Option.ShortName));
+					}
+					
+					if (info.Option.LongName != null)
+					{
+						opts.Add(String.Format("--{0}", info.Option.LongName));
+					}
+				}
+			}
+			
+			return String.Join(" ", opts.ToArray());
+		}
+		
 		public new void ShowHelp(TextWriter writer)
 		{
 			writer.WriteLine("Usage:");
