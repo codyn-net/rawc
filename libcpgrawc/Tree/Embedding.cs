@@ -129,6 +129,8 @@ namespace Cpg.RawC.Tree
 		public Embedding(Node node, IEnumerable<Argument> arguments) : this(node, new NodePath[] {})
 		{
 			d_arguments = new List<Argument>(arguments);
+			
+			Sort.Insertion(d_arguments, (a, b) => a.Index.CompareTo(b.Index));
 		}
 		
 		public Embedding(Node node, IEnumerable<NodePath> arguments)
