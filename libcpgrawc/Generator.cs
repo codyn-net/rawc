@@ -264,6 +264,11 @@ namespace Cpg.RawC
 		
 		private Tree.Collectors.Result Collect()
 		{
+			if (Options.Instance.NoEmbeddings)
+			{
+				return new Tree.Collectors.Result();
+			}
+
 			Options parser = Options.Instance;
 			Tree.Collectors.ICollector collector;
 			

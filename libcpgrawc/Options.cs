@@ -45,6 +45,9 @@ namespace Cpg.RawC
 		[CommandLine.Option("list-options", Description="List available options (used for completion)")]
 		private bool d_listOptions;
 		
+		[CommandLine.Option("no-embeddings", Description="Disable detection of embeddings")]
+		private bool d_noEmbeddings;
+		
 		private double[] d_validateRange;
 
 		private Programmer.Formatters.IFormatter d_formatter;		
@@ -329,6 +332,14 @@ namespace Cpg.RawC
 			get
 			{
 				return d_listOptions;
+			}
+		}
+		
+		public bool NoEmbeddings
+		{
+			get
+			{
+				return d_noEmbeddings;
 			}
 		}
 	}
