@@ -71,6 +71,7 @@ cpgrawc
 Makefile
 libcpgrawc/Makefile
 libcpgrawc/cpg-rawc-sharp.pc
+completion/Makefile
 m4/Makefile
 ])
 

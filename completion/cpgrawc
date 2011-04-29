@@ -1,0 +1,9 @@
+_cpgrawc() {
+	cur=`_get_cword`
+
+	COMPREPLY=($(compgen -W "$(cpgrawc --list-options)" -- "$cur"))
+	
+	return 0
+}
+
+complete -F _cpgrawc cpgrawc
