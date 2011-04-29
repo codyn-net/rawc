@@ -59,7 +59,6 @@ FILES = \
 	Tree/Collectors/Default.cs \
 	Tree/SortedList.cs \
 	Tree/Expression.cs \
-	Tree/Instructions/Embedding.cs \
 	Tree/Embedding.cs \
 	Tree/Filters/IFilter.cs \
 	Tree/Filters/Optimal.cs \

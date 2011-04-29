@@ -96,7 +96,6 @@
     <Folder Include="Plugins\" />
     <Folder Include="Tree\" />
     <Folder Include="Tree\Filters\" />
-    <Folder Include="Tree\Instructions\" />
     <Folder Include="Programmer\" />
     <Folder Include="Programmer\Formatters\" />
     <Folder Include="CommandLine\" />
