@@ -602,6 +602,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Reindent(string s, string indent)
 		{
+			if (String.IsNullOrEmpty(s))
+			{
+				return s;
+			}
+
 			string[] lines = s.Split('\n');
 			return indent + String.Join("\n" + indent, lines).Replace("\n" + indent + "\n", "\n\n");
 		}
