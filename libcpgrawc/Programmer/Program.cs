@@ -138,7 +138,7 @@ namespace Cpg.RawC.Programmer
 				
 				foreach (Tree.Node instance in embedding.Instances)
 				{
-					instance.Instruction = new Instructions.Function(instance, function);
+					instance.Instruction = new Instructions.Function(function);
 				}
 
 				d_functions.Add(function);
@@ -157,6 +157,22 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
+		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cpg.Function, List<Tree.Node>> usage)
+		{
+			List<Tree.Node> lst;
+			Cpg.Function f = ((Cpg.InstructionCustomFunction)node.Instruction).Function;
+				
+			if (!usage.TryGetValue(f, out lst))
+			{
+				lst = new List<Tree.Node>();
+				usage[f] = lst;
+				
+				d_usedCustomFunctions.Add(f);
+			}
+			
+			lst.Add(node);
+		}
+		
 		private void ProgramCustomFunctions()
 		{			
 			Dictionary<Cpg.Function, List<Tree.Node>> usage = new Dictionary<Cpg.Function, List<Tree.Node>>();
@@ -166,18 +182,16 @@ namespace Cpg.RawC.Programmer
 			{
 				foreach (Tree.Node node in eq.Value.Collect<Cpg.InstructionCustomFunction>())
 				{
-					List<Tree.Node> lst;
-					Cpg.Function f = ((Cpg.InstructionCustomFunction)node.Instruction).Function;
-						
-					if (!usage.TryGetValue(f, out lst))
-					{
-						lst = new List<Tree.Node>();
-						usage[f] = lst;
-						
-						d_usedCustomFunctions.Add(f);
-					}
-					
-					lst.Add(node);
+					CustomFunctionUsage(node, usage);
+				}
+			}
+			
+			// Check also in the generated function implementations
+			foreach (Function function in d_functions)
+			{
+				foreach (Tree.Node node in function.Expression.Collect<Cpg.InstructionCustomFunction>())
+				{
+					CustomFunctionUsage(node, usage);
 				}
 			}
 			
@@ -225,17 +239,9 @@ namespace Cpg.RawC.Programmer
 				
 				foreach (Tree.Node nn in usage[function])
 				{
-					Tree.Node inst = (Tree.Node)node.Clone();
-					
-					foreach (Tree.Embedding.Argument arg in args)
-					{
-						inst.FromPath(arg.Path).Replace(nn.Children[(int)arg.Index]);
-					}
+					embedding.Embed(nn);
 
-					embedding.Embed(inst);
-
-					Instructions.Function f = new Instructions.Function(inst, func);
-					nn.Replace(new Tree.Node(inst.State, f));
+					nn.Instruction = new Instructions.Function(func);
 				}
 			}
 		}
