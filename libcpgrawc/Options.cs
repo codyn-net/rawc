@@ -42,6 +42,9 @@ namespace Cpg.RawC
 		[CommandLine.Option("always-initialize-dynamically", Description="Force dynamic intialization instead of static initialization of states")]
 		private bool d_alwaysInitializeDynamically;
 		
+		[CommandLine.Option("list-options", Description="List available options (used for completion)")]
+		private bool d_listOptions;
+		
 		private double[] d_validateRange;
 
 		private Programmer.Formatters.IFormatter d_formatter;		
@@ -91,6 +94,12 @@ namespace Cpg.RawC
 				System.Version version = Assembly.GetExecutingAssembly().GetName().Version;
 
 				Console.WriteLine("cpgrawc - Version {0}.{1}.{2}", version.Major, version.Minor, version.Revision);
+				Environment.Exit(0);
+			}
+			
+			if (d_listOptions)
+			{
+				Console.WriteLine(ShowOptions());
 				Environment.Exit(0);
 			}
 			
@@ -312,6 +321,14 @@ namespace Cpg.RawC
 			set
 			{
 				Plugins.Plugins.Instance.LoadAssembly(value);
+			}
+		}
+		
+		public bool ListOptions
+		{
+			get
+			{
+				return d_listOptions;
 			}
 		}
 	}
