@@ -766,9 +766,12 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			
 			writer.WriteLine();
 			
-			foreach (string header in d_options.CustomHeaders)
+			if (d_options.CustomHeaders != null)
 			{
-				writer.WriteLine("#include \"{0}\"", header);
+				foreach (string header in d_options.CustomHeaders)
+				{
+					writer.WriteLine("#include \"{0}\"", header);
+				}
 			}
 			
 			TextWriter math;
