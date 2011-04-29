@@ -103,7 +103,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				return false;
 			}
 			
-			return s1.Priority > s2.Priority || (s1.Priority == s2.Priority && !s2.LeftAssociation);
+			return s1.Priority >= s2.Priority;
 		}
 
 		private string SimpleOperator(Context context, InstructionOperator inst, string glue)
