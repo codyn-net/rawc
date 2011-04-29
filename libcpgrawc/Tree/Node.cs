@@ -486,7 +486,7 @@ namespace Cpg.RawC.Tree
 				return;
 			}
 			
-			d_children.Sort();
+			Cpg.RawC.Sort.Insertion(d_children);
 		}
 		
 		public override string ToString()

@@ -92,7 +92,8 @@ FILES = \
 	Plugins/IOptions.cs \
 	Plugins/Attributes.cs \
 	Options.cs \
-	Generator.cs
+	Generator.cs \
+	Sort.cs
 
 DATA_FILES =
 
