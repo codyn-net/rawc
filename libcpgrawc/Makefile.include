@@ -64,7 +64,7 @@ DISTCLEANFILES = $(GENERATED_FILES) $(pc_files) $(BUILD_DIR)/*
 
 bin_SCRIPTS = $(BINARIES)
 
-programfilesdir = @libdir@/cpg-rawc-sharp-@LIBLIBCPG_RAWC_SHARP_API_VERSION@
+programfilesdir = @libdir@/cpg-rawc-sharp-@LIBCPG_RAWC_SHARP_API_VERSION@
 programfiles_DATA = $(PROGRAMFILES)
 programfiles_SCRIPTS = $(ASSEMBLY)
 

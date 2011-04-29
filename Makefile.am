@@ -1,6 +1,7 @@
-EXTRA_DIST = expansions.m4
+ACLOCAL_AMFLAGS = -I m4
+SUBDIRS = libcpgrawc completion m4
 
-SUBDIRS = libcpgrawc
+EXTRA_DIST =
 
 # Include project specific makefile
-include rawc.make
+include cpgrawc.make

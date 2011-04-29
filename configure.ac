@@ -3,6 +3,8 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
 AC_INIT(cpgrawc, 2.0)
 AM_INIT_AUTOMAKE([foreign])
+
+AC_CONFIG_MACRO_DIR([m4])
 AM_MAINTAINER_MODE
 
 LIBCPG_RAWC_SHARP_API_VERSION=2.0
@@ -65,10 +67,11 @@ dnl package checks, per config
 
 
 AC_CONFIG_FILES([
-rawc
+cpgrawc
 Makefile
 libcpgrawc/Makefile
 libcpgrawc/cpg-rawc-sharp.pc
+m4/Makefile
 ])
 
 AC_OUTPUT

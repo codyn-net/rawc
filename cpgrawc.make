@@ -5,21 +5,21 @@
 if ENABLE_DEBUG
 ASSEMBLY_COMPILER_COMMAND = gmcs
 ASSEMBLY_COMPILER_FLAGS =  -noconfig -codepage:utf8 -warn:3 -optimize- -debug "-define:DEBUG"
-ASSEMBLY = bin/Debug/rawc.exe
+ASSEMBLY = bin/Debug/cpgrawc.exe
 ASSEMBLY_MDB = $(ASSEMBLY).mdb
 COMPILE_TARGET = exe
 PROJECT_REFERENCES = libcpgrawc/bin/Debug/Cpg.RawC.dll
 BUILD_DIR = bin/Debug
 
-RAWC_EXE_MDB_SOURCE=bin/Debug/rawc.exe.mdb
-RAWC_EXE_MDB=$(BUILD_DIR)/rawc.exe.mdb
+RAWC_EXE_MDB_SOURCE=bin/Debug/cpgrawc.exe.mdb
+RAWC_EXE_MDB=$(BUILD_DIR)/cpgrawc.exe.mdb
 
 endif
 
 if ENABLE_RELEASE
 ASSEMBLY_COMPILER_COMMAND = gmcs
 ASSEMBLY_COMPILER_FLAGS =  -noconfig -codepage:utf8 -warn:4 -optimize-
-ASSEMBLY = bin/Release/rawc.exe
+ASSEMBLY = bin/Release/cpgrawc.exe
 ASSEMBLY_MDB =
 COMPILE_TARGET = exe
 PROJECT_REFERENCES = libcpgrawc/bin/Release/Cpg.RawC.dll
@@ -52,7 +52,7 @@ DATA_FILES =
 RESOURCES =
 
 EXTRAS = \
-	rawc.in
+	cpgrawc.in
 
 REFERENCES = \
 	$(CPG_NETWORK_SHARP_LIBS) \
@@ -63,9 +63,9 @@ DLL_REFERENCES =
 CLEANFILES = $(PROGRAMFILES) $(BINARIES)
 
 include $(top_srcdir)/Makefile.include
-RAWC = $(BUILD_DIR)/rawc
+RAWC = $(BUILD_DIR)/cpgrawc
 
-$(eval $(call emit-deploy-wrapper,RAWC,rawc,x))
+$(eval $(call emit-deploy-wrapper,RAWC,cpgrawc,x))
 
 
 $(eval $(call emit_resgen_targets))
