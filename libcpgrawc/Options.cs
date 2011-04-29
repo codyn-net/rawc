@@ -42,6 +42,9 @@ namespace Cpg.RawC
 		[CommandLine.Option("always-initialize-dynamically", Description="Force dynamic intialization instead of static initialization of states")]
 		private bool d_alwaysInitializeDynamically;
 		
+		[CommandLine.Option("minimum-embedding-size", Description="Minimum number of instructions which are candidates for embeddings")]
+		private int d_minimumEmbeddingSize = 3;
+		
 		[CommandLine.Option("list-options", Description="List available options (used for completion)")]
 		private bool d_listOptions;
 		
@@ -324,6 +327,14 @@ namespace Cpg.RawC
 			set
 			{
 				Plugins.Plugins.Instance.LoadAssembly(value);
+			}
+		}
+		
+		public int MinimumEmbeddingSize
+		{
+			get
+			{
+				return d_minimumEmbeddingSize;
 			}
 		}
 		
