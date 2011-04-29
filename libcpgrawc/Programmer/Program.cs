@@ -155,6 +155,14 @@ namespace Cpg.RawC.Programmer
 					yield return (T)node.Instruction;
 				}
 			}
+			
+			foreach (Function function in d_functions)
+			{
+				foreach (Tree.Node node in function.Expression.Collect<T>())
+				{
+					yield return (T)node.Instruction;
+				}
+			}
 		}
 		
 		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cpg.Function, List<Tree.Node>> usage)
