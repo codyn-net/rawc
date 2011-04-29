@@ -7,7 +7,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{FEB77A56-5271-4E82-B65C-9DB0886759E8}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Cpg.RawC</RootNamespace>
+    <RootNamespace>Cpg.RawC.Application</RootNamespace>
     <AssemblyName>cpgrawc</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
@@ -21,7 +21,7 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
     <Externalconsole>true</Externalconsole>
-    <Commandlineparameters>test.cpg</Commandlineparameters>
+    <Commandlineparameters>test.cpg --generate-cpp-wrapper</Commandlineparameters>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>none</DebugType>
@@ -36,7 +36,7 @@
     <Reference Include="System" />
     <Reference Include="CpgNetwork, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\.packeteer\install-cpg\lib\cpg-network-sharp-2.0\CpgNetwork.dll</HintPath>
+      <HintPath>..\..\..\..\..\home\jvanden\.packeteer\install-cpg\lib\cpg-network-sharp-2.0\CpgNetwork.dll</HintPath>
     </Reference>
     <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
       <Package>glib-sharp-2.0</Package>
@@ -45,7 +45,6 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="Generator.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

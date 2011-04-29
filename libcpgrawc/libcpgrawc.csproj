@@ -8,7 +8,7 @@
     <ProjectGuid>{BD4A016B-2BD3-4701-AEBA-6B1884EDC265}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>Cpg.RawC</RootNamespace>
-    <AssemblyName>CpgRawC</AssemblyName>
+    <AssemblyName>Cpg.RawC</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -88,6 +88,7 @@
     <Compile Include="Programmer\Formatters\C\NumberTranslator.cs" />
     <Compile Include="Programmer\Instructions\Variable.cs" />
     <Compile Include="Options.cs" />
+    <Compile Include="Generator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

@@ -1,6 +1,6 @@
 using System;
 
-namespace Cpg.RawC
+namespace Cpg.RawC.Application
 {
 	class MainClass
 	{

@@ -1,0 +1,7 @@
+Name: cpg-rawc-sharp
+Description: cpg-rawc-sharp
+Version: @VERSION@
+Libraries=@expanded_libdir@/cpg-rawc-sharp-@LIBLIBCPG_RAWC_SHARP_API_VERSION@/Cpg.RawC.dll
+
+Requires: cpg-network-sharp-2.0
+Libs: -r:@expanded_libdir@/cpg-rawc-sharp-@LIBLIBCPG_RAWC_SHARP_API_VERSION@/Cpg.RawC.dll
