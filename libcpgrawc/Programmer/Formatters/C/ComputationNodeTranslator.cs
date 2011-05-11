@@ -1,4 +1,6 @@
 using System;
+using System.Text;
+using System.Collections.Generic;
 
 namespace Cpg.RawC.Programmer.Formatters.C
 {
@@ -19,20 +21,32 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			return (new ComputationNodeTranslator()).Invoke<string>(node, context);
 		}
 		
+		private string Translate(Computation.Loop node, Context context)
+		{
+			StringBuilder ret = new StringBuilder();
+			
+			Context ctx = new Context(context.Program, context.Options, node.Expression, node.Mapping);
+			
+			ret.AppendFormat("for (i = 0; i < {0}; ++i)", node.Items.Count);
+			ret.AppendLine();
+			ret.AppendLine("{");
+			ret.AppendFormat("\t{0}[{1}[i][0]] = {2};",
+			               context.Program.StateTable.Name,
+			               node.IndexTable.Name,
+			               InstructionTranslator.QuickTranslate(ctx));
+			ret.AppendLine();			               
+			ret.AppendLine("}");
+			ret.AppendLine();
+			
+			return ret.ToString();
+		}
+		
 		private string Translate(Computation.Assignment node, Context context)
 		{
 			return String.Format("{0}[{1}] = {2};",
 			                     node.Item.Table.Name,
 			                     node.Item.AliasOrIndex,
-			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.Equation)));
-		}
-		
-		private string Translate(Computation.Addition node, Context context)
-		{
-			return String.Format("{0}[{1}] += {2};",
-			                     node.Item.Table.Name,
-			                     node.Item.AliasOrIndex,
-			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.Equation)));
+			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation)));
 		}
 		
 		private string Translate(Computation.ZeroTable node, Context context)

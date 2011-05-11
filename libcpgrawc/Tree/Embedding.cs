@@ -340,6 +340,14 @@ namespace Cpg.RawC.Tree
 			}
 		}
 		
+		public int ArgumentsCount
+		{
+			get
+			{
+				return (int)d_argumentIdx;
+			}
+		}
+		
 		public int InstancesCount
 		{
 			get

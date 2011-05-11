@@ -5,15 +5,17 @@ namespace Cpg.RawC
 {
 	public class State
 	{
+		[Flags()]
 		public enum Flags
 		{
-			None,
-			Integrated,
-			Direct,
-			Initialization,
-			BeforeDirect,
-			BeforeIntegrated,
-			AfterIntegrated
+			None = 0,
+			Integrated = 1 << 0,
+			Direct = 1 << 1,
+			Initialization = 1 << 2,
+			BeforeDirect = 1 << 3,
+			BeforeIntegrated = 1 << 4,
+			AfterIntegrated = 1 << 5,
+			Update = 1 << 6
 		}
 
 		public Property Property;
@@ -31,7 +33,7 @@ namespace Cpg.RawC
 			Property = property;
 			Actions = actions;
 			
-			if (property.Integrated)
+			if (property != null && property.Integrated)
 			{
 				d_type = Flags.Integrated;
 			}
@@ -65,6 +67,27 @@ namespace Cpg.RawC
 			}
 			
 			d_expression = RawC.Tree.Expression.Expand(exprs.ToArray());
+			
+			if (Actions.Length != 0)
+			{
+				List<Cpg.Instruction> instructions = new List<Cpg.Instruction>(d_expression.Instructions);
+				
+				if ((d_type & (Flags.Integrated | Flags.Direct)) != 0)
+				{
+					if ((d_type & Flags.Integrated) != 0)
+					{
+						// Multiply by timestep
+						instructions.Add(new InstructionProperty(Knowledge.Instance.Network.Integrator.Property("dt"), Cpg.InstructionPropertyBinding.None));
+						instructions.Add(new InstructionOperator((int)Cpg.MathOperatorType.Multiply, "*", 2));
+					}
+					
+					// Add to original state variable as well
+					instructions.Add(new InstructionProperty(Property, Cpg.InstructionPropertyBinding.None));
+					instructions.Add(new InstructionOperator((int)Cpg.MathOperatorType.Plus, "+", 2));
+				}
+				
+				d_expression.Instructions = instructions.ToArray();
+			}
 		}
 		
 		public Cpg.Expression Expression

@@ -13,23 +13,33 @@ namespace Cpg.RawC.Programmer
 		private List<Computation.INode> d_initialization;
 		private List<Cpg.Function> d_usedCustomFunctions;
 		private Dictionary<string, Function> d_functionMap;
+		private List<State> d_updateStates;
+		private int d_stateIntegratedIndex;
+		private int d_stateIntegratedUpdateIndex;
+		private Dictionary<DataTable.DataItem, State> d_integrateTable;
+		private List<Computation.Loop> d_loops;
+		private Dictionary<Tree.Embedding, Function> d_embeddingFunctionMap;
 
 		private DataTable d_statetable;
-		private DataTable d_integratetable;
+		private List<DataTable> d_indexTables;
 		private Dictionary<State, Tree.Node> d_equations;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
 			// Write out equations and everything
 			d_statetable = new DataTable("ss", true);
-			d_integratetable = new DataTable("si", false);
 
 			d_functions = new List<Function>();
 			d_embeddings = new List<Tree.Embedding>(embeddings);
+			d_embeddingFunctionMap = new Dictionary<Tree.Embedding, Function>();
 			d_source = new List<Computation.INode>();
 			d_initialization = new List<Computation.INode>();
 			d_usedCustomFunctions = new List<Cpg.Function>();
 			d_functionMap = new Dictionary<string, Function>();
+			d_updateStates = new List<State>();
+			d_integrateTable = new Dictionary<DataTable.DataItem, State>();
+			d_loops = new List<Computation.Loop>();
+			d_indexTables = new List<DataTable>();
 
 			d_equations = equations;
 			d_options = options;
@@ -46,14 +56,6 @@ namespace Cpg.RawC.Programmer
 			get
 			{
 				return d_statetable;
-			}
-		}
-		
-		public DataTable IntegrateTable
-		{
-			get
-			{
-				return d_integratetable;
 			}
 		}
 		
@@ -81,19 +83,40 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
+		public Dictionary<DataTable.DataItem, State> IntegrateTable
+		{
+			get
+			{
+				return d_integrateTable;
+			}
+		}
+		
 		private void ProgramDataTables()
 		{
-			// Add integrated state variables
-			foreach (State state in Knowledge.Instance.IntegratedStates)
-			{
-				d_statetable.Add(state);
-				d_integratetable.Add(state);
-			}
-			
 			// Add direct state variables
 			foreach (State state in Knowledge.Instance.DirectStates)
 			{
 				d_statetable.Add(state);
+			}
+			
+			d_stateIntegratedIndex = d_statetable.Count;
+
+			// Add integrated state variables
+			foreach (State state in Knowledge.Instance.IntegratedStates)
+			{
+				d_statetable.Add(state);
+			}
+			
+			d_stateIntegratedUpdateIndex = d_statetable.Count;
+			
+			// Add update values for integrated state variables
+			foreach (State state in Knowledge.Instance.IntegratedStates)
+			{
+				State update = new State(null, State.Flags.Update);
+				
+				d_updateStates.Add(update);
+				d_statetable.Add(update);
+				d_integrateTable[d_statetable[state]] = update;
 			}
 			
 			// Add in variables
@@ -129,7 +152,7 @@ namespace Cpg.RawC.Programmer
 		}
 		
 		private void ProgramFunctions()
-		{		
+		{
 			// Generate functions for all the embeddings
 			foreach (Tree.Embedding embedding in d_embeddings)
 			{
@@ -141,8 +164,7 @@ namespace Cpg.RawC.Programmer
 					instance.Instruction = new Instructions.Function(function);
 				}
 
-				d_functions.Add(function);
-				d_functionMap[name] = function;
+				Add(embedding, function);
 			}
 		}
 		
@@ -181,6 +203,13 @@ namespace Cpg.RawC.Programmer
 			lst.Add(node);
 		}
 		
+		private void Add(Tree.Embedding embedding, Function function)
+		{
+			d_functions.Add(function);
+			d_functionMap[function.Name] = function;
+			d_embeddingFunctionMap[embedding] = function;
+		}
+
 		private void ProgramCustomFunctions()
 		{			
 			Dictionary<Cpg.Function, List<Tree.Node>> usage = new Dictionary<Cpg.Function, List<Tree.Node>>();
@@ -239,11 +268,12 @@ namespace Cpg.RawC.Programmer
 				// we create instances of that embedding for all the nodes where the custom
 				// function is used.
 				Tree.Embedding embedding = new Tree.Embedding(node, args);
-				string name = String.Format("cf_{0}", function.Id.ToLower());
+				string name = GenerateFunctionName(String.Format("cf_{0}", function.Id.ToLower()));
 
-				Function func = new Function(name, embedding);
-				d_functions.Add(func);
-				d_functionMap[name] = func;
+				Function func = new Function(name, embedding);			
+				Add(embedding, func);
+
+				d_embeddings.Add(embedding);
 				
 				foreach (Tree.Node nn in usage[function])
 				{
@@ -254,13 +284,145 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
+		private class LoopData
+		{
+			public Tree.Embedding Embedding;
+			public Function Function;
+			public List<Tree.Node> Instances;
+			public bool AllRoots;
+			
+			public LoopData(Tree.Embedding embedding, Function function)
+			{
+				Embedding = embedding;
+				Function = function;
+				Instances = new List<Tree.Node>();
+				AllRoots = true;
+			}
+			
+			public void Add(Tree.Node node)
+			{
+				Instances.Add(node);
+				
+				if (node.Parent != null)
+				{
+					AllRoots = false;
+				}
+			}
+		}
+		
+		private Computation.Loop CreateLoop(List<State> states, LoopData loop)
+		{
+			DataTable dt = new DataTable(String.Format("ssi_{0}", d_indexTables.Count), true, loop.Function.NumArguments + 1);
+			
+			dt.IsConstant = true;
+			dt.IntegerType = true;
+			
+			d_indexTables.Add(dt);
+
+			Computation.Loop ret = new Computation.Loop(this, dt, loop.Embedding, loop.Function);
+			ret.IsIntegrated = (states[0].Type & State.Flags.Integrated) != 0;
+
+			List<Tree.Node> nodes = new List<Tree.Node>();
+			
+			// Promote any argument of the embedding that is not in the table and not the same value
+			// for all instances
+			foreach (Tree.Node node in loop.Instances)
+			{
+				Tree.Node cloned = (Tree.Node)node.Clone();
+				nodes.Add(cloned);
+
+				foreach (Tree.Embedding.Argument arg in loop.Function.Arguments)
+				{
+					Tree.Node subnode = node.FromPath(arg.Path);
+					Cpg.InstructionNumber num = subnode.Instruction as Cpg.InstructionNumber;
+					
+					if (num != null)
+					{
+						// Promote to data table
+						DataTable.DataItem ditem = d_statetable.Add(num.Value);
+						subnode.Instruction = new Instructions.State(ditem);
+					}
+				}
+			}
+
+			for (int i = 0; i < loop.Instances.Count; ++i)
+			{
+				Tree.Node cloned = nodes[i];
+				Tree.Node node = loop.Instances[i];
+
+				if (loop.AllRoots)
+				{
+					ret.Add(d_statetable[node.State], cloned);
+					states.Remove(node.State);
+				}
+				else
+				{
+					// Create new temporary state for this computation
+					DataTable.DataItem item = d_statetable.Add(cloned);
+					
+					ret.Add(item, cloned);
+					
+					// Create new instruction that references this state
+					Instructions.State inst = new Instructions.State(item);
+					
+					// Replace embedding instance in the node with the temporary state instruction
+					node.Instruction = inst;
+				}
+			}
+			
+			ret.Close();
+			
+			return ret;
+		}
+		
+		public int LoopsCount
+		{
+			get
+			{
+				return d_loops.Count;
+			}
+		}
+		
+		public IEnumerable<Computation.Loop> Loops
+		{
+			get
+			{
+				return d_loops;
+			}
+		}
+
 		private List<Computation.INode> AssignmentStates(IEnumerable<State> states)
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
-
-			foreach (State state in states)
+			List<State> st = new List<State>(states);
+			
+			// Extract loops from states. Scan for embeddings and replace them with
+			// looped stuff, creating temporary variables on the fly if needed
+			foreach (Tree.Embedding embedding in d_embeddings)
 			{
-				ret.Add(new Computation.Assignment(d_statetable[state], d_equations[state]));
+				LoopData loop = new LoopData(embedding, d_embeddingFunctionMap[embedding]);
+
+				foreach (Tree.Node node in embedding.Instances)
+				{
+					if (st.Contains(node.State))
+					{
+						loop.Add(node);
+					}
+				}
+				
+				if (loop.Instances.Count >= Cpg.RawC.Options.Instance.MinimumLoopSize)
+				{
+					// Create loop for this thing
+					Computation.Loop l = CreateLoop(st, loop);
+					
+					ret.Add(l);
+					d_loops.Add(l);
+				}
+			}
+
+			foreach (State state in st)
+			{
+				ret.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
 			}
 			
 			return ret;
@@ -274,9 +436,15 @@ namespace Cpg.RawC.Programmer
 			
 			// Set dt
 			d_source.Add(new Computation.Comment("Set timestep"));
-			d_source.Add(new Computation.Assignment(dt, dteq));
+			d_source.Add(new Computation.Assignment(null, dt, dteq));
 			d_source.Add(new Computation.Empty());
+
+			d_source.Add(new Computation.Comment("Make copy of current integrated state"));
 			
+			int num = d_stateIntegratedUpdateIndex - d_stateIntegratedIndex;
+			d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, d_stateIntegratedIndex, num, d_stateIntegratedUpdateIndex));
+			d_source.Add(new Computation.Empty());
+
 			// Precompute for out properties
 			if (Knowledge.Instance.PrecomputeBeforeDirectStatesCount != 0)
 			{
@@ -304,28 +472,8 @@ namespace Cpg.RawC.Programmer
 			// Integrated links			
 			if (Knowledge.Instance.IntegratedStatesCount != 0)
 			{
-				d_source.Add(new Computation.Comment("Clear integration update table"));
-				d_source.Add(new Computation.CopyTable(d_statetable, d_integratetable, d_integratetable.Count));
-				d_source.Add(new Computation.Empty());
-
 				d_source.Add(new Computation.Comment("Integration equations"));
-
-				foreach (State state in Knowledge.Instance.IntegratedStates)
-				{
-					Tree.Node node = new Tree.Node(null, new InstructionOperator((uint)Cpg.MathOperatorType.Multiply, "*", 2));
-					Tree.Node left = d_equations[state];
-					Tree.Node right = new Tree.Node(null, new Instructions.Variable("timestep"));
-				
-					node.Add(left);
-					node.Add(right);
-
-					d_source.Add(new Computation.Addition(d_integratetable[state], node));
-				}
-
-				d_source.Add(new Computation.Empty());
-				d_source.Add(new Computation.Comment("Copy integrated values to state table"));
-				d_source.Add(new Computation.CopyTable(d_integratetable, d_statetable, d_integratetable.Count));
-				
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.IntegratedStates));
 				d_source.Add(new Computation.Empty());
 			}
 			
@@ -338,11 +486,16 @@ namespace Cpg.RawC.Programmer
 			}
 			
 			// Increase time
-			DataTable.DataItem t = d_statetable[Knowledge.Instance.Network.Integrator.Property("t")];
-			Tree.Node eq = new Tree.Node(null, new InstructionProperty(dtprop, InstructionPropertyBinding.None));
+			Cpg.Property tprop = Knowledge.Instance.Network.Integrator.Property("t");
+			DataTable.DataItem t = d_statetable[tprop];
+
+			Tree.Node eq = new Tree.Node(null, new InstructionOperator((int)Cpg.MathOperatorType.Plus, "+", 2));
+			
+			eq.Add(new Tree.Node(null, new InstructionProperty(tprop, InstructionPropertyBinding.None)));
+			eq.Add(new Tree.Node(null, new InstructionProperty(dtprop, InstructionPropertyBinding.None)));
 
 			d_source.Add(new Computation.Comment("Increase time"));
-			d_source.Add(new Computation.Addition(t, eq));
+			d_source.Add(new Computation.Assignment(null, t, eq));
 		}
 		
 		private void ProgramInitialization()
@@ -354,7 +507,7 @@ namespace Cpg.RawC.Programmer
 					continue;
 				}
 
-				d_initialization.Add(new Computation.Assignment(d_statetable[state], d_equations[state]));
+				d_initialization.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
 			}
 		}
 		
@@ -387,7 +540,11 @@ namespace Cpg.RawC.Programmer
 			get
 			{
 				yield return d_statetable;
-				yield return d_integratetable;
+				
+				foreach (DataTable table in d_indexTables)
+				{
+					yield return table;
+				}
 			}
 		}
 	}

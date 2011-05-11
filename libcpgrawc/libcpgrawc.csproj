@@ -69,7 +69,6 @@
     <Compile Include="CommandLine\OptionException.cs" />
     <Compile Include="CommandLine\OptionGroup.cs" />
     <Compile Include="Programmer\Instructions\Function.cs" />
-    <Compile Include="Programmer\Computation\Addition.cs" />
     <Compile Include="Programmer\Computation\Assignment.cs" />
     <Compile Include="Programmer\Computation\IComputationNode.cs" />
     <Compile Include="Programmer\Computation\Loop.cs" />
@@ -89,6 +88,8 @@
     <Compile Include="Options.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="Sort.cs" />
+    <Compile Include="Log.cs" />
+    <Compile Include="Programmer\Instructions\State.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

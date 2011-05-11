@@ -5,9 +5,21 @@ namespace Cpg.RawC.Programmer.Formatters.C
 {
 	public class Context
 	{
+		private class Item
+		{
+			public State State;
+			public Tree.Node Node;
+			
+			public Item(State state, Tree.Node node)
+			{
+				State = state;
+				Node = node;
+			}
+		}
+
 		private Program d_program;
 		private Tree.Node d_root;
-		private Stack<Tree.Node> d_node;
+		private Stack<Item> d_stack;
 		private Dictionary<Tree.NodePath, string> d_mapping;
 		private Options d_options;
 		
@@ -20,7 +32,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			d_program = program;
 			d_options = options;
 			
-			d_node = new Stack<Tree.Node>();
+			d_stack = new Stack<Item>();
 			Push(node);
 			
 			if (mapping != null)
@@ -38,14 +50,14 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			return new Context(d_program, d_options);
 		}
 		
-		public Context Push(Tree.Node node)
+		public Context Push(State state, Tree.Node node)
 		{
 			if (node == null)
 			{
 				return this;
 			}
 
-			d_node.Push(node);
+			d_stack.Push(new Item(state, node));
 			
 			if (d_root == null)
 			{
@@ -55,11 +67,16 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			return this;
 		}
 		
+		public Context Push(Tree.Node node)
+		{
+			return Push(State, node);
+		}
+		
 		public Context Pop()
 		{
-			d_node.Pop();
+			d_stack.Pop();
 			
-			if (d_node.Count == 0)
+			if (d_stack.Count == 0)
 			{
 				d_root = null;
 			}
@@ -71,7 +88,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			get
 			{
-				return d_node.Peek();
+				return d_stack.Count == 0 ? null : d_stack.Peek().Node;
 			}
 		}
 		
@@ -80,6 +97,14 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			get
 			{
 				return d_root;
+			}
+		}
+		
+		public State State
+		{
+			get
+			{
+				return d_stack.Count == 0 ? null : d_stack.Peek().State;
 			}
 		}
 		

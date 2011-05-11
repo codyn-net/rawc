@@ -9,6 +9,7 @@ namespace Cpg.RawC
 	{
 		private string d_filename;
 		private Cpg.Network d_network;
+		private string[] d_writtenFiles;
 
 		public Generator(string filename)
 		{
@@ -17,6 +18,8 @@ namespace Cpg.RawC
 		
 		public void Generate()
 		{
+			Log.WriteLine("Generating code for network...");
+			
 			LoadNetwork();
 			
 			// Initialize the knowledge
@@ -31,11 +34,11 @@ namespace Cpg.RawC
 			// Resolve final equations
 			Dictionary<State, Tree.Node> equations = ResolveEquations(embeddings);
 			
-			// Create prorgam
+			// Create program
 			Programmer.Program program = new Programmer.Program(ProgrammerOptions(), embeddings, equations);
 			
 			// Write program
-			Options.Instance.Formatter.Write(program);
+			d_writtenFiles = Options.Instance.Formatter.Write(program);
 			
 			if (Options.Instance.PrintCompileSource)
 			{
@@ -47,12 +50,15 @@ namespace Cpg.RawC
 			}
 			else if (Options.Instance.Compile != null)
 			{
+				Log.WriteLine("Compiling code...");
 				Options.Instance.Formatter.Compile(Options.Instance.Compile, Options.Instance.Verbose);
 			}
 		}
 		
 		private void Validate()
 		{
+			Log.WriteLine("Validating generated network...");
+
 			string tmpprog = Path.GetTempFileName();
 			
 			Options opts = Options.Instance;
@@ -102,6 +108,7 @@ namespace Cpg.RawC
 				{
 					Console.Error.WriteLine("Could not parse number:");
 					Console.Error.WriteLine(line);
+					
 					Environment.Exit(1);
 				}
 			}
@@ -135,7 +142,15 @@ namespace Cpg.RawC
 				}
 			}
 			
-			Console.WriteLine("Network {0} successfully validated...", d_network.Filename);
+			Log.WriteLine("Network {0} successfully validated...", d_network.Filename);
+		}
+		
+		public string[] WrittenFiles
+		{
+			get
+			{
+				return d_writtenFiles;
+			}
 		}
 		
 		private Programmer.Options ProgrammerOptions()

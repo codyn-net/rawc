@@ -10,6 +10,9 @@ namespace Cpg.RawC.Programmer
 		private Dictionary<object, DataItem> d_items;
 		private List<DataItem> d_list;
 		private bool d_needsInitialization;
+		private int d_columns;
+		private bool d_isconstant;
+		private bool d_integertype;
 		
 		public class DataItem
 		{
@@ -70,12 +73,55 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
-		public DataTable(string name, bool needsInitialization)
+		public DataTable(string name, bool needsInitialization) : this(name, needsInitialization, -1)
+		{
+		}
+		
+		public DataTable(string name, bool needsInitialization, int columns)
 		{
 			d_name = name;
 			d_items = new Dictionary<object, DataItem>();
 			d_list = new List<DataItem>();
 			d_needsInitialization = needsInitialization;
+			d_columns = columns;
+			d_isconstant = false;
+			d_integertype = false;
+		}
+		
+		public bool IsConstant
+		{
+			get
+			{
+				return d_isconstant;
+			}
+			set
+			{
+				d_isconstant = value;
+			}
+		}
+		
+		public bool IntegerType
+		{
+			get
+			{
+				return d_integertype;
+			}
+			set
+			{
+				d_integertype = value;
+			}
+		}
+		
+		public int Columns
+		{
+			get
+			{
+				return d_columns;
+			}
+			set
+			{
+				d_columns = value;
+			}
 		}
 		
 		public bool NeedsInitialization
@@ -118,10 +164,27 @@ namespace Cpg.RawC.Programmer
 		private object BaseKey(object key)
 		{
 			State state;
+			Tree.Node node;
 
-			if (As(key, out state))
+			if (As(key, out state) && state.Property != null)
 			{
 				return state.Property;
+			}
+			else if (As(key, out node))
+			{
+				InstructionProperty prop = node.Instruction as InstructionProperty;
+				
+				if (prop != null)
+				{
+					return prop.Property;
+				}
+				
+				Instructions.State st = node.Instruction as Instructions.State;
+				
+				if (st != null)
+				{
+					return st.Item;
+				}
 			}
 			
 			return key;
@@ -135,13 +198,13 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
-		public bool Add(object key)
+		public DataItem Add(object key)
 		{
 			object b = BaseKey(key);
 			
 			if (d_items.ContainsKey(b))
 			{
-				return false;
+				return d_items[b];
 			}
 			
 			DataItem ret = new DataItem(this, b, d_list.Count);
@@ -149,7 +212,7 @@ namespace Cpg.RawC.Programmer
 			d_items.Add(b, ret);
 			d_list.Add(ret);
 
-			return true;
+			return ret;
 		}
 		
 		public DataItem this[int idx]
@@ -175,6 +238,18 @@ namespace Cpg.RawC.Programmer
 				{
 					return d_items[BaseKey(key)];
 				}
+			}
+		}
+		
+		public void RemoveAll(IEnumerable<int> indices)
+		{
+			int num = 0;
+
+			foreach (int idx in indices)
+			{
+				d_items.Remove(d_list[idx - num].Key);
+				d_list.RemoveAt(idx - num);
+				++num;
 			}
 		}
 		

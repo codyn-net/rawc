@@ -33,6 +33,11 @@ namespace Cpg.RawC.Application
 			{
 				return;
 			}
+			
+			if (options.Quiet)
+			{
+				Log.Base = null;
+			}
 
 			foreach (string filename in options.Files)
 			{
@@ -41,6 +46,24 @@ namespace Cpg.RawC.Application
 				try
 				{
 					generator.Generate();
+					
+					if (!options.Validate)
+					{
+						string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, a => String.Format("`{0}'", System.IO.Path.GetFileName(a)));
+	
+						string s;
+						
+						if (files.Length <= 1)
+						{
+							s = String.Join(", ", files);
+						}
+						else
+						{
+							s = String.Format("{0} and {1}", String.Join(", ", files, 0, files.Length - 1), files[files.Length - 1]);
+						}
+
+						Console.Out.WriteLine("Generated {0} from `{1}'...", s, filename);
+					}
 				}
 				catch (Exception e)
 				{

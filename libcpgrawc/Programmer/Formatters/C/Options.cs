@@ -25,7 +25,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		[CommandLine.Option("symbolic-names", Description="Use symbolic names for state indices in the source code")]
 		public bool SymbolicNames;
-
+		
 		public Options(string name) : base(name)
 		{
 		}		

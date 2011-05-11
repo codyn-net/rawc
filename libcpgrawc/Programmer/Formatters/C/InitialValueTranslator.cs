@@ -19,6 +19,16 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			return Invoke<string>(parameters);
 		}
 		
+		private string Translate(Tree.Node node)
+		{
+			return NotInitialized;
+		}
+		
+		private string Translate(State state)
+		{
+			return NotInitialized;
+		}
+		
 		private string Translate(Cpg.Property property)
 		{
 			if (Knowledge.Instance.NeedsInitialization(property, RawC.Options.Instance.AlwaysInitializeDynamically))
@@ -29,6 +39,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			{
 				return NumberTranslator.Translate(property);
 			}
+		}
+		
+		private string Translate(Computation.Loop.Index val)
+		{
+			return val.DataItem.AliasOrIndex;
 		}
 		
 		private string Translate(double number)

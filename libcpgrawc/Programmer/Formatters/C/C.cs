@@ -17,6 +17,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private string d_cprefix;
 		private string d_cprefixup;
 		private string d_sourceFilename;
+		private string d_headerFilename;
+		private string d_cppFilename;
 		
 		private class EnumItem
 		{
@@ -40,17 +42,25 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			d_enumMap = new List<EnumItem>();
 		}
 		
-		public void Write(Program program)
+		public string[] Write(Program program)
 		{
 			d_program = program;
+			
+			List<string> written = new List<string>();
 
 			WriteHeader();
 			WriteSource();
 			
+			written.Add(d_headerFilename);
+			written.Add(d_sourceFilename);
+			
 			if (d_options.GenerateCppWrapper)
 			{
 				WriteCppWrapper();
+				written.Add(d_cppFilename);
 			}
+			
+			return written.ToArray();
 		}
 		
 		public string CompileSource()
@@ -114,7 +124,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			
 			if (verbose)
 			{
-				Console.Error.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
+				Log.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
 			}
 			
 			process.Start();
@@ -305,10 +315,10 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				if (d_options.SymbolicNames)
 				{
 					item.Alias = enumname;
-				
-					if (d_program.IntegrateTable.Contains(prop))
+
+					if (d_program.IntegrateTable.ContainsKey(item))
 					{
-						d_program.IntegrateTable[prop].Alias = enumname;
+						d_program.StateTable[d_program.IntegrateTable[item]].Alias = enumname;
 					}
 				}
 				
@@ -337,8 +347,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private void WriteHeader()
 		{
-			string filename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".h");
-			TextWriter writer = new StreamWriter(filename);
+			d_headerFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".h");
+			TextWriter writer = new StreamWriter(d_headerFilename);
 			
 			// Include guard
 			writer.WriteLine("#ifndef __{0}_H__", CPrefixUp);
@@ -664,18 +674,55 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
 			writer.WriteLine("{");
 			
+			if (d_program.LoopsCount != 0)
+			{
+				writer.WriteLine("\tint i;\n");
+			}
+			
 			WriteComputationNodes(writer, d_program.SourceNodes);
 			
 			writer.WriteLine("}");
 			writer.WriteLine();
 		}
 		
+		private string MinimumTableType(DataTable table)
+		{
+			ulong maxnum = 0;
+
+			foreach (DataTable.DataItem item in table)
+			{
+				maxnum = System.Math.Max(maxnum, ((Computation.Loop.Index)item.Key).Value);
+			}
+			
+			if (maxnum < (ulong)byte.MaxValue)
+			{
+				return "unsigned char";
+			}
+			else if (maxnum < (ulong)UInt16.MaxValue)
+			{
+				return "unsigned short";
+			}
+			else if (maxnum < (ulong)UInt32.MaxValue)
+			{
+				return "unsigned int";
+			}
+			else
+			{
+				return "unsigned long int";
+			}
+		}
+		
 		private void WriteDataTable(TextWriter writer, DataTable table)
 		{
-			writer.WriteLine("static {0} {1}[] =", ValueType, table.Name);
+			writer.WriteLine("static{0} {1} {2}[]{3} =",
+			                 table.IsConstant ? " const" : "",
+			                 table.IntegerType ? MinimumTableType(table) : ValueType,
+			                 table.Name,
+			                 table.Columns > 0 ? String.Format("[{0}]", table.Columns) : "");
+			
 			writer.WriteLine("{");
 			
-			int cols = System.Math.Min(10, table.Count);
+			int cols = table.Columns > 0 ? table.Columns : System.Math.Min(10, table.Count);
 			int rows = (int)System.Math.Ceiling(table.Count / (double)cols);
 			int[,] colsize = new int[cols, 2];
 
@@ -704,6 +751,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				if (col == 0)
 				{
 					writer.Write("\t");
+					
+					if (table.Columns > 0)
+					{
+						writer.Write("{ ");
+					}
 				}
 				
 				string val = vals[row, col];
@@ -716,6 +768,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				else
 				{
 					writer.Write("{0}.{1}", parts[0].PadLeft(colsize[col, 0] + 1), parts[1].PadRight(colsize[col, 1] - 1));
+				}
+				
+				if (table.Columns > 0 && col == table.Columns - 1)
+				{
+					writer.Write(" }");
 				}
 				
 				if (i != table.Count - 1)
@@ -822,8 +879,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private void WriteCppWrapper()
 		{
-			string filename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".hh");
-			TextWriter writer = new StreamWriter(filename);
+			d_cppFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".hh");
+			TextWriter writer = new StreamWriter(d_cppFilename);
 			
 			writer.WriteLine("#ifndef __{0}_HH__", CPrefixUp);
 			writer.WriteLine("#define __{0}_HH__", CPrefixUp);

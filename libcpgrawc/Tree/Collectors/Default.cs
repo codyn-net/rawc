@@ -18,7 +18,7 @@ namespace Cpg.RawC.Tree.Collectors
 			// The default implementation is very basic, it just compares the whole expression
 			for (int i = 0; i < forest.Length; ++i)
 			{
-				if (forest[i].DescendantsCount < Options.Instance.MinimumEmbeddingSize)
+				if ((forest[i].DescendantsCount + 1) < Options.Instance.MinimumEmbeddingSize)
 				{
 					continue;
 				}

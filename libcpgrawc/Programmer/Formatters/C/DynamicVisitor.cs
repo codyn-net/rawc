@@ -68,7 +68,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				
 				type = type.BaseType;
 				
-				if (!TypeIsA(type, d_parameterTypes[0], false))
+				if (type == null || !TypeIsA(type, d_parameterTypes[0], false))
 				{
 					return null;
 				}
@@ -86,7 +86,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			}
 			else
 			{
-				throw new NotImplementedException(String.Format("The handler for `{0}' is not yet implemented...", parameters[0].GetType()));
+				throw new NotImplementedException(String.Format("The handler for `{0}' ({1}) is not yet implemented...", parameters[0].GetType(), parameters[0]));
 			}
 		}
 		

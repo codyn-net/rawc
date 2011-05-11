@@ -36,8 +36,11 @@ namespace Cpg.RawC
 		[CommandLine.Option("validate-precision", Description="Allowed precision for validation")]
 		private double d_validatePrecision = 10e-6;
 		
-		[CommandLine.Option("verbose", 'V', Description="Allowed precision for validation")]
+		[CommandLine.Option("verbose", 'V', Description="Display verbose information")]
 		private bool d_verbose;
+		
+		[CommandLine.Option("quiet", 'q', Description="Do not output anything on standard out")]
+		private bool d_quiet;
 		
 		[CommandLine.Option("always-initialize-dynamically", Description="Force dynamic intialization instead of static initialization of states")]
 		private bool d_alwaysInitializeDynamically;
@@ -50,7 +53,10 @@ namespace Cpg.RawC
 		
 		[CommandLine.Option("no-embeddings", Description="Disable detection of embeddings")]
 		private bool d_noEmbeddings;
-		
+
+		[CommandLine.Option("minimum-loop-size", Description="Minimum number of items in a loop")]
+		public uint MinimumLoopSize = 3;
+
 		private double[] d_validateRange;
 
 		private Programmer.Formatters.IFormatter d_formatter;		
@@ -153,6 +159,14 @@ namespace Cpg.RawC
 			get
 			{
 				return d_collector;
+			}
+		}
+		
+		public bool Quiet
+		{
+			get
+			{
+				return d_quiet;
 			}
 		}
 		
