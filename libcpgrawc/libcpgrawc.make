@@ -81,10 +81,10 @@ FILES = \
 	Programmer/Computation/Empty.cs \
 	Programmer/Computation/Loop.cs \
 	Programmer/Computation/Assignment.cs \
-	Programmer/Computation/Addition.cs \
 	Programmer/Program.cs \
 	Programmer/Instructions/Variable.cs \
 	Programmer/Instructions/Function.cs \
+	Programmer/Instructions/State.cs \
 	Programmer/Options.cs \
 	AssemblyInfo.cs \
 	Plugins/Plugins.cs \
@@ -92,7 +92,8 @@ FILES = \
 	Plugins/Attributes.cs \
 	Options.cs \
 	Generator.cs \
-	Sort.cs
+	Sort.cs \
+	Log.cs
 
 DATA_FILES =
 
