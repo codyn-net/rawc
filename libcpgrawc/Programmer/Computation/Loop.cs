@@ -132,70 +132,92 @@ namespace Cpg.RawC.Programmer.Computation
 			}
 		}
 		
-		private bool RemoveSameIndices(int c1, int c2)
+		private bool ColumnIsDuplicate(int c1, out int c2, out int[] indices)
 		{
-			List<int> indices = new List<int>();
-
-			for (int i = 0; i < d_items.Count; ++i)
+			indices = new int[d_items.Count];
+			
+			for (c2 = c1 + 1; c2 < d_indextable.Columns; ++c2)
 			{
-				int idx1 = i * d_indextable.Columns + c1;
-				int idx2 = i * d_indextable.Columns + c2;
-				
-				if (((Index)d_indextable[idx1].Key).Value != ((Index)d_indextable[idx2].Key).Value)
+				bool ret = true;
+
+				for (int i = 0; i < d_items.Count; ++i)
 				{
-					return false;
+					int idx1 = i * d_indextable.Columns + c1;
+					int idx2 = i * d_indextable.Columns + c2;
+				
+					if (((Index)d_indextable[idx1].Key).Value != ((Index)d_indextable[idx2].Key).Value)
+					{
+						ret = false;
+						break;
+					}
+					
+					indices[i] = idx1;
 				}
 				
-				indices.Add(idx2);
+				if (ret)
+				{
+					return true;
+				}
 			}
 			
-			// Remove column c2
-			d_indextable.RemoveAll(indices);
-			--d_indextable.Columns;
-			
-			return true;
+			return false;
+		}
+		
+		private int FromMap(Dictionary<int, int> mapping, int idx)
+		{
+			int ret;
+
+			while (true)
+			{
+				ret = mapping[idx];
+				
+				if (ret <= idx)
+				{
+					return ret;
+				}
+				else
+				{
+					idx = ret;
+				}
+			}
 		}
 		
 		public void Close()
 		{
 			// Eliminate redundant columns
-			int column = 0;
-			
 			Dictionary<int, int> indexmap = new Dictionary<int, int>();
-			List<int> origindex = new List<int>(d_indextable.Columns);
+			List<int> removed = new List<int>();
 			
 			for (int i = 0; i < d_indextable.Columns; ++i)
 			{
-				origindex.Add(i);
+				indexmap[i] = i;
 			}
 			
-			while (column < d_indextable.Columns)
+			for (int i = 1; i < d_indextable.Columns; ++i)
 			{
-				int cmp = column + 1;
-				indexmap[origindex[column]] = column;
-
-				while (cmp < d_indextable.Columns)
+				int col;
+				int[] indices;
+				
+				if (ColumnIsDuplicate(i, out col, out indices))
 				{
-					if (!RemoveSameIndices(column, cmp))
+					indexmap[i] = col;
+					removed.AddRange(indices);
+					
+					for (int j = i + 1; j < d_indextable.Columns; ++j)
 					{
-						++cmp;
-					}
-					else
-					{
-						indexmap[origindex[cmp]] = column;
-						origindex.RemoveAt(cmp);
+						--indexmap[j];
 					}
 				}
-
-				++column;
 			}
+			
+			d_indextable.RemoveAll(removed);
 			
 			foreach (Tree.Embedding.Argument arg in d_function.Arguments)
 			{
 				d_mapping[arg.Path] = String.Format("{0}[{1}[i][{2}]]",
 				                                    d_program.StateTable.Name,
 				                                    d_indextable.Name,
-				                                    indexmap[(int)arg.Index] + 1);
+				                                    FromMap(indexmap, (int)arg.Index + 1));
 			}
 
 		}

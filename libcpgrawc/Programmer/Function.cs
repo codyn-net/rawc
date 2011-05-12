@@ -6,16 +6,22 @@ namespace Cpg.RawC.Programmer
 	public class Function
 	{
 		private string d_name;
+		private bool d_iscustom;
 
 		private Tree.Node d_expression;
 		private List<Tree.Embedding.Argument> d_arguments;
 		private List<Tree.Embedding.Argument> d_orderedArguments;
+		
+		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments) : this(name, expression, arguments, false)
+		{
+		}
 
-		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments)
+		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments, bool iscustom)
 		{
 			d_expression = expression;
 			d_arguments = new List<Tree.Embedding.Argument>(arguments);
 			d_name = name;
+			d_iscustom = iscustom;
 			
 			d_orderedArguments = new List<Tree.Embedding.Argument>();
 			
@@ -33,7 +39,19 @@ namespace Cpg.RawC.Programmer
 			}
 		}
 		
-		public Function(string name, Tree.Embedding embedding) : this(name, embedding.Expression, embedding.Arguments)
+		public bool IsCustom
+		{
+			get
+			{
+				return d_iscustom;
+			}
+		}
+		
+		public Function(string name, Tree.Embedding embedding, bool iscustom) : this(name, embedding.Expression, embedding.Arguments, iscustom)
+		{
+		}
+		
+		public Function(string name, Tree.Embedding embedding) : this(name, embedding, false)
 		{
 		}
 		

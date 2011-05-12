@@ -42,6 +42,10 @@ namespace Cpg.RawC.Programmer
 				{
 					return d_index;
 				}
+				set
+				{
+					d_index = value;
+				}
 			}
 			
 			public object Key
@@ -244,12 +248,27 @@ namespace Cpg.RawC.Programmer
 		public void RemoveAll(IEnumerable<int> indices)
 		{
 			int num = 0;
+			int cur = d_list.Count;
+			
+			List<int> ids = new List<int>(indices);
+			ids.Sort();
 
-			foreach (int idx in indices)
+			foreach (int idx in ids)
 			{
 				d_items.Remove(d_list[idx - num].Key);
 				d_list.RemoveAt(idx - num);
 				++num;
+			}
+			
+			// How many rows
+			if (d_columns > 0)
+			{
+				d_columns -= num / (cur / d_columns);
+			}
+			
+			for (int i = 0; i < d_list.Count; ++i)
+			{
+				d_list[i].Index = i;
 			}
 		}
 		

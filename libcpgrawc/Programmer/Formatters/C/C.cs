@@ -315,11 +315,6 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				if (d_options.SymbolicNames)
 				{
 					item.Alias = enumname;
-
-					if (d_program.IntegrateTable.ContainsKey(item))
-					{
-						d_program.StateTable[d_program.IntegrateTable[item]].Alias = enumname;
-					}
 				}
 				
 				d_enumMap.Add(new EnumItem(prop, shortname, enumname));

@@ -270,7 +270,7 @@ namespace Cpg.RawC.Programmer
 				Tree.Embedding embedding = new Tree.Embedding(node, args);
 				string name = GenerateFunctionName(String.Format("cf_{0}", function.Id.ToLower()));
 
-				Function func = new Function(name, embedding);			
+				Function func = new Function(name, embedding, true);
 				Add(embedding, func);
 
 				d_embeddings.Add(embedding);
@@ -400,7 +400,14 @@ namespace Cpg.RawC.Programmer
 			// looped stuff, creating temporary variables on the fly if needed
 			foreach (Tree.Embedding embedding in d_embeddings)
 			{
-				LoopData loop = new LoopData(embedding, d_embeddingFunctionMap[embedding]);
+				Function function = d_embeddingFunctionMap[embedding];
+				
+				if (function.IsCustom)
+				{
+					continue;
+				}
+
+				LoopData loop = new LoopData(embedding, function);
 
 				foreach (Tree.Node node in embedding.Instances)
 				{

@@ -34,9 +34,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			               context.Program.StateTable.Name,
 			               node.IndexTable.Name,
 			               InstructionTranslator.QuickTranslate(ctx));
-			ret.AppendLine();			               
-			ret.AppendLine("}");
 			ret.AppendLine();
+			ret.AppendLine("}");
 			
 			return ret.ToString();
 		}
