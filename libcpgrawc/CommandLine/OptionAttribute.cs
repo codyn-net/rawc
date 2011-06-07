@@ -3,7 +3,7 @@ using System;
 namespace Cpg.RawC.CommandLine
 {
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-	public class OptionAttribute : Attribute
+	public class OptionAttribute : System.Attribute
 	{
 		public string LongName;
 		public string ShortName;

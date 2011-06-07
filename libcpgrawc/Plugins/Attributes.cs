@@ -3,7 +3,7 @@ using System;
 namespace Cpg.RawC.Plugins.Attributes
 {
 	[AttributeUsage(AttributeTargets.Field)]
-	public class SettingAttribute : Attribute
+	public class SettingAttribute : System.Attribute
 	{
 		public string d_name;
 		public object d_default;
@@ -61,7 +61,7 @@ namespace Cpg.RawC.Plugins.Attributes
 	}
 
 	[AttributeUsage(AttributeTargets.Class)]
-	public class PluginAttribute : Attribute
+	public class PluginAttribute : System.Attribute
 	{
 		private string d_name;
 		private string d_description;
