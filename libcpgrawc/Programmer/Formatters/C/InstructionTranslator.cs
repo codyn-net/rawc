@@ -201,7 +201,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
 			
-			if ((context.State == null || (context.State.Type & State.Flags.AfterIntegrated) == 0) && context.Program.IntegrateTable.ContainsKey(item))
+			if ((context.State == null || (context.State.Type & (State.Flags.Initialization | State.Flags.AfterIntegrated)) == 0) && context.Program.IntegrateTable.ContainsKey(item))
 			{
 				// Instead use the conserved state
 				item = context.Program.StateTable[context.Program.IntegrateTable[item]];
@@ -238,7 +238,6 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(Instructions.State instruction, Context context)
 		{
-			Console.WriteLine(instruction.Item.AliasOrIndex);
 			return String.Format("{0}[{1}]", instruction.Item.Table.Name, instruction.Item.AliasOrIndex);
 		}
 		
