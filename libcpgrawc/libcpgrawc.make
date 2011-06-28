@@ -97,7 +97,8 @@ FILES = \
 
 DATA_FILES =
 
-RESOURCES =
+RESOURCES = \
+	Programmer/Formatters/C/TestProgram.resources,Cpg.RawC.Programmer.Formatters.C.TestProgram.resources
 
 EXTRAS = \
 	cpg-rawc-sharp.pc.in
