@@ -72,7 +72,7 @@ namespace Cpg.RawC.Tree
 			}
 			else if (InstructionIs(inst, out icusop))
 			{
-				throw new Exception(String.Format("Custom operators are currently not supported: {0}", icusop.Operator.Name));
+				throw new Exception(String.Format("Custom operators are currently not supported: {0}", icusop.Operator));
 			}
 			else if (InstructionIs(inst, out iop))
 			{
