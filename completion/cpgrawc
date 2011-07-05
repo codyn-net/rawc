@@ -2,7 +2,7 @@ _cpgrawc() {
 	cur=`_get_cword`
 
 	if [[ "$cur" != -* ]]; then
-        _filedir '@(cpg|xml)'
+		_filedir '@(cpg|xml)'
 	else
 		COMPREPLY=($(compgen -W "$(cpgrawc --list-options)" -- "$cur"))
 	fi
