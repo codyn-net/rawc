@@ -41,6 +41,22 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			}
 		}
 		
+		private string Translate(DelayedState.Key op)
+		{
+			if (Knowledge.Instance.NeedsInitialization(op.Operator.InitialValue, RawC.Options.Instance.AlwaysInitializeDynamically))
+			{
+				return NotInitialized;
+			}
+			else if (op.Operator.InitialValue != null)
+			{
+				return NumberTranslator.Translate(op.Operator.InitialValue.Value);
+			}
+			else
+			{
+				return "0.0";
+			}
+		}
+		
 		private string Translate(Computation.Loop.Index val)
 		{
 			return val.DataItem.AliasOrIndex;
@@ -49,6 +65,16 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private string Translate(double number)
 		{
 			return NumberTranslator.Translate(number);
+		}
+		
+		private string Translate(DelayedState.Size size)
+		{
+			return "0";
+		}
+		
+		private string Translate(UInt32 number)
+		{
+			return number.ToString();
 		}
 		
 		public const string NotInitialized = "NINIT";

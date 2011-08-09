@@ -21,6 +21,8 @@ namespace Cpg.RawC.Programmer
 		private Dictionary<Tree.Embedding, Function> d_embeddingFunctionMap;
 
 		private DataTable d_statetable;
+		private DataTable d_delayedCounters;
+		private DataTable d_delayedCountersSize;
 		private List<DataTable> d_indexTables;
 		private Dictionary<State, Tree.Node> d_equations;
 
@@ -41,6 +43,13 @@ namespace Cpg.RawC.Programmer
 			d_loops = new List<Computation.Loop>();
 			d_indexTables = new List<DataTable>();
 
+			d_delayedCounters = new DataTable("delay_counters", true);
+			d_delayedCounters.IntegerType = true;
+			
+			d_delayedCountersSize = new DataTable("delayed_counters_size", true);
+			d_delayedCountersSize.IntegerType = true;
+			d_delayedCountersSize.IsConstant = true;
+
 			d_equations = equations;
 			d_options = options;
 			
@@ -49,6 +58,11 @@ namespace Cpg.RawC.Programmer
 			ProgramCustomFunctions();
 			ProgramInitialization();
 			ProgramSource();
+			
+			foreach (DataTable table in DataTables)
+			{
+				table.Lock();
+			}
 		}
 		
 		public DataTable StateTable
@@ -96,7 +110,7 @@ namespace Cpg.RawC.Programmer
 			// Add direct state variables
 			foreach (State state in Knowledge.Instance.DirectStates)
 			{
-				d_statetable.Add(state);
+				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Integrated);
 			}
 			
 			d_stateIntegratedIndex = d_statetable.Count;
@@ -104,7 +118,7 @@ namespace Cpg.RawC.Programmer
 			// Add integrated state variables
 			foreach (State state in Knowledge.Instance.IntegratedStates)
 			{
-				d_statetable.Add(state);
+				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Direct);
 			}
 			
 			d_stateIntegratedUpdateIndex = d_statetable.Count;
@@ -112,29 +126,46 @@ namespace Cpg.RawC.Programmer
 			// Add update values for integrated state variables
 			foreach (State state in Knowledge.Instance.IntegratedStates)
 			{
-				State update = new State(null, State.Flags.Update);
+				State update = new State(State.Flags.Update);
 				
 				d_updateStates.Add(update);
-				d_statetable.Add(update);
+				d_statetable.Add(update).Type |= (DataTable.DataItem.Flags.State |
+				                                  DataTable.DataItem.Flags.Integrated |
+				                                  DataTable.DataItem.Flags.Update);
+
 				d_integrateTable[d_statetable[state]] = update;
 			}
 			
 			// Add in variables
 			foreach (Cpg.Property prop in Knowledge.Instance.InProperties)
 			{
-				d_statetable.Add(prop);
+				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.In);
 			}
 			
 			// Add out variables
 			foreach (Cpg.Property prop in Knowledge.Instance.OutProperties)
 			{
-				d_statetable.Add(prop);
+				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Out);
+			}
+			
+			// Add delayed
+			foreach (State state in Knowledge.Instance.DelayedStates)
+			{
+				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Delayed);
+				
+				DelayedState.Size size = ((DelayedState)state).Count;
+
+				d_delayedCounters.Add(size).Type = DataTable.DataItem.Flags.Counter;
+				d_delayedCounters.MaxSize = size - 1;
+				
+				d_delayedCountersSize.Add((uint)size).Type = DataTable.DataItem.Flags.Size;
+				d_delayedCountersSize.MaxSize = size;
 			}
 			
 			// Add intialized variables
 			foreach (State state in Knowledge.Instance.InitializeStates)
 			{
-				d_statetable.Add(state);
+				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Initialization);
 			}
 		}
 		
@@ -340,6 +371,8 @@ namespace Cpg.RawC.Programmer
 					{
 						// Promote to data table
 						DataTable.DataItem ditem = d_statetable.Add(num.Value);
+						
+						ditem.Type = DataTable.DataItem.Flags.Constant;
 						subnode.Instruction = new Instructions.State(ditem);
 					}
 				}
@@ -359,6 +392,7 @@ namespace Cpg.RawC.Programmer
 				{
 					// Create new temporary state for this computation
 					DataTable.DataItem item = d_statetable.Add(cloned);
+					item.Type = DataTable.DataItem.Flags.Temporary;
 					
 					ret.Add(item, cloned);
 					
@@ -436,21 +470,28 @@ namespace Cpg.RawC.Programmer
 		}
 		
 		private void ProgramSource()
-		{
+		{		
 			Cpg.Property dtprop = Knowledge.Instance.Network.Integrator.Property("dt");
 			DataTable.DataItem dt = d_statetable[dtprop];
-			Tree.Node dteq = new Tree.Node(null, new Instructions.Variable("timestep"));
-			
-			// Set dt
-			d_source.Add(new Computation.Comment("Set timestep"));
-			d_source.Add(new Computation.Assignment(null, dt, dteq));
-			d_source.Add(new Computation.Empty());
 
-			d_source.Add(new Computation.Comment("Make copy of current integrated state"));
+			if (d_options.FixedStepSize <= 0)
+			{
+				Tree.Node dteq = new Tree.Node(null, new Instructions.Variable("timestep"));
 			
+				// Set dt
+				d_source.Add(new Computation.Comment("Set timestep"));
+				d_source.Add(new Computation.Assignment(null, dt, dteq));
+				d_source.Add(new Computation.Empty());
+			}
+
 			int num = d_stateIntegratedUpdateIndex - d_stateIntegratedIndex;
-			d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, d_stateIntegratedIndex, num, d_stateIntegratedUpdateIndex));
-			d_source.Add(new Computation.Empty());
+			
+			if (num > 0)
+			{
+				d_source.Add(new Computation.Comment("Make copy of current integrated state"));
+				d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, d_stateIntegratedIndex, num, d_stateIntegratedUpdateIndex));
+				d_source.Add(new Computation.Empty());
+			}
 
 			// Precompute for out properties
 			if (Knowledge.Instance.PrecomputeBeforeDirectStatesCount != 0)
@@ -492,6 +533,18 @@ namespace Cpg.RawC.Programmer
 				d_source.Add(new Computation.Empty());
 			}
 			
+			// Compute delayed values using the current counters
+			if (Knowledge.Instance.DelayedStatesCount != 0)
+			{
+				d_source.Add(new Computation.Comment("Write values of delayed expressions"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.DelayedStates));
+				d_source.Add(new Computation.Empty());
+				
+				d_source.Add(new Computation.Comment("Increment delayed counters"));
+				d_source.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
+				d_source.Add(new Computation.Empty());
+			}
+			
 			// Increase time
 			Cpg.Property tprop = Knowledge.Instance.Network.Integrator.Property("t");
 			DataTable.DataItem t = d_statetable[tprop];
@@ -507,15 +560,35 @@ namespace Cpg.RawC.Programmer
 		
 		private void ProgramInitialization()
 		{
+			if (d_options.FixedStepSize > 0)
+			{
+				Cpg.Property dtprop = Knowledge.Instance.Network.Integrator.Property("dt");
+				DataTable.DataItem dt = d_statetable[dtprop];
+				
+				Tree.Node node = new Tree.Node(null, new Cpg.InstructionNumber(d_options.FixedStepSize));
+				
+				d_initialization.Add(new Computation.Comment("Set the fixed time step"));
+				d_initialization.Add(new Computation.Assignment(null, dt, node));
+				
+				if (Knowledge.Instance.InitializeStatesCount > 0)
+				{
+					d_initialization.Add(new Computation.Empty());
+				}
+			}
+			
+			List<State> init = new List<State>();
+
 			foreach (State state in Knowledge.Instance.InitializeStates)
 			{
 				if (!d_statetable.Contains(state))
 				{
 					continue;
 				}
-
-				d_initialization.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
+				
+				init.Add(state);
 			}
+			
+			d_initialization.AddRange(AssignmentStates(init));
 		}
 		
 		public IEnumerable<Cpg.Function> UsedCustomFunctions
@@ -552,6 +625,25 @@ namespace Cpg.RawC.Programmer
 				{
 					yield return table;
 				}
+				
+				yield return d_delayedCounters;
+				yield return d_delayedCountersSize;
+			}
+		}
+		
+		public DataTable DelayedCounters
+		{
+			get
+			{
+				return d_delayedCounters;
+			}
+		}
+		
+		public DataTable DelayedCountersSize
+		{
+			get
+			{
+				return d_delayedCountersSize;
 			}
 		}
 	}

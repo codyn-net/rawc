@@ -366,7 +366,15 @@ namespace Cpg.RawC.Programmer.Formatters.C
  			writer.WriteLine();
  			
  			writer.WriteLine("void {0}_initialize (void);", CPrefixDown);
- 			writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
+ 			
+ 			if (d_program.Options.FixedStepSize <= 0)
+ 			{
+ 				writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
+ 			}
+ 			else
+ 			{
+ 				writer.WriteLine("void {0}_step ();", CPrefixDown);
+ 			}
  			
  			writer.WriteLine();
 
@@ -666,7 +674,16 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private void WriteStep(TextWriter writer)
 		{
 			writer.WriteLine("void");
-			writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
+			
+			if (d_program.Options.FixedStepSize <= 0)
+			{
+				writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
+			}
+			else
+			{
+				writer.WriteLine("{0}_step ()", CPrefixDown);
+			}
+
 			writer.WriteLine("{");
 			
 			if (d_program.LoopsCount != 0)
@@ -682,13 +699,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string MinimumTableType(DataTable table)
 		{
-			ulong maxnum = 0;
+			ulong maxnum = table.MaxSize;
 
-			foreach (DataTable.DataItem item in table)
-			{
-				maxnum = System.Math.Max(maxnum, ((Computation.Loop.Index)item.Key).Value);
-			}
-			
 			if (maxnum < (ulong)byte.MaxValue)
 			{
 				return "unsigned char";
@@ -742,7 +754,38 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			{
 				int row = i / cols;
 				int col = i % cols;
-				
+
+				if (Cpg.RawC.Options.Instance.Verbose)
+				{
+					if (col == 0 && table.Columns > 0)
+					{
+						writer.WriteLine("{");
+					}
+
+					writer.Write("\t{0}", vals[row, col]);
+					
+					if (i != table.Count - 1)
+					{
+						writer.Write(",");
+					}
+					
+					writer.WriteLine(" /* {0}) {1} [{2}] */", i, table[i].Description, table[i].Type);
+					
+					if (table.Columns > 0 && col == table.Columns - 1)
+					{
+						writer.Write("}");
+						
+						if (i != table.Count - 1)
+						{
+							writer.Write(",");
+						}
+						
+						writer.WriteLine();
+					}
+
+					continue;
+				}
+			
 				if (col == 0)
 				{
 					writer.Write("\t");
@@ -922,9 +965,26 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine("\t\t\t}");
 			writer.WriteLine();
 
-			writer.WriteLine("\t\t\tstatic void step({0} timestep)", ValueType);
+			if (d_program.Options.FixedStepSize <= 0)
+			{
+				writer.WriteLine("\t\t\tstatic void step({0} timestep)", ValueType);
+			}
+			else
+			{
+				writer.WriteLine("\t\t\tstatic void step()", ValueType);
+			}
+
 			writer.WriteLine("\t\t\t{");
-			writer.WriteLine("\t\t\t\t{0}_step (timestep);", CPrefixDown);
+			
+			if (d_program.Options.FixedStepSize <= 0)
+			{
+				writer.WriteLine("\t\t\t\t{0}_step (timestep);", CPrefixDown);
+			}
+			else
+			{
+				writer.WriteLine("\t\t\t\t{0}_step ();", CPrefixDown);
+			}
+
 			writer.WriteLine("\t\t\t}");
 			writer.WriteLine();
 

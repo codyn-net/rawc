@@ -13,19 +13,98 @@ namespace Cpg.RawC.Programmer
 		private int d_columns;
 		private bool d_isconstant;
 		private bool d_integertype;
+		private ulong d_maxSize;
+		private bool d_locked;
 		
 		public class DataItem
 		{
+			[Flags()]
+			public enum Flags
+			{
+				None = 0,
+				State = 1 << 0,
+				Index = 1 << 1,
+				Constant = 1 << 2,
+				Delayed = 1 << 3,
+				Integrated = 1 << 4,
+				Direct = 1 << 5,
+				In = 1 << 6,
+				Out = 1 << 7,
+				Update = 1 << 8,
+				Counter = 1 << 9,
+				Size = 1 << 10,
+				Initialization = 1 << 11,
+				Temporary = 1 << 12
+			}
+
 			private DataTable d_table;
 			private int d_index;
 			private object d_key;
 			private string d_alias;
+			private Flags d_type;
 			
-			public DataItem(DataTable table, object key, int index)
+			public DataItem(DataTable table, object key, int index) : this(table, key, index, Flags.None)
+			{
+			}
+
+			public DataItem(DataTable table, object key, int index, Flags type)
 			{
 				d_table = table;
 				d_index = index;
 				d_key = key;
+				d_type = type;
+			}
+			
+			public bool HasType(Flags type)
+			{
+				return (d_type & type) != 0;
+			}
+			
+			public string Description
+			{
+				get
+				{
+					if (d_key is Cpg.Property)
+					{
+						Cpg.Property prop = (Cpg.Property)d_key;
+						return prop.FullNameForDisplay;
+					}
+					else if (d_key is DelayedState.Key)
+					{
+						DelayedState.Key key = (DelayedState.Key)d_key;
+						
+						if (HasType(Flags.State))
+						{
+							return key.Operator.Expression.AsString;
+						}
+						else
+						{
+							return "";
+						}
+					}
+					else if (d_key is Computation.Loop.Index)
+					{
+						Computation.Loop.Index idx = (Computation.Loop.Index)d_key;
+						
+						return idx.Value.ToString();
+					}
+					else
+					{
+						return d_key.ToString();
+					}
+				}
+			}
+			
+			public Flags Type
+			{
+				get
+				{
+					return d_type;
+				}
+				set
+				{
+					d_type = value;
+				}
 			}
 			
 			public DataTable Table
@@ -90,6 +169,35 @@ namespace Cpg.RawC.Programmer
 			d_columns = columns;
 			d_isconstant = false;
 			d_integertype = false;
+			d_locked = false;
+		}
+		
+		public void Lock()
+		{
+			d_locked = true;
+		}
+		
+		public bool Locked
+		{
+			get
+			{
+				return d_locked;
+			}
+		}
+		
+		public ulong MaxSize
+		{
+			get
+			{
+				return d_maxSize;
+			}
+			set
+			{
+				if (value > d_maxSize)
+				{
+					d_maxSize = value;
+				}
+			}
 		}
 		
 		public bool IsConstant
@@ -168,11 +276,16 @@ namespace Cpg.RawC.Programmer
 		private object BaseKey(object key)
 		{
 			State state;
+			DelayedState dstate;
 			Tree.Node node;
 
 			if (As(key, out state) && state.Property != null)
 			{
 				return state.Property;
+			}
+			else if (As(key, out dstate))
+			{
+				return new DelayedState.Key(dstate.Operator);
 			}
 			else if (As(key, out node))
 			{
@@ -188,6 +301,20 @@ namespace Cpg.RawC.Programmer
 				if (st != null)
 				{
 					return st.Item;
+				}
+				
+				InstructionCustomOperator op = node.Instruction as InstructionCustomOperator;
+				
+				if (op != null && op.Operator is OperatorDelayed)
+				{
+					return new DelayedState.Key((OperatorDelayed)op.Operator);
+				}
+				
+				InstructionNumber opnum = node.Instruction as InstructionNumber;
+				
+				if (opnum != null)
+				{
+					return opnum.Value;
 				}
 			}
 			
@@ -215,6 +342,17 @@ namespace Cpg.RawC.Programmer
 			
 			d_items.Add(b, ret);
 			d_list.Add(ret);
+			
+			DelayedState dstate;
+			
+			if (As(key, out dstate))
+			{
+				/* Also add memory in the table for all the delayed values */
+				for (uint i = 1; i < dstate.Count; ++i)
+				{
+					d_list.Add(new DataItem(this, b, d_list.Count, DataItem.Flags.Delayed));
+				}
+			}
 
 			return ret;
 		}
@@ -233,14 +371,14 @@ namespace Cpg.RawC.Programmer
 			{
 				object basekey = BaseKey(key);
 				
-				if (!d_items.ContainsKey(basekey))
+				if (!d_items.ContainsKey(basekey) && !d_locked)
 				{
 					Add(basekey);
 					return d_items[basekey];
 				}
 				else
 				{
-					return d_items[BaseKey(key)];
+					return d_items[basekey];
 				}
 			}
 		}

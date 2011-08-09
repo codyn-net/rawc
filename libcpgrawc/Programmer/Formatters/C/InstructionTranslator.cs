@@ -223,6 +223,29 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			return String.Format("{0} ({1})", name, String.Join(", ", args));
 		}
 		
+		private string Translate(InstructionCustomOperator instruction, Context context)
+		{
+			OperatorDelayed delayed;
+			
+			delayed = instruction.Operator as OperatorDelayed;
+			
+			if (delayed == null)
+			{
+				throw new NotSupportedException(String.Format("The custom operator `{0}' is not yet implemented in rawc...", instruction.Operator.Name));
+			}
+			
+			uint size = (uint)System.Math.Round(delayed.Delay / Cpg.RawC.Options.Instance.FixedTimeStep) + 1;
+
+			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed)];
+			DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
+				
+			return String.Format("{0}[{1} + {2}[{3}]]",
+			                     context.Program.StateTable.Name,
+			                     item.AliasOrIndex,
+			                     context.Program.DelayedCounters.Name,
+			                     counter.Index);
+		}
+		
 		private string Translate(Instructions.Function instruction, Context context)
 		{
 			string name = instruction.FunctionCall.Name.ToUpper();

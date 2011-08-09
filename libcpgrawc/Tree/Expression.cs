@@ -72,7 +72,16 @@ namespace Cpg.RawC.Tree
 			}
 			else if (InstructionIs(inst, out icusop))
 			{
-				throw new Exception(String.Format("Custom operators are currently not supported: {0}", icusop.Operator));
+				if (icusop.Operator is OperatorDelayed)
+				{
+					// These are actually part of the state table, so we use
+					// a placeholder code here
+					return PlaceholderCode;
+				}
+				else
+				{
+					return HashMap("co_" + icusop.Operator.Name);
+				}
 			}
 			else if (InstructionIs(inst, out iop))
 			{
@@ -100,7 +109,7 @@ namespace Cpg.RawC.Tree
 			// Hash byte codes are layout like this:
 			// [MathFunctionNum]: Functions
 			// [MathOperatorNum]: Operators
-			// [...]:             Custom functions
+			// [...]:             Custom functions and operators
 			// 255 (byte max):    Property or number
 			
 			foreach (Instruction inst in instructions)
@@ -150,83 +159,12 @@ namespace Cpg.RawC.Tree
 			}
 		}
 		
-		private static bool NumericArguments(InstructionFunction ifunc, Stack<Instruction> newinst)
-		{
-			Stack<Instruction> cp = new Stack<Instruction>(newinst);
-						
-			for (int i = 0; i < ifunc.Arguments; ++i)
-			{
-				Instruction inst = cp.Pop();
-				
-				if (!(inst is InstructionNumber))
-				{
-					return false;
-				}
-			}
-			
-			return true;
-		}
-		
 		public static uint PlaceholderCode
 		{
 			get
 			{
 				return 0;
 			}
-		}
-		
-		private static void Precompute(InstructionFunction ifunc, Stack<Instruction> newinst)
-		{
-			int num = ifunc.Arguments;
-			Cpg.Stack stack = new Cpg.Stack((uint)num);
-
-			for (int i = 0; i < num; ++i)
-			{
-				InstructionNumber inum = (InstructionNumber)newinst.Pop();
-				
-				stack.Push(inum.Value);
-			}
-			
-			ifunc.Execute(stack);
-			newinst.Push(new InstructionNumber(stack.Pop()));
-		}
-		
-		public static Cpg.Expression Precompute(Cpg.Expression expression, out bool isopt)
-		{
-			Stack<Instruction> newinst = new Stack<Instruction>();
-			isopt = false;
-			
-			foreach (Instruction inst in expression.Instructions)
-			{
-				InstructionFunction ifunc;
-				InstructionOperator iop;
-
-				if (InstructionIs(inst, out iop) && Math.OperatorIsConstant((Cpg.MathOperatorType)iop.Id))
-				{
-					if (NumericArguments(iop, newinst))
-					{
-						Precompute(iop, newinst);
-						isopt = true;
-						continue;
-					}
-				}
-				else if (InstructionIs(inst, out ifunc) && Math.FunctionIsConstant((Cpg.MathFunctionType)ifunc.Id))
-				{
-					if (NumericArguments(ifunc, newinst))
-					{
-						Precompute(ifunc, newinst);
-						isopt = true;
-						continue;
-					}
-				}
-				
-				newinst.Push(inst);
-			}
-			
-			Cpg.Expression nexpr = new Cpg.Expression("0");
-			nexpr.Instructions = newinst.ToArray();
-
-			return nexpr;
 		}
 		
 		public static implicit operator Cpg.Expression(Expression expression)
@@ -275,6 +213,16 @@ namespace Cpg.RawC.Tree
 				}
 
 				instructions.Add(inst);
+			}
+		}
+		
+		public string HashString
+		{
+			get
+			{
+				string[] ret = Array.ConvertAll<uint, string>(Hash, a => a.ToString());
+				
+				return String.Join(" ", ret);
 			}
 		}
 	}

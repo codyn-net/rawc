@@ -70,7 +70,6 @@
     <Compile Include="CommandLine\OptionGroup.cs" />
     <Compile Include="Programmer\Instructions\Function.cs" />
     <Compile Include="Programmer\Computation\Assignment.cs" />
-    <Compile Include="Programmer\Computation\IComputationNode.cs" />
     <Compile Include="Programmer\Computation\Loop.cs" />
     <Compile Include="Programmer\Computation\Empty.cs" />
     <Compile Include="Programmer\Formatters\C\C.cs" />
@@ -90,6 +89,10 @@
     <Compile Include="Sort.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Programmer\Instructions\State.cs" />
+    <Compile Include="Programmer\Computation\INode.cs" />
+    <Compile Include="Exception.cs" />
+    <Compile Include="DelayedState.cs" />
+    <Compile Include="Programmer\Computation\IncrementDelayedCounters.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

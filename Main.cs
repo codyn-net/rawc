@@ -65,9 +65,14 @@ namespace Cpg.RawC.Application
 						Console.Out.WriteLine("Generated {0} from `{1}'...", s, filename);
 					}
 				}
-				catch (Exception e)
+				catch (Cpg.RawC.Exception e)
 				{
-					Exception b = e.GetBaseException();
+					Console.Error.WriteLine(e.Message);
+					Environment.Exit(1);
+				}
+				catch (System.Exception e)
+				{
+					System.Exception b = e.GetBaseException();
 					
 					if (!(b is NotImplementedException))
 					{

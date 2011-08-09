@@ -35,7 +35,74 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			               node.IndexTable.Name,
 			               InstructionTranslator.QuickTranslate(ctx));
 			ret.AppendLine();
-			ret.AppendLine("}");
+			ret.Append("}");
+			
+			return ret.ToString();
+		}
+		
+		private string Translate(Computation.IncrementDelayedCounters node, Context context)
+		{
+			StringBuilder ret = new StringBuilder();
+			
+			ret.AppendFormat("for (i = 0; i < {0}; ++i)", node.Counters.Count);
+			ret.AppendLine();
+			ret.AppendLine("{");
+			ret.AppendFormat("\tif ({0}[i] == {1}[i] - 1)", node.Counters.Name, node.CountersSize.Name);
+			ret.AppendLine();
+			ret.AppendLine("\t{");
+			ret.AppendFormat("\t\t{0}[i] = 0;", node.Counters.Name);
+			ret.AppendLine();
+			ret.AppendLine("\t}");
+			ret.AppendLine("\telse");
+			ret.AppendLine("\t{");
+			ret.AppendFormat("\t\t++{0}[i];", node.Counters.Name);
+			ret.AppendLine();
+			ret.AppendLine("\t}");
+			ret.Append("}");
+			
+			Dictionary<DataTable, bool> seen = new Dictionary<DataTable, bool>();
+			bool first = true;
+			
+			// Update counter loop indices
+			foreach (Computation.Loop loop in context.Program.Loops)
+			{
+				DataTable table = loop.IndexTable;
+				
+				if (seen.ContainsKey(table))
+				{
+					continue;
+				}
+				
+				for (int i = 0; i < table.Count; ++i)
+				{
+					DataTable.DataItem item = table[i];
+					
+					if (item.HasType(DataTable.DataItem.Flags.Delayed))
+					{
+						int r = i % table.Columns;
+						int c = i / table.Columns;
+						Computation.Loop.Index sidx = (Computation.Loop.Index)item.Key;
+
+						DataTable.DataItem state = context.Program.StateTable[(int)sidx.Value];
+						DelayedState.Key delayed = (DelayedState.Key)state.Key;
+						DataTable.DataItem idx = context.Program.DelayedCounters[delayed.Size];
+						
+						if (first)
+						{
+							ret.AppendLine();
+							first = false;
+						}
+
+						ret.AppendLine();
+						ret.AppendFormat("{0}[{1}][{2}] = {3} + {4}[{5}];",
+						                 table.Name, r, c,
+						                 sidx.Value,
+						                 context.Program.DelayedCounters.Name, idx.Index);
+					}
+				}
+				
+				seen[table] = true;
+			}
 			
 			return ret.ToString();
 		}

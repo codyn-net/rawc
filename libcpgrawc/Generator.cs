@@ -160,6 +160,7 @@ namespace Cpg.RawC
 			ret.Network = d_network;
 			ret.Basename = Options.Instance.Basename;
 			ret.Output = Options.Instance.Output;
+			ret.FixedStepSize = Options.Instance.FixedTimeStep;
 			
 			if (String.IsNullOrEmpty(ret.Basename))
 			{

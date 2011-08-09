@@ -56,6 +56,9 @@ namespace Cpg.RawC
 
 		[CommandLine.Option("minimum-loop-size", Description="Minimum number of items in a loop")]
 		public uint MinimumLoopSize = 3;
+		
+		[CommandLine.Option("fixed-time-step", Description="Fixed time step that will be used in the network")]
+		public double FixedTimeStep = -1;
 
 		private double[] d_validateRange;
 

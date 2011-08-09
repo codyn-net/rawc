@@ -27,6 +27,11 @@ namespace Cpg.RawC.Programmer.Computation
 				Value = val;
 				DataItem = item;
 			}
+			
+			public static implicit operator ulong(Index idx)
+			{
+				return idx.Value;
+			}
 		}
 
 		private Function d_function;
@@ -116,6 +121,7 @@ namespace Cpg.RawC.Programmer.Computation
 			
 			// Add row to index table
 			d_indextable.Add(new Index((ulong)target.Index, target));
+			d_indextable.MaxSize = (ulong)target.Index;
 			
 			foreach (Tree.Embedding.Argument arg in d_function.OrderedArguments)
 			{
@@ -127,8 +133,9 @@ namespace Cpg.RawC.Programmer.Computation
 				{
 					it = d_program.StateTable[d_program.IntegrateTable[it]];
 				}
-
-				d_indextable.Add(new Index((ulong)it.Index, it));
+				
+				d_indextable.Add(new Index((ulong)it.Index, it)).Type = (it.Type | DataTable.DataItem.Flags.Index);
+				d_indextable.MaxSize = (ulong)it.Index;
 			}
 		}
 		
@@ -212,6 +219,15 @@ namespace Cpg.RawC.Programmer.Computation
 			
 			d_indextable.RemoveAll(removed);
 			
+			for (int i = 0; i < d_indextable.Count; ++i)
+			{
+				if (d_indextable[i].HasType(DataTable.DataItem.Flags.Delayed))
+				{
+					d_indextable.IsConstant = false;
+					break;
+				}
+			}
+			
 			foreach (Tree.Embedding.Argument arg in d_function.Arguments)
 			{
 				d_mapping[arg.Path] = String.Format("{0}[{1}[i][{2}]]",
@@ -219,7 +235,6 @@ namespace Cpg.RawC.Programmer.Computation
 				                                    d_indextable.Name,
 				                                    FromMap(indexmap, (int)arg.Index + 1));
 			}
-
 		}
 	}
 }

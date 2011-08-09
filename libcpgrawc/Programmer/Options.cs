@@ -12,6 +12,8 @@ namespace Cpg.RawC.Programmer
 		
 		/* Output file basename */
 		public string Basename;
+		
+		public double FixedStepSize;
 	}
 }
 

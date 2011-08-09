@@ -15,14 +15,21 @@ namespace Cpg.RawC
 			BeforeDirect = 1 << 3,
 			BeforeIntegrated = 1 << 4,
 			AfterIntegrated = 1 << 5,
-			Update = 1 << 6
+			Update = 1 << 6,
+			Delayed = 1 << 7
 		}
 
 		public Property Property;
 		public LinkAction[] Actions;
 		private Cpg.Expression d_expression;
 		private Instruction[] d_instructions;
+		private Cpg.Expression d_initialValue;
 		private Flags d_type;
+		
+		public State(Flags type)
+		{
+			d_type = type;
+		}
 		
 		public State(Property property, params LinkAction[] actions) : this(property, Flags.None, actions)
 		{
@@ -37,12 +44,27 @@ namespace Cpg.RawC
 			{
 				d_type = Flags.Integrated;
 			}
-			else
+			else if (property != null)
 			{
 				d_type = Flags.Direct;
 			}
 			
 			d_type |= type;
+		}
+		
+		public State(Cpg.Expression expression) : this(expression, null, Flags.None)
+		{
+		}
+		
+		public State(Cpg.Expression expression, Flags type) : this(expression, null, type)
+		{
+		}
+		
+		public State(Cpg.Expression expression, Cpg.Expression initialValue, Flags type)
+		{
+			d_expression = expression;
+			d_initialValue = initialValue;
+			d_type = type;
 		}
 		
 		private void Expand()
@@ -94,8 +116,27 @@ namespace Cpg.RawC
 		{
 			get
 			{
-				Expand();
-				return d_expression;
+				if ((d_type & Flags.Initialization) != 0)
+				{
+					return InitialValue;
+				}
+				else
+				{
+					Expand();
+					return d_expression;
+				}
+			}
+		}
+		
+		public Cpg.Expression InitialValue
+		{
+			get
+			{
+				return d_initialValue != null ? d_initialValue : d_expression;
+			}
+			set
+			{
+				d_initialValue = value;
 			}
 		}
 		
@@ -105,7 +146,12 @@ namespace Cpg.RawC
 			{
 				if (d_instructions == null)
 				{
-					d_instructions = Expression.Instructions;
+					Cpg.Expression expression = Expression;
+					
+					if (expression != null)
+					{
+						d_instructions = expression.Instructions;
+					}
 				}
 				
 				return d_instructions;

@@ -42,6 +42,7 @@ namespace Cpg.RawC.Tree
 				
 				InstructionFunction ifunc = inst as InstructionFunction;
 				InstructionCustomFunction icfunc = inst as InstructionCustomFunction;
+				InstructionCustomOperator icop = inst as InstructionCustomOperator;
 				
 				if (ifunc != null)
 				{
@@ -55,6 +56,14 @@ namespace Cpg.RawC.Tree
 				for (int j = 0; j < numargs; ++j)
 				{
 					node.Add(stack.Pop());
+				}
+				
+				if (icop != null && !(icop.Operator is OperatorDelayed))
+				{
+					foreach (Cpg.Expression ex in icop.Operator.Expressions)
+					{
+						node.Add(Create(state, ex.Instructions));
+					}
 				}
 				
 				node.d_children.Reverse();
@@ -139,7 +148,7 @@ namespace Cpg.RawC.Tree
 			{
 				size = icfunc.Arguments;
 			}
-				
+			
 			d_isLeaf = size == 0;
 			
 			d_children = new List<Node>(size);
@@ -495,9 +504,11 @@ namespace Cpg.RawC.Tree
 
 			InstructionFunction ifunc;
 			InstructionCustomFunction icfunc;
-			
+			InstructionCustomOperator icop;
+
 			ifunc = d_instruction as InstructionFunction;
 			icfunc = d_instruction as InstructionCustomFunction;
+			icop = d_instruction as InstructionCustomOperator;
 			
 			if (ifunc != null)
 			{
@@ -506,6 +517,10 @@ namespace Cpg.RawC.Tree
 			else if (icfunc != null)
 			{
 				lbl = icfunc.Function.Id;
+			}
+			else if (icop != null)
+			{
+				lbl = icop.Operator.Name;
 			}
 			
 			string par = "";

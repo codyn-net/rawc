@@ -45,7 +45,9 @@ all: $(ASSEMBLY) $(PROGRAMFILES) $(LINUX_PKGCONFIG)
 
 FILES = \
 	State.cs \
+	DelayedState.cs \
 	Knowledge.cs \
+	Exception.cs \
 	CommandLine/OptionGroup.cs \
 	CommandLine/OptionException.cs \
 	CommandLine/OptionAttribute.cs \
@@ -74,7 +76,8 @@ FILES = \
 	Programmer/Formatters/C/InstructionTranslator.cs \
 	Programmer/Formatters/IFormatter.cs \
 	Programmer/DataTable.cs \
-	Programmer/Computation/IComputationNode.cs \
+	Programmer/Computation/INode.cs \
+	Programmer/Computation/IncrementDelayedCounters.cs \
 	Programmer/Computation/CopyTable.cs \
 	Programmer/Computation/Comment.cs \
 	Programmer/Computation/ZeroTable.cs \

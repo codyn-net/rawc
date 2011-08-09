@@ -14,6 +14,7 @@ namespace Cpg.RawC
 		private List<State> d_precomputeBeforeDirect;
 		private List<State> d_precomputeBeforeIntegrated;
 		private List<State> d_precomputeAfterIntegrated;
+		private List<State> d_delayed;
 
 		private Dictionary<Cpg.Property, State> d_stateMap;
 
@@ -45,6 +46,7 @@ namespace Cpg.RawC
 			d_precomputeBeforeDirect = new List<State>();
 			d_precomputeBeforeIntegrated = new List<State>();
 			d_precomputeAfterIntegrated = new List<State>();
+			d_delayed = new List<State>();
 			
 			d_stateMap = new Dictionary<Property, State>();
 
@@ -124,6 +126,62 @@ namespace Cpg.RawC
 			}
 
 			d_initialize = initialize;
+			
+			ExtractDelayedStates();
+		}
+		
+		private void ExtractDelayedStates()
+		{
+			Dictionary<DelayedState.Key, bool> same = new Dictionary<DelayedState.Key, bool>();
+
+			foreach (State st in States)
+			{
+				if (st.Instructions == null)
+				{
+					continue;
+				}
+				
+				foreach (Cpg.Instruction instruction in st.Instructions)
+				{
+					InstructionCustomOperator op = instruction as InstructionCustomOperator;
+					
+					if (op == null || !(op.Operator is OperatorDelayed))
+					{
+						continue;
+					}
+					
+					if (Options.Instance.FixedTimeStep <= 0)
+					{
+						throw new Exception("The network uses the `delayed' operator but no fixed time step was specified (--fixed-time-step)...");
+					}
+					
+					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
+					DelayedState.Key key = new DelayedState.Key(opdel);
+					
+					if (same.ContainsKey(key))
+					{
+						continue;
+					}
+
+					double size = (opdel.Delay / Options.Instance.FixedTimeStep);
+					
+					if (size % 1 > 0.0000001)
+					{
+						Console.Error.WriteLine("Warning: the delayed time ({0}) is not a multiple of the time step ({1})...",
+						                        opdel.Delay,
+						                        Options.Instance.FixedTimeStep);
+					}
+					
+					DelayedState s = new DelayedState(opdel);					
+					d_delayed.Add(s);
+					same.Add(key, true);
+					
+					if (NeedsInitialization(opdel.InitialValue, Options.Instance.AlwaysInitializeDynamically))
+					{
+						d_initialize.Add(new DelayedState(opdel, Cpg.RawC.State.Flags.Initialization));
+					}
+				}
+			}
 		}
 		
 		private bool DependsOn(Cpg.Expression expression, Cpg.RawC.State.Flags flags)
@@ -309,6 +367,19 @@ namespace Cpg.RawC
 				{
 					return true;
 				}
+				
+				InstructionCustomOperator icop = inst as InstructionCustomOperator;
+				
+				if (icop != null)
+				{
+					foreach (Cpg.Expression ex in icop.Operator.Expressions)
+					{
+						if (IsVariadic(ex, samestep))
+						{
+							return true;
+						}
+					}
+				}
 			}
 			
 			// Check if any of its dependencies are then variadic maybe
@@ -350,8 +421,30 @@ namespace Cpg.RawC
 			return NeedsInitialization(property, false);
 		}
 		
+		public bool NeedsInitialization(Cpg.Expression expression, bool alwaysDynamic)
+		{
+			if (expression == null)
+			{
+				return false;
+			}
+
+			if (alwaysDynamic)
+			{
+				return true;
+			}
+			else
+			{
+				return IsVariadic(expression, true);
+			}
+		}
+		
 		public bool NeedsInitialization(Property property, bool alwaysDynamic)
 		{
+			if (property == null)
+			{
+				return false;
+			}
+
 			if (property.Object is Cpg.Link)
 			{
 				return false;
@@ -366,7 +459,7 @@ namespace Cpg.RawC
 			{
 				// Dynamic initialization is needed only if the property is variadic within the same
 				// step
-				return IsVariadic(property.Expression, true);
+				return NeedsInitialization(property.Expression, alwaysDynamic);
 			}
 		}
 		
@@ -385,6 +478,11 @@ namespace Cpg.RawC
 				}
 				
 				foreach (State state in d_initialize)
+				{
+					yield return state;
+				}
+				
+				foreach (State state in d_delayed)
 				{
 					yield return state;
 				}
@@ -443,6 +541,22 @@ namespace Cpg.RawC
 			get
 			{
 				return d_initialize;
+			}
+		}
+		
+		public IEnumerable<State> DelayedStates
+		{
+			get
+			{
+				return d_delayed;
+			}
+		}
+		
+		public int DelayedStatesCount
+		{
+			get
+			{
+				return d_delayed.Count;
 			}
 		}
 		
