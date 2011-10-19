@@ -116,7 +116,7 @@ namespace Cpg.RawC
 		{
 			get
 			{
-				if ((d_type & Flags.Initialization) != 0)
+				if ((d_type & Flags.Initialization) != 0 && d_initialValue != null)
 				{
 					return InitialValue;
 				}
@@ -132,7 +132,7 @@ namespace Cpg.RawC
 		{
 			get
 			{
-				return d_initialValue != null ? d_initialValue : d_expression;
+				return d_initialValue != null ? d_initialValue : Expression;
 			}
 			set
 			{
@@ -147,7 +147,7 @@ namespace Cpg.RawC
 				if (d_instructions == null)
 				{
 					Cpg.Expression expression = Expression;
-					
+
 					if (expression != null)
 					{
 						d_instructions = expression.Instructions;
