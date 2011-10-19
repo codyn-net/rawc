@@ -644,6 +644,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine("void");
 			writer.WriteLine("{0}_initialize (void)", CPrefixDown);
 			writer.WriteLine("{");
+
+			if (d_program.InitLoopsCount > 0)
+			{
+				writer.WriteLine("\tint i;");
+			}
 			
 			WriteComputationNodes(writer, d_program.InitializationNodes);
 			

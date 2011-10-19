@@ -18,6 +18,7 @@ namespace Cpg.RawC.Programmer
 		private int d_stateIntegratedUpdateIndex;
 		private Dictionary<DataTable.DataItem, State> d_integrateTable;
 		private List<Computation.Loop> d_loops;
+		private List<Computation.Loop> d_initLoops;
 		private Dictionary<Tree.Embedding, Function> d_embeddingFunctionMap;
 
 		private DataTable d_statetable;
@@ -41,6 +42,7 @@ namespace Cpg.RawC.Programmer
 			d_updateStates = new List<State>();
 			d_integrateTable = new Dictionary<DataTable.DataItem, State>();
 			d_loops = new List<Computation.Loop>();
+			d_initLoops = new List<Computation.Loop>();
 			d_indexTables = new List<DataTable>();
 
 			d_delayedCounters = new DataTable("delay_counters", true);
@@ -408,6 +410,11 @@ namespace Cpg.RawC.Programmer
 			
 			return ret;
 		}
+
+		public int InitLoopsCount
+		{
+			get { return d_initLoops.Count; }
+		}
 		
 		public int LoopsCount
 		{
@@ -426,6 +433,11 @@ namespace Cpg.RawC.Programmer
 		}
 
 		private List<Computation.INode> AssignmentStates(IEnumerable<State> states)
+		{
+			return AssignmentStates(states, d_loops);
+		}
+
+		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, List<Computation.Loop> loops)
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
 			List<State> st = new List<State>(states);
@@ -457,7 +469,7 @@ namespace Cpg.RawC.Programmer
 					Computation.Loop l = CreateLoop(st, loop);
 					
 					ret.Add(l);
-					d_loops.Add(l);
+					loops.Add(l);
 				}
 			}
 
@@ -588,7 +600,7 @@ namespace Cpg.RawC.Programmer
 				init.Add(state);
 			}
 			
-			d_initialization.AddRange(AssignmentStates(init));
+			d_initialization.AddRange(AssignmentStates(init, d_initLoops));
 		}
 		
 		public IEnumerable<Cpg.Function> UsedCustomFunctions
