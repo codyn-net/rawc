@@ -460,7 +460,6 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				case MathFunctionType.Sin:
 				case MathFunctionType.Sinh:
 				case MathFunctionType.Sqrt:
-				case MathFunctionType.Ln:
 				case MathFunctionType.Log10:
 				case MathFunctionType.Pow:
 				case MathFunctionType.Round:
@@ -469,6 +468,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				{
 					return String.Format("{0}{1}({2})", name.ToLower(), IsDouble ? "" : "f", GenerateArgsList("x", arguments));
 				}
+				case MathFunctionType.Ln:
+					return String.Format("log{0}({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
 				case MathFunctionType.Lerp:
 					return "(x0 + (x1 - x0) * x2)";
 				case MathFunctionType.Max:
