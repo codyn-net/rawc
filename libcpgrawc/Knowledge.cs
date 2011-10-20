@@ -7,7 +7,6 @@ namespace Cpg.RawC
 	{
 		private static Knowledge s_instance;
 		private Cpg.Network d_network;
-		
 		private List<State> d_integrated;
 		private List<State> d_direct;
 		private List<State> d_initialize;
@@ -15,9 +14,7 @@ namespace Cpg.RawC
 		private List<State> d_precomputeBeforeIntegrated;
 		private List<State> d_precomputeAfterIntegrated;
 		private List<State> d_delayed;
-
 		private Dictionary<Cpg.Property, State> d_stateMap;
-
 		private List<Cpg.Property> d_properties;
 		private List<Cpg.Property> d_inproperties;
 		private List<Cpg.Property> d_outproperties;
@@ -60,7 +57,7 @@ namespace Cpg.RawC
 		private State ExpandedState(Property prop)
 		{
 			Link[] links = prop.Object.Links;
-			List<LinkAction> actions = new List<LinkAction>();
+			List<LinkAction > actions = new List<LinkAction>();
 			
 			foreach (Link link in links)
 			{
@@ -103,7 +100,7 @@ namespace Cpg.RawC
 			ScanProperties(d_network);
 			
 			// Sort initialize list on dependencies
-			List<State> initialize = new List<State>();
+			List<State > initialize = new List<State>();
 			
 			foreach (State st in d_initialize)
 			{
@@ -132,7 +129,7 @@ namespace Cpg.RawC
 		
 		private void ExtractDelayedStates()
 		{
-			Dictionary<DelayedState.Key, bool> same = new Dictionary<DelayedState.Key, bool>();
+			Dictionary<DelayedState.Key, bool > same = new Dictionary<DelayedState.Key, bool>();
 
 			foreach (State st in States)
 			{
@@ -176,7 +173,7 @@ namespace Cpg.RawC
 					d_delayed.Add(s);
 					same.Add(key, true);
 					
-					if (NeedsInitialization(opdel.InitialValue, Options.Instance.AlwaysInitializeDynamically))
+					if (NeedsInitialization(opdel.InitialValue, true))
 					{
 						d_initialize.Add(new DelayedState(opdel, Cpg.RawC.State.Flags.Initialization));
 					}
@@ -289,7 +286,7 @@ namespace Cpg.RawC
 					}
 				}
 				
-				if (NeedsInitialization(prop, Options.Instance.AlwaysInitializeDynamically))
+				if (NeedsInitialization(prop, true))
 				{
 					d_initialize.Add(new State(prop, RawC.State.Flags.Initialization));
 				}
@@ -420,7 +417,7 @@ namespace Cpg.RawC
 			
 			return NeedsInitialization(property, false);
 		}
-		
+
 		public bool NeedsInitialization(Cpg.Expression expression, bool alwaysDynamic)
 		{
 			if (expression == null)
@@ -450,9 +447,9 @@ namespace Cpg.RawC
 				return false;
 			}
 
+			// Always initialize dynamically if the property is persistent
 			if (alwaysDynamic)
 			{
-				// Always initialize dynamically if the property is persistent
 				return IsPersist(property);
 			}
 			else

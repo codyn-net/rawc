@@ -10,6 +10,8 @@ namespace Cpg.RawC
 		private string d_filename;
 		private Cpg.Network d_network;
 		private string[] d_writtenFiles;
+		private List<Cpg.Monitor> d_monitors;
+		private List<double[] > d_monitored;
 
 		public Generator(string filename)
 		{
@@ -21,7 +23,43 @@ namespace Cpg.RawC
 			Log.WriteLine("Generating code for network...");
 			
 			LoadNetwork();
-			
+
+			if (Options.Instance.Validate)
+			{
+				d_network.Compiled += delegate {
+					StaticRandExpressions();
+				};
+
+				// Run the network now, with the static rands
+				d_monitors = new List<Cpg.Monitor>();
+
+				d_monitors.Add(new Cpg.Monitor(d_network, d_network.Integrator.Property("t")));
+
+				Knowledge.Initialize(d_network);
+
+				foreach (State state in Knowledge.Instance.IntegratedStates)
+				{
+					d_monitors.Add(new Cpg.Monitor(d_network, state.Property));
+				}
+
+				foreach (State state in Knowledge.Instance.DirectStates)
+				{
+					d_monitors.Add(new Cpg.Monitor(d_network, state.Property));
+				}
+
+				d_network.Run(Options.Instance.ValidateRange[0],
+					          Options.Instance.ValidateRange[1],
+					          Options.Instance.ValidateRange[2]);
+
+				// Extract the validation data
+				d_monitored = new List<double[]>();
+
+				for (int i = 0; i < d_monitors.Count; ++i)
+				{
+					d_monitored.Add(d_monitors[i].GetData());
+				}
+			}
+
 			// Initialize the knowledge
 			Knowledge.Initialize(d_network);
 			
@@ -38,21 +76,129 @@ namespace Cpg.RawC
 			Programmer.Program program = new Programmer.Program(ProgrammerOptions(), embeddings, equations);
 			
 			// Write program
+			if (Options.Instance.Validate)
+			{
+				// Create a new temporary directory for the output files
+				string path = Path.GetTempFileName();
+				File.Delete(path);
+
+				Directory.CreateDirectory(path);
+
+				program.Options.Output = path;
+			}
+
 			d_writtenFiles = Options.Instance.Formatter.Write(program);
 			
 			if (Options.Instance.PrintCompileSource)
 			{
 				Console.WriteLine(Options.Instance.Formatter.CompileSource());
 			}
+
 			if (Options.Instance.Validate)
 			{
-				Validate();
+				try
+				{
+					Validate();
+				}
+				catch (Exception e)
+				{
+					Console.Error.WriteLine(e.Message);
+
+					Directory.Delete(program.Options.Output, true);
+					Environment.Exit(1);
+				}
+
+				Directory.Delete(program.Options.Output, true);
 			}
 			else if (Options.Instance.Compile != null)
 			{
 				Log.WriteLine("Compiling code...");
 				Options.Instance.Formatter.Compile(Options.Instance.Compile, Options.Instance.Verbose);
 			}
+		}
+
+		private int InstructionStackMod(Instruction inst)
+		{
+			if (inst is InstructionConstant ||
+				inst is InstructionNumber ||
+				inst is InstructionProperty)
+			{
+				return 0;
+			}
+			else if (inst is InstructionFunction)
+			{
+				return ((InstructionFunction)inst).Arguments;
+			}
+			else if (inst is InstructionCustomFunction)
+			{
+				return ((InstructionCustomFunction)inst).Arguments;
+			}
+			else if (inst is InstructionCustomOperator)
+			{
+				// Don't know yet
+			}
+
+			return 0;
+		}
+
+		private void StaticRandExpression(Cpg.Expression expr)
+		{
+			Instruction[] instructions = expr.Instructions;
+			Cpg.Stack stack = new Cpg.Stack((uint)instructions.Length);
+			Stack<List<Instruction >> args = new Stack<List<Instruction>>();
+
+			foreach (Cpg.Instruction inst in instructions)
+			{
+				InstructionVariadicFunction func = inst as InstructionVariadicFunction;
+				int popped = InstructionStackMod(inst);
+
+				if (func != null)
+				{
+					func.Execute(stack);
+
+					double val = stack.At((int)stack.Count() - 1);
+
+					for (int i = 0; i < popped; ++i)
+					{
+						args.Pop();
+					}
+
+					List<Instruction > r = new List<Instruction>();
+					r.Add(new InstructionNumber(val));
+
+					args.Push(r);
+				}
+				else
+				{
+					List<Instruction > ret = new List<Instruction>();
+
+					for (int i = 0; i < popped; ++i)
+					{
+						ret.AddRange(args.Pop());
+					}
+
+					ret.Add((Instruction)inst.Copy());
+					args.Push(ret);
+
+					inst.Execute(stack);
+				}
+			}
+
+			List<Instruction > newinst = new List<Instruction>();
+
+			foreach (List<Instruction> r in args)
+			{
+				newinst.AddRange(r);
+			}
+
+			expr.Instructions = newinst.ToArray();
+		}
+
+		private void StaticRandExpressions()
+		{
+			d_network.ForeachExpression((expr) => {
+				StaticRandExpression(expr);
+			});
 		}
 		
 		private void Validate()
@@ -72,16 +218,12 @@ namespace Cpg.RawC
 			process.StartInfo.UseShellExecute = false;
 
 			process.Start();
-			
+
 			process.StandardInput.WriteLine("t");
-			List<Cpg.Monitor> monitors = new List<Cpg.Monitor>();
-			
-			monitors.Add(new Cpg.Monitor(Knowledge.Instance.Network, Knowledge.Instance.Network.Integrator.Property("t")));
-			
-			foreach (State state in Knowledge.Instance.IntegratedStates)
+
+			for (int i = 1; i < d_monitors.Count; ++i)
 			{
-				process.StandardInput.WriteLine(state.Property.FullName);
-				monitors.Add(new Cpg.Monitor(Knowledge.Instance.Network, state.Property));
+				process.StandardInput.WriteLine(d_monitors[i].Property.FullNameForDisplay);
 			}
 			
 			process.StandardInput.Close();
@@ -89,7 +231,7 @@ namespace Cpg.RawC
 			string output = process.StandardOutput.ReadToEnd();
 			process.WaitForExit();
 			
-			List<List<double>> data = new List<List<double>>();
+			List<List<double >> data = new List<List<double>>();
 
 			string[] lines = output.Split('\n');
 			
@@ -106,38 +248,23 @@ namespace Cpg.RawC
 				}
 				catch
 				{
-					Console.Error.WriteLine("Could not parse number:");
-					Console.Error.WriteLine(line);
-					
-					Environment.Exit(1);
+					throw new Exception(String.Format("Could not parse number:\n{0}", line));
 				}
-			}
-			
-			// Now simulate network internally also
-			Knowledge.Instance.Network.Run(opts.ValidateRange[0], opts.ValidateRange[1], opts.ValidateRange[2]);
-			
-			// Compare values
-			List<double[]> monitored = new List<double[]>();
-			
-			for (int i = 0; i < monitors.Count; ++i)
-			{
-				monitored.Add(monitors[i].GetData());
 			}
 
 			for (int i = 0; i < data.Count; ++i)
 			{
-				List<double> raw = data[i];
+				List<double > raw = data[i];
 				
 				for (int j = 0; j < raw.Count; ++j)
 				{
-					if (System.Math.Abs(monitored[j][i] - raw[j]) > opts.ValidatePrecision)
+					if (System.Math.Abs(d_monitored[j][i] - raw[j]) > opts.ValidatePrecision)
 					{
-						Console.Error.WriteLine("Discrepancy detected at t = {0} in {1} (got {2} but expected {3})",
+						throw new Exception(String.Format("Discrepancy detected at t = {0} in {1} (got {2} but expected {3})",
 						                        opts.ValidateRange[0] + (i * opts.ValidateRange[1]),
-						                        monitors[j].Property.FullName,
+						                        d_monitors[j].Property.FullName,
 						                        raw[j],
-						                        monitored[j][i]);
-						Environment.Exit(1);
+						                        d_monitored[j][i]));
 					}
 				}
 			}

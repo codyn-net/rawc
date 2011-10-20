@@ -46,7 +46,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			d_program = program;
 			
-			List<string> written = new List<string>();
+			List<string > written = new List<string>();
 
 			WriteHeader();
 			WriteSource();
@@ -265,11 +265,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine("typedef enum");
 			writer.WriteLine("{");
 			
-			Dictionary<string, bool> unique = new Dictionary<string, bool>();
+			Dictionary<string, bool > unique = new Dictionary<string, bool>();
 			
-			List<string> names = new List<string>();
-			List<string> values = new List<string>();
-			List<string> comments = new List<string>();
+			List<string > names = new List<string>();
+			List<string > values = new List<string>();
+			List<string > comments = new List<string>();
 			
 			int maxname = 0;
 			int maxval = 0;
@@ -354,38 +354,38 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			
 			// Protect for including this from C++
 			writer.WriteLine("#ifdef __cplusplus");
- 			writer.WriteLine("extern \"C\" {");
- 			writer.WriteLine("#endif");
+			writer.WriteLine("extern \"C\" {");
+			writer.WriteLine("#endif");
  			
- 			writer.WriteLine();
+			writer.WriteLine();
  			
- 			// Write interface
- 			WriteAccessorEnum(writer);
+			// Write interface
+			WriteAccessorEnum(writer);
  			
- 			writer.WriteLine("{0} {1}_get (int idx);", ValueType, CPrefixDown);
- 			writer.WriteLine("void {0}_set (int idx, {1} val);", CPrefixDown, ValueType);
+			writer.WriteLine("{0} {1}_get (int idx);", ValueType, CPrefixDown);
+			writer.WriteLine("void {0}_set (int idx, {1} val);", CPrefixDown, ValueType);
  			
- 			writer.WriteLine();
+			writer.WriteLine();
  			
- 			writer.WriteLine("void {0}_initialize (void);", CPrefixDown);
+			writer.WriteLine("void {0}_initialize (void);", CPrefixDown);
  			
- 			if (d_program.Options.FixedStepSize <= 0)
- 			{
- 				writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
- 			}
- 			else
- 			{
- 				writer.WriteLine("void {0}_step ();", CPrefixDown);
- 			}
+			if (d_program.Options.FixedStepSize <= 0)
+			{
+				writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
+			}
+			else
+			{
+				writer.WriteLine("void {0}_step ();", CPrefixDown);
+			}
  			
- 			writer.WriteLine();
+			writer.WriteLine();
 
- 			// End protect for including this from C++
- 			writer.WriteLine("#ifdef __cplusplus");
- 			writer.WriteLine("}");
- 			writer.WriteLine("#endif");
+			// End protect for including this from C++
+			writer.WriteLine("#ifdef __cplusplus");
+			writer.WriteLine("}");
+			writer.WriteLine("#endif");
  			
- 			writer.WriteLine();
+			writer.WriteLine();
 			
 			// End include guard
 			writer.WriteLine("#endif /* __{0}_H__ */", CPrefixUp);
@@ -447,42 +447,42 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 			switch (type)
 			{
-				case MathFunctionType.Abs:
-				case MathFunctionType.Acos:
-				case MathFunctionType.Asin:
-				case MathFunctionType.Atan:
-				case MathFunctionType.Atan2:
-				case MathFunctionType.Ceil:
-				case MathFunctionType.Cos:
-				case MathFunctionType.Cosh:
-				case MathFunctionType.Exp:
-				case MathFunctionType.Exp2:
-				case MathFunctionType.Floor:
-				case MathFunctionType.Hypot:
-				case MathFunctionType.Sin:
-				case MathFunctionType.Sinh:
-				case MathFunctionType.Sqrt:
-				case MathFunctionType.Log10:
-				case MathFunctionType.Pow:
-				case MathFunctionType.Round:
-				case MathFunctionType.Tan:
-				case MathFunctionType.Tanh:
+			case MathFunctionType.Abs:
+			case MathFunctionType.Acos:
+			case MathFunctionType.Asin:
+			case MathFunctionType.Atan:
+			case MathFunctionType.Atan2:
+			case MathFunctionType.Ceil:
+			case MathFunctionType.Cos:
+			case MathFunctionType.Cosh:
+			case MathFunctionType.Exp:
+			case MathFunctionType.Exp2:
+			case MathFunctionType.Floor:
+			case MathFunctionType.Hypot:
+			case MathFunctionType.Sin:
+			case MathFunctionType.Sinh:
+			case MathFunctionType.Sqrt:
+			case MathFunctionType.Log10:
+			case MathFunctionType.Pow:
+			case MathFunctionType.Round:
+			case MathFunctionType.Tan:
+			case MathFunctionType.Tanh:
 				{
 					return String.Format("{0}{1}({2})", name.ToLower(), IsDouble ? "" : "f", GenerateArgsList("x", arguments));
 				}
-				case MathFunctionType.Ln:
-					return String.Format("log{0}({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
-				case MathFunctionType.Lerp:
-					return "(x0 + (x1 - x0) * x2)";
-				case MathFunctionType.Max:
-					return NestedImplementation("CPG_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
-				case MathFunctionType.Min:
-					return NestedImplementation("CPG_MATH_MIN", arguments, "(x0 < x1 ? x0 : x1)");
-				case MathFunctionType.Sqsum:
-					return NestedImplementation("CPG_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
-				case MathFunctionType.Invsqrt:
-					return IsDouble ? "1 / sqrt(x0)" : "1 / sqrtf(x0)";
-				default:
+			case MathFunctionType.Ln:
+				return String.Format("log{0}({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
+			case MathFunctionType.Lerp:
+				return "(x0 + (x1 - x0) * x2)";
+			case MathFunctionType.Max:
+				return NestedImplementation("CPG_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
+			case MathFunctionType.Min:
+				return NestedImplementation("CPG_MATH_MIN", arguments, "(x0 < x1 ? x0 : x1)");
+			case MathFunctionType.Sqsum:
+				return NestedImplementation("CPG_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
+			case MathFunctionType.Invsqrt:
+				return IsDouble ? "1 / sqrt(x0)" : "1 / sqrtf(x0)";
+			default:
 				break;
 					
 			}
@@ -506,7 +506,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			}
 			
 			string mathmap = MathFunctionMap(type, arguments);
-			List<string> args = new List<string>();
+			List<string > args = new List<string>();
 				
 			for (int i = 0; i < arguments; ++i)
 			{
@@ -548,7 +548,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			WriteDefine(writer, rdef1, "(a)", rdef2 + "(0, a)");
 			WriteDefine(writer, rdef0, "()", rdef1 + "(1)");
 			
-			Dictionary<string, bool> generated = new Dictionary<string, bool>();
+			Dictionary<string, bool > generated = new Dictionary<string, bool>();
 			
 			generated[rdef2] = true;
 			generated[rdef1] = true;
@@ -576,7 +576,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private Dictionary<Tree.NodePath, string> GenerateMapping(string format, IEnumerable<Tree.Embedding.Argument> args)
 		{
-			Dictionary<Tree.NodePath, string> mapping = new Dictionary<Tree.NodePath, string>();
+			Dictionary<Tree.NodePath, string > mapping = new Dictionary<Tree.NodePath, string>();
 
 			foreach (Tree.Embedding.Argument arg in args)
 			{
@@ -729,6 +729,11 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private void WriteDataTable(TextWriter writer, DataTable table)
 		{
+			if (table.Count == 0)
+			{
+				return;
+			}
+
 			writer.WriteLine("static{0} {1} {2}[]{3} =",
 			                 table.IsConstant ? " const" : "",
 			                 table.IntegerType ? MinimumTableType(table) : ValueType,
@@ -892,9 +897,9 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				
 				writer.WriteLine("#include \"{0}\"", mathbase);
 				writer.WriteLine();
-			  	math = new StreamWriter(filename);
+				math = new StreamWriter(filename);
 			  	
-			  	guard = ToAsciiOnly(mathbase).ToUpper();
+				guard = ToAsciiOnly(mathbase).ToUpper();
 			
 				math.WriteLine("#ifndef __{0}__", guard);
 				math.WriteLine("#define __{0}__", guard);

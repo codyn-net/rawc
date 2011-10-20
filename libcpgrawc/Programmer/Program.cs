@@ -6,7 +6,6 @@ namespace Cpg.RawC.Programmer
 	public class Program
 	{
 		private Options d_options;
-
 		private List<Computation.INode> d_source;
 		private List<Function> d_functions;
 		private List<Tree.Embedding> d_embeddings;
@@ -20,7 +19,6 @@ namespace Cpg.RawC.Programmer
 		private List<Computation.Loop> d_loops;
 		private List<Computation.Loop> d_initLoops;
 		private Dictionary<Tree.Embedding, Function> d_embeddingFunctionMap;
-
 		private DataTable d_statetable;
 		private DataTable d_delayedCounters;
 		private DataTable d_delayedCountersSize;
@@ -440,7 +438,7 @@ namespace Cpg.RawC.Programmer
 		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, List<Computation.Loop> loops)
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
-			List<State> st = new List<State>(states);
+			List<State > st = new List<State>(states);
 			
 			// Extract loops from states. Scan for embeddings and replace them with
 			// looped stuff, creating temporary variables on the fly if needed
@@ -588,7 +586,7 @@ namespace Cpg.RawC.Programmer
 				}
 			}
 			
-			List<State> init = new List<State>();
+			List<State > init = new List<State>();
 
 			foreach (State state in Knowledge.Instance.InitializeStates)
 			{

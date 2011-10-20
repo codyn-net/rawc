@@ -31,7 +31,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(Cpg.Property property)
 		{
-			if (Knowledge.Instance.NeedsInitialization(property, RawC.Options.Instance.AlwaysInitializeDynamically))
+			if (Knowledge.Instance.NeedsInitialization(property, true))
 			{
 				return NotInitialized;
 			}
@@ -43,7 +43,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(DelayedState.Key op)
 		{
-			if (Knowledge.Instance.NeedsInitialization(op.Operator.InitialValue, RawC.Options.Instance.AlwaysInitializeDynamically))
+			if (Knowledge.Instance.NeedsInitialization(op.Operator.InitialValue, true))
 			{
 				return NotInitialized;
 			}

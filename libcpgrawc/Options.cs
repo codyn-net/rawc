@@ -8,64 +8,42 @@ namespace Cpg.RawC
 	{
 		[CommandLine.Option("help", 'h', Description="Show this help message and exit")]
 		private bool d_showHelp;
-		
 		[CommandLine.Option("version", 'v', Description="Show version")]
 		private bool d_showVersion;
-		
 		[CommandLine.Option("output", 'o', ArgumentName="DIR", Description="Output directory")]
 		private string d_output;
-		
 		[CommandLine.Option("collector", 'c', OptionalArgument=true, ArgumentName="NAME", Description="The collector algorithm to use")]
 		private string d_collector;
-		
 		[CommandLine.Option("filter", 'f', OptionalArgument=true, ArgumentName="NAME", Description="The filter algorithm to use")]
 		private string d_filter;
-		
 		[CommandLine.Option("basename", 'b', ArgumentName="NAME", Description="The basename of the generated files")]
 		private string d_basename;
-		
 		[CommandLine.Option("compile", ArgumentName="PROGRAM", Description="Compile a test program integrating the network")]
 		private string d_compile;
-		
 		[CommandLine.Option("print-compile-source", Description="Print source code of test program")]
 		private bool d_printCompileSource;
-		
 		[CommandLine.Option("validate", Description="Validate generated network")]
 		private bool d_validate;
-		
 		[CommandLine.Option("validate-precision", Description="Allowed precision for validation")]
 		private double d_validatePrecision = 10e-6;
-		
 		[CommandLine.Option("verbose", 'V', Description="Display verbose information")]
 		private bool d_verbose;
-		
 		[CommandLine.Option("quiet", 'q', Description="Do not output anything on standard out")]
 		private bool d_quiet;
-		
-		[CommandLine.Option("always-initialize-dynamically", Description="Force dynamic intialization instead of static initialization of states")]
-		private bool d_alwaysInitializeDynamically;
-		
 		[CommandLine.Option("minimum-embedding-size", Description="Minimum number of instructions which are candidates for embeddings")]
 		private int d_minimumEmbeddingSize = 3;
-		
 		[CommandLine.Option("list-options", Description="List available options (used for completion)")]
 		private bool d_listOptions;
-		
 		[CommandLine.Option("no-embeddings", Description="Disable detection of embeddings")]
 		private bool d_noEmbeddings;
-
 		[CommandLine.Option("minimum-loop-size", Description="Minimum number of items in a loop")]
 		public uint MinimumLoopSize = 3;
-		
 		[CommandLine.Option("fixed-time-step", Description="Fixed time step that will be used in the network")]
 		public double FixedTimeStep = -1;
-
 		private double[] d_validateRange;
-
-		private Programmer.Formatters.IFormatter d_formatter;		
+		private Programmer.Formatters.IFormatter d_formatter;
 		private List<string> d_files;
 		private bool d_showFormatters;
-		
 		private static Options s_instance;
 
 		public static Options Initialize(string[] args)
@@ -239,14 +217,6 @@ namespace Cpg.RawC
 				{
 					throw new Exception(String.Format("Invalid range: {0}", value));
 				}
-			}
-		}
-		
-		public bool AlwaysInitializeDynamically
-		{
-			get
-			{
-				return d_alwaysInitializeDynamically;
 			}
 		}
 		
