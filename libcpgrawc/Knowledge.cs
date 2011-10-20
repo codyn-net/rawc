@@ -53,13 +53,43 @@ namespace Cpg.RawC
 			
 			Scan();
 		}
+
+		private IEnumerable<Link> LinksForProxies(Cpg.Object obj)
+		{
+			if (obj == null || obj.Parent == null)
+			{
+				yield break;
+			}
+
+			foreach (Link link in obj.Parent.Links)
+			{
+				yield return link;
+			}
+
+			foreach (Link link in LinksForProxies(obj.Parent))
+			{
+				yield return link;
+			}
+		}
+
+		private IEnumerable<Link> LinksForProperty(Property prop)
+		{
+			foreach (Link link in prop.Object.Links)
+			{
+				yield return link;
+			}
+
+			foreach (Link link in LinksForProxies(prop.Object))
+			{
+				yield return link;
+			}
+		}
 		
 		private State ExpandedState(Property prop)
 		{
-			Link[] links = prop.Object.Links;
 			List<LinkAction > actions = new List<LinkAction>();
-			
-			foreach (Link link in links)
+
+			foreach (Link link in LinksForProperty(prop))
 			{
 				foreach (LinkAction action in link.Actions)
 				{
