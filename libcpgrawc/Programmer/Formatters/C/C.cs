@@ -114,13 +114,15 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			{
 				throw new Exception("The program is not compiled yet!");
 			}
+
+			string ddir = Path.GetDirectoryName(d_sourceFilename);
 			
 			// Compile source file
 			Process process = new Process();
 			process.StartInfo.FileName = "gcc";
 			process.StartInfo.UseShellExecute = true;
 			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-			process.StartInfo.Arguments = String.Format("{0} -Wall -I. -c -o {1}.o {2}", d_options.CFlags, CPrefixDown, d_sourceFilename);
+			process.StartInfo.Arguments = String.Format("{0} -Wall -I{3} -c -o {1}.o {2}", d_options.CFlags, CPrefixDown, d_sourceFilename, ddir);
 			
 			if (verbose)
 			{
@@ -144,7 +146,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			writer.WriteLine(source);
 			writer.Close();
 			
-			process.StartInfo.Arguments = String.Format("{0} -I. -Wall -c -o {1}.o {2}.c", d_options.CFlags, tempfile, tempfile);
+			process.StartInfo.Arguments = String.Format("{0} -I{3} -Wall -c -o {1}.o {2}.c", d_options.CFlags, tempfile, tempfile, ddir);
 			
 			if (verbose)
 			{
