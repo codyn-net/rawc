@@ -223,7 +223,7 @@ namespace Cpg.RawC
 
 			for (int i = 1; i < d_monitors.Count; ++i)
 			{
-				process.StandardInput.WriteLine(d_monitors[i].Property.FullNameForDisplay);
+				process.StandardInput.WriteLine(d_monitors[i].Property.FullName);
 			}
 			
 			process.StandardInput.Close();
