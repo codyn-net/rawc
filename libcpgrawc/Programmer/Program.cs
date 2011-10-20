@@ -517,7 +517,7 @@ namespace Cpg.RawC.Programmer
 			if (Knowledge.Instance.DirectStatesCount != 0)
 			{
 				d_source.Add(new Computation.Comment("Direct equations"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.IntegratedStates));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.DirectStates));
 				d_source.Add(new Computation.Empty());
 			}
 			

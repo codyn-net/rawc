@@ -101,11 +101,11 @@ namespace Cpg.RawC
 						// Multiply by timestep
 						instructions.Add(new InstructionProperty(Knowledge.Instance.Network.Integrator.Property("dt"), Cpg.InstructionPropertyBinding.None));
 						instructions.Add(new InstructionOperator((int)Cpg.MathOperatorType.Multiply, "*", 2));
+
+						// Add to original state variable as well
+						instructions.Add(new InstructionProperty(Property, Cpg.InstructionPropertyBinding.None));
+						instructions.Add(new InstructionOperator((int)Cpg.MathOperatorType.Plus, "+", 2));
 					}
-					
-					// Add to original state variable as well
-					instructions.Add(new InstructionProperty(Property, Cpg.InstructionPropertyBinding.None));
-					instructions.Add(new InstructionOperator((int)Cpg.MathOperatorType.Plus, "+", 2));
 				}
 				
 				d_expression.Instructions = instructions.ToArray();
