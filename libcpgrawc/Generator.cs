@@ -174,8 +174,13 @@ namespace Cpg.RawC
 
 					for (int i = 0; i < popped; ++i)
 					{
-						ret.AddRange(args.Pop());
+						List<Instruction > ir = new List<Instruction>(args.Pop());
+						ir.Reverse();
+
+						ret.AddRange(ir);
 					}
+
+					ret.Reverse();
 
 					ret.Add((Instruction)inst.Copy());
 					args.Push(ret);
