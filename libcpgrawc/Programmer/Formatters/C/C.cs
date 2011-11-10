@@ -544,7 +544,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			string rdef1 = Context.MathFunctionDefine(Cpg.MathFunctionType.Rand, 1);
 			string rdef0 = Context.MathFunctionDefine(Cpg.MathFunctionType.Rand, 0);
 
-			WriteDefine(writer, rdef2, "(a, b)", "(({0})(a + (random () / (double)RAND_MAX) * (b - a)))", null, ValueType);
+			WriteDefine(writer, rdef2, "(a, b)", "(({0})(a + (rand () / (double)RAND_MAX) * (b - a)))", null, ValueType);
 			WriteDefine(writer, rdef1, "(a)", rdef2 + "(0, a)");
 			WriteDefine(writer, rdef0, "()", rdef1 + "(1)");
 			
