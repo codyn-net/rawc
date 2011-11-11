@@ -110,7 +110,7 @@ namespace Cpg.RawC.Programmer
 			// Add direct state variables
 			foreach (State state in Knowledge.Instance.DirectStates)
 			{
-				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Integrated);
+				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Direct);
 			}
 			
 			d_stateIntegratedIndex = d_statetable.Count;
@@ -118,7 +118,7 @@ namespace Cpg.RawC.Programmer
 			// Add integrated state variables
 			foreach (State state in Knowledge.Instance.IntegratedStates)
 			{
-				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Direct);
+				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Integrated);
 			}
 			
 			d_stateIntegratedUpdateIndex = d_statetable.Count;
