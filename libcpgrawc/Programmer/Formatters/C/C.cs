@@ -70,7 +70,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			
 			StringWriter writer = new StringWriter();
 			
-			writer.WriteLine("#include \"{0}.h\"", CPrefixDown);
+			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine();
 			
 			string prog = reader.ReadToEnd();
