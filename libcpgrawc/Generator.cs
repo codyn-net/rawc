@@ -170,6 +170,13 @@ namespace Cpg.RawC
 				}
 				else
 				{
+					InstructionCustomFunction ff = inst as InstructionCustomFunction;
+
+					if (ff != null)
+					{
+						StaticRandExpression(ff.Function.Expression);
+					}
+
 					List<Instruction > ret = new List<Instruction>();
 
 					for (int i = 0; i < popped; ++i)
@@ -201,6 +208,10 @@ namespace Cpg.RawC
 
 		private void StaticRandExpressions()
 		{
+			d_network.ForeachExpression((expr) => {
+				expr.ResetCache();
+			});
+
 			d_network.ForeachExpression((expr) => {
 				StaticRandExpression(expr);
 			});
