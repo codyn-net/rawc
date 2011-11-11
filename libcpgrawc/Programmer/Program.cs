@@ -1,4 +1,4 @@
-using System;
+																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	using System;
 using System.Collections.Generic;
 
 namespace Cpg.RawC.Programmer
@@ -217,21 +217,40 @@ namespace Cpg.RawC.Programmer
 				}
 			}
 		}
-		
-		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cpg.Function, List<Tree.Node>> usage)
+
+		private class CustomFunctionNode
 		{
-			List<Tree.Node> lst;
+			public Tree.Node Node { get; set; }
+
+			public List<Tree.Node> Nodes { get; set; }
+
+			public CustomFunctionNode(Cpg.Function func)
+			{
+				Node = Tree.Node.Create(null, func.Expression.Instructions);
+				Nodes = new List<Tree.Node>();
+			}
+		}
+		
+		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cpg.Function, CustomFunctionNode> usage)
+		{
+			CustomFunctionNode lst;
 			Cpg.Function f = ((Cpg.InstructionCustomFunction)node.Instruction).Function;
 				
 			if (!usage.TryGetValue(f, out lst))
 			{
-				lst = new List<Tree.Node>();
+				lst = new CustomFunctionNode(f);
 				usage[f] = lst;
-				
+
 				d_usedCustomFunctions.Add(f);
+
+				// Recurse
+				foreach (Tree.Node child in lst.Node.Collect<Cpg.InstructionCustomFunction>())
+				{
+					CustomFunctionUsage(child, usage);
+				}
 			}
-			
-			lst.Add(node);
+
+			lst.Nodes.Add(node);
 		}
 		
 		private void Add(Tree.Embedding embedding, Function function)
@@ -243,7 +262,7 @@ namespace Cpg.RawC.Programmer
 
 		private void ProgramCustomFunctions()
 		{			
-			Dictionary<Cpg.Function, List<Tree.Node>> usage = new Dictionary<Cpg.Function, List<Tree.Node>>();
+			Dictionary<Cpg.Function, CustomFunctionNode > usage = new Dictionary<Cpg.Function, CustomFunctionNode>();
 			
 			// Calculate map from a custom function to the nodes that use that function
 			foreach (KeyValuePair<State, Tree.Node> eq in d_equations)
@@ -262,13 +281,13 @@ namespace Cpg.RawC.Programmer
 					CustomFunctionUsage(node, usage);
 				}
 			}
-			
+
 			// Foreach custom function that is used
 			foreach (Cpg.Function function in usage.Keys)
 			{
 				// Create a new node for the custom function expression
-				Tree.Node node = Tree.Node.Create(null, function.Expression.Instructions);
-				
+				Tree.Node node = usage[function].Node;
+
 				// Calculate all the paths to where the arguments for this function
 				// are used in the expression. All arguments are implemented as properties
 				List<Cpg.Property> arguments = new List<Cpg.Property>();
@@ -279,7 +298,7 @@ namespace Cpg.RawC.Programmer
 				}
 				
 				List<Tree.Embedding.Argument> args = new List<Tree.Embedding.Argument>();
-				
+
 				foreach (Tree.Node child in node.Collect<InstructionProperty>())
 				{
 					InstructionProperty prop = child.Instruction as InstructionProperty;
@@ -289,16 +308,17 @@ namespace Cpg.RawC.Programmer
 					{
 						continue;
 					}
-					
+
 					// Create new embedding argument
 					args.Add(new Tree.Embedding.Argument(child.RelPath(node), (uint)idx));
 				}
-				
+
 				// Here it's a little messy, maybe can be improved. For now we create an
 				// embedding for the custom function as if it's a normal function. Then
 				// we create instances of that embedding for all the nodes where the custom
 				// function is used.
 				Tree.Embedding embedding = new Tree.Embedding(node, args);
+
 				string name = GenerateFunctionName(String.Format("cf_{0}", function.Id.ToLower()));
 
 				Function func = new Function(name, embedding, true);
@@ -306,7 +326,7 @@ namespace Cpg.RawC.Programmer
 
 				d_embeddings.Add(embedding);
 				
-				foreach (Tree.Node nn in usage[function])
+				foreach (Tree.Node nn in usage[function].Nodes)
 				{
 					embedding.Embed(nn);
 
@@ -411,7 +431,8 @@ namespace Cpg.RawC.Programmer
 
 		public int InitLoopsCount
 		{
-			get { return d_initLoops.Count; }
+			get
+																										{ return d_initLoops.Count; }
 		}
 		
 		public int LoopsCount

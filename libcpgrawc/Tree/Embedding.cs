@@ -10,7 +10,7 @@ namespace Cpg.RawC.Tree
 			private uint d_index;
 			private NodePath d_path;
 			
-			public Argument(NodePath path, uint index)
+			public Argument(NodePath path,uint index)
 			{
 				d_index = index;
 				d_path = path;
@@ -54,6 +54,7 @@ namespace Cpg.RawC.Tree
 		}
 
 		public delegate void InstanceHandler(object source, InstanceArgs instance);
+
 		public event InstanceHandler InstanceAdded = delegate {};
 		public event InstanceHandler InstanceRemoved = delegate {};
 		
@@ -149,7 +150,7 @@ namespace Cpg.RawC.Tree
 
 			d_arguments = new List<Argument>();
 			d_instances = new List<Node>();
-			d_expression = (Node)node.Clone();
+			d_expression = node;
 			
 			d_argumentIdx = 0;
 		}
@@ -188,7 +189,7 @@ namespace Cpg.RawC.Tree
 		
 		public void Embed(Node embed)
 		{
-			List<ulong> embeddedIds = new List<ulong>();
+			List<ulong > embeddedIds = new List<ulong>();
 			
 			embed.Instruction = new Instance(this, embeddedIds, embed.Instruction);
 

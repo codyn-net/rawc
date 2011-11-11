@@ -22,7 +22,7 @@ namespace Cpg.RawC.Tree.Collectors
 		
 		public Embedding Prototype(Node node, IEnumerable<NodePath> arguments)
 		{
-			Embedding ret = new Embedding(node, arguments);
+			Embedding ret = new Embedding((Node)node.Clone(), arguments);
 			Add(ret);
 			
 			return ret;
@@ -30,7 +30,7 @@ namespace Cpg.RawC.Tree.Collectors
 		
 		private void PrototypeInstanceAdded(object source, Embedding.InstanceArgs args)
 		{
-			List<Node> items;
+			List<Node > items;
 
 			if (!d_embeddings.TryGetValue(args.Instance.State, out items))
 			{
@@ -51,7 +51,7 @@ namespace Cpg.RawC.Tree.Collectors
 		
 		public IEnumerable<Node> Embeddings(State state)
 		{
-			List<Node> instances;
+			List<Node > instances;
 			
 			if (d_embeddings.TryGetValue(state, out instances))
 			{
