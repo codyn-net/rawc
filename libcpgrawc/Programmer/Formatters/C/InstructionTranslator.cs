@@ -150,38 +150,38 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			switch ((Cpg.MathOperatorType)instruction.Id)
 			{
-				case MathOperatorType.And:
-					return SimpleOperator(context, instruction, " && ");
-				case MathOperatorType.Divide:
-					return SimpleOperator(context, instruction, " / ");
-				case MathOperatorType.Equal:
-					return SimpleOperator(context, instruction, " == ");
-				case MathOperatorType.Greater:
-					return SimpleOperator(context, instruction, " > ");
-				case MathOperatorType.GreaterOrEqual:
-					return SimpleOperator(context, instruction, " >= ");
-				case MathOperatorType.Less:
-					return SimpleOperator(context, instruction, " < ");
-				case MathOperatorType.LessOrEqual:
-					return SimpleOperator(context, instruction, " <= ");
-				case MathOperatorType.Minus:
-					return SimpleOperator(context, instruction, " - ");
-				case MathOperatorType.UnaryMinus:
-					return SimpleOperator(context, instruction, " -");
-				case MathOperatorType.Multiply:
-					return SimpleOperator(context, instruction, " * ");
-				case MathOperatorType.Negate:
-					return SimpleOperator(context, instruction, " !");
-				case MathOperatorType.Or:
-					return SimpleOperator(context, instruction, " || ");
-				case MathOperatorType.Plus:
-					return SimpleOperator(context, instruction, " + ");
-				case MathOperatorType.Power:
-					return String.Format("{0}{1}",
+			case MathOperatorType.And:
+				return SimpleOperator(context, instruction, " && ");
+			case MathOperatorType.Divide:
+				return SimpleOperator(context, instruction, " / ");
+			case MathOperatorType.Equal:
+				return SimpleOperator(context, instruction, " == ");
+			case MathOperatorType.Greater:
+				return SimpleOperator(context, instruction, " > ");
+			case MathOperatorType.GreaterOrEqual:
+				return SimpleOperator(context, instruction, " >= ");
+			case MathOperatorType.Less:
+				return SimpleOperator(context, instruction, " < ");
+			case MathOperatorType.LessOrEqual:
+				return SimpleOperator(context, instruction, " <= ");
+			case MathOperatorType.Minus:
+				return SimpleOperator(context, instruction, " - ");
+			case MathOperatorType.UnaryMinus:
+				return SimpleOperator(context, instruction, " -");
+			case MathOperatorType.Multiply:
+				return SimpleOperator(context, instruction, " * ");
+			case MathOperatorType.Negate:
+				return SimpleOperator(context, instruction, " !");
+			case MathOperatorType.Or:
+				return SimpleOperator(context, instruction, " || ");
+			case MathOperatorType.Plus:
+				return SimpleOperator(context, instruction, " + ");
+			case MathOperatorType.Power:
+				return String.Format("{0}{1}",
 					                     Context.MathFunctionDefine(Cpg.MathFunctionType.Pow, context.Node.Children.Count),
 					                     SimpleOperator(context, null, ", "));
-				case MathOperatorType.Ternary:
-					return String.Format("({0} ? {1} : {2})",
+			case MathOperatorType.Ternary:
+				return String.Format("({0} ? {1} : {2})",
 					                     Translate(context, 0),
 					                     Translate(context, 1),
 					                     Translate(context, 2));
@@ -249,11 +249,21 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		private string Translate(Instructions.Function instruction, Context context)
 		{
 			string name = instruction.FunctionCall.Name.ToUpper();
-			List<string> args = new List<string>();
-			
-			foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
+			List<string > args = new List<string>();
+
+			if (!instruction.FunctionCall.IsCustom)
 			{
-				args.Add(Translate(context, context.Node.FromPath(argument.Path)));
+				foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
+				{
+					args.Add(Translate(context, context.Node.FromPath(argument.Path)));
+				}
+			}
+			else
+			{
+				foreach (Tree.Node child in context.Node.Children)
+				{
+					args.Add(Translate(context, child));
+				}
 			}
 
 			return String.Format("{0} ({1})", name, String.Join(", ", args.ToArray()));
@@ -273,12 +283,12 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		{
 			switch (instruction.Symbol)
 			{
-				case "pi":
-				case "PI":
-					return "M_PI";
-				case "e":
-				case "E":
-					return "M_E";
+			case "pi":
+			case "PI":
+				return "M_PI";
+			case "e":
+			case "E":
+				return "M_E";
 			}
 			
 			throw new NotImplementedException(String.Format("The symbol `{0}' is not yet supported...", instruction.Symbol));
