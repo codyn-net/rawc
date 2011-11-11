@@ -239,7 +239,21 @@ namespace Cpg.RawC
 
 			for (int i = 1; i < d_monitors.Count; ++i)
 			{
-				process.StandardInput.WriteLine(d_monitors[i].Property.FullName);
+				Cpg.Property prop;
+				string name;
+
+				prop = d_monitors[i].Property;
+
+				if (prop.Object is Cpg.Integrator || prop.Object is Cpg.Network)
+				{
+					name = prop.Name;
+				}
+				else
+				{
+					name = prop.FullName;
+				}
+
+				process.StandardInput.WriteLine(name);
 			}
 			
 			process.StandardInput.Close();
