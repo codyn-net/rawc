@@ -10,27 +10,21 @@ namespace Cpg.RawC.Tree
 	{
 		private State d_state;
 		private Instruction d_instruction;
-
 		private uint d_label;
-
 		private List<Node> d_children;
 		private SortedList<Node> d_leafs;
-
 		private Node d_parent;
-
 		private bool d_isLeaf;
 		private uint d_height;
-		
 		private uint d_degree;
 		private uint d_childCount;
 		private uint d_descendants;
 		private bool d_isCommutative;
-		
 		private ulong d_treeId;
 
 		public static Node Create(State state, Cpg.Instruction[] instructions)
 		{
-			Stack<Node> stack = new Stack<Node>();
+			Stack<Node > stack = new Stack<Node>();
 			
 			for (int i = 0; i < instructions.Length; ++i)
 			{
@@ -82,7 +76,7 @@ namespace Cpg.RawC.Tree
 		public static Node Create(State state)
 		{
 			return Create(state, state.Instructions);
-		}		
+		}
 
 		public Node(uint label) : this(null, null)
 		{
@@ -184,7 +178,7 @@ namespace Cpg.RawC.Tree
 		{
 			get
 			{
-				List<Node> ret = new List<Node>();
+				List<Node > ret = new List<Node>();
 				
 				CollectDescendants(ret);
 				return ret.ToArray();
@@ -497,18 +491,29 @@ namespace Cpg.RawC.Tree
 			
 			Cpg.RawC.Sort.Insertion(d_children);
 		}
-		
+
 		public override string ToString()
+		{
+			return ToString(true);
+		}
+		
+		public string ToString(bool withstate)
 		{
 			string lbl = "?";
 
 			InstructionFunction ifunc;
 			InstructionCustomFunction icfunc;
 			InstructionCustomOperator icop;
+			InstructionProperty iprop;
+			InstructionConstant icons;
+			InstructionNumber inum;
 
 			ifunc = d_instruction as InstructionFunction;
 			icfunc = d_instruction as InstructionCustomFunction;
 			icop = d_instruction as InstructionCustomOperator;
+			iprop = d_instruction as InstructionProperty;
+			icons = d_instruction as InstructionConstant;
+			inum = d_instruction as InstructionNumber;
 			
 			if (ifunc != null)
 			{
@@ -522,17 +527,36 @@ namespace Cpg.RawC.Tree
 			{
 				lbl = icop.Operator.Name;
 			}
+			else if (iprop != null)
+			{
+				lbl = "?" + iprop.Property.FullNameForDisplay;
+			}
+			else if (icons != null)
+			{
+				lbl = "?" + icons.Symbol;
+			}
+			else if (inum != null)
+			{
+				lbl = "?" + inum.Value.ToString();
+			}
 			
 			string par = "";
 			
 			Node top = Top;
 			
-			if (top != null && top.State != null)
+			if (top != null && top.State != null && withstate)
 			{
-				par = String.Format("{0}.{1}", top.State.Property.Object.FullId, top.State.Property.Name);
+				par = String.Format("{0}, ", top.State.Property.FullNameForDisplay);
 			}
 
-			return string.Format("[{0}, {1}, ({2})]", par, lbl, String.Join(", ", Array.ConvertAll<Tree.Node, string>(Children.ToArray(), a => a.ToString())));
+			string cs = "";
+
+			if (Children.Count != 0)
+			{
+				cs = ", (" + String.Join(", ", Array.ConvertAll<Tree.Node, string>(Children.ToArray(), a => a.ToString(false))) + ")";
+			}
+
+			return string.Format("[{0}{1}{2}]", par, lbl, cs);
 		}
 
 		public int CompareTo(Node other)
