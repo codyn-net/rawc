@@ -1,0 +1,202 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "mex.h"
+
+typedef struct
+{
+	int id;
+	char const *name;
+} StateItem;
+
+static StateItem states_map[] =
+{
+${statemap}
+};
+
+#define NUM_STATES (sizeof (states_map) / sizeof (StateItem))
+
+static int
+lookup_monitor (char const *name)
+{
+	int i;
+	
+	for (i = 0; i < NUM_STATES; ++i)
+	{
+		if (strcmp (states_map[i].name, name) == 0)
+		{
+			return states_map[i].id;
+		}
+	}
+	
+	return -1;
+}
+
+void
+mexFunction (int nlhs,
+             mxArray *plhs[],
+             int nrhs,
+             mxArray const *prhs[])
+{
+	enum
+	{
+		PARAM_FROM,
+		PARAM_TIMESTEP,
+		PARAM_TO,
+		PARAM_MONITORS,
+		N_PARAMS
+	};
+
+	enum
+	{
+		OPTIONAL_SEED,
+		N_OPTIONALS
+	};
+
+	/* if no input and zero or one output, return cell array of all available states */
+	if (nlhs <= 1 && nrhs == 0)
+	{
+		plhs[0] = mxCreateCellMatrix(NUM_STATES, 1);
+
+		int i;
+
+		for (i = 0; i < NUM_STATES; ++i)
+		{
+			mxSetCell (plhs[0], i, mxCreateString (states_map[i].name));
+		}
+
+		return;
+	}
+
+	if (nrhs < N_PARAMS || nrhs > N_PARAMS + N_OPTIONALS)
+	{
+		mexErrMsgTxt ("Wrong number of input arguments. Call with no arguments to get a list of available states. Otherwise:\n"
+		              "INPUTS:\n"
+		              "\tStart time\n"
+		              "\tTimestep\n"
+		              "\tEnd time\n"
+		              "\tState, or cell array of states, to monitor\n"
+		              "\tSeed (optional)\n"
+		              "OUTPUTS:\n"
+		              "\tArray of monitored values, one row per timestep\n"
+		              "\tSeed\n");
+	}
+
+	if (nlhs > 2)
+	{
+		mexErrMsgTxt ("Too many output arguments (max 2)");
+	}
+
+	double from = mxGetScalar (prhs[PARAM_FROM]);
+	double timestep = mxGetScalar (prhs[PARAM_TIMESTEP]);
+	double to = mxGetScalar (prhs[PARAM_TO]);
+	mxArray const *monitor_cells = prhs[PARAM_MONITORS];
+	unsigned int seed;
+
+	if (nrhs > N_PARAMS + OPTIONAL_SEED)
+	{
+		seed = mxGetScalar (prhs[N_PARAMS + OPTIONAL_SEED]);
+	}
+	else
+	{
+		FILE *file = fopen("/dev/urandom", "r");
+		int n_read = fread (&seed, sizeof (seed), 1, file);
+		fclose (file);
+
+		if (n_read != 1)
+		{
+			mexErrMsgTxt ("Couldn't read seed from /dev/urandom");
+		}
+	}
+
+	if (to - (from + timestep) >= to - from)
+	{
+		mexErrMsgTxt ("Invalid simulation range specified");
+	}
+
+	int n_monitors;
+	if (mxIsCell (monitor_cells))
+	{
+		if (mxGetM (monitor_cells) * mxGetN (monitor_cells) == 0)
+		{
+			mexErrMsgTxt ("No monitor specified");
+		}
+
+		if (mxGetM (monitor_cells) > 1 && mxGetN (monitor_cells) > 1)
+		{
+			mexErrMsgTxt ("The monitor list must have one dimension");
+		}
+
+		n_monitors = mxGetM (monitor_cells);
+
+		if (n_monitors == 1)
+		{
+			n_monitors = mxGetN (monitor_cells);
+		}
+	}
+	else
+	{
+		if (!mxIsChar (monitor_cells))
+		{
+			mexErrMsgTxt ("Invalid value for monitors");
+		}
+
+		n_monitors = 1;
+	}
+
+	int *monitors = mxCalloc (n_monitors, sizeof (int));
+
+	int i;
+	for (i = 0; i < n_monitors; ++i)
+	{
+		char *name = mxArrayToString (mxIsCell (monitor_cells) ? mxGetCell (monitor_cells, i) : monitor_cells);
+
+		/* Lookup in table */
+		int id = lookup_monitor (name);
+		
+		if (id == -1)
+		{
+			mxFree (monitors);
+			mexPrintf ("Could not find state to monitor: %s\n", name);
+			mexErrMsgTxt ("Couldn't find all monitors\n");
+		}
+		
+		monitors[i] = id;
+
+		mxFree (name);
+	}
+
+	srand (seed);
+	
+	${name}_initialize ();
+	${name}_set (${NAME}_STATE_T, from);
+	
+	to += timestep / 2;
+
+	int n_steps = (to - from) / timestep + 1;
+	int step;
+
+	plhs[0] = mxCreateDoubleMatrix (n_steps, n_monitors, mxREAL);
+	double *output = mxGetPr (plhs[0]);
+
+	for (step = 0; step < n_steps; ++step)
+	{
+		int i;
+		
+		for (i = 0; i < n_monitors; ++i)
+		{
+			output[n_steps * i + step] = ${name}_get (monitors[i]);
+		}
+
+		${name}_step (timestep);
+	}
+
+	if (nlhs > 1)
+	{
+		plhs[1] = mxCreateDoubleScalar (seed);
+	}
+
+	mxFree (monitors);
+}

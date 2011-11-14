@@ -94,6 +94,11 @@ namespace Cpg.RawC
 				Console.WriteLine(Options.Instance.Formatter.CompileSource());
 			}
 
+			if (Options.Instance.PrintMexSource)
+			{
+				Console.WriteLine(Options.Instance.Formatter.MexSource());
+			}
+
 			if (Options.Instance.Validate)
 			{
 				try

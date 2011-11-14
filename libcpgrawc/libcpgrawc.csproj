@@ -110,5 +110,6 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <EmbeddedResource Include="Programmer\Formatters\C\TestProgram.resources" />
+    <EmbeddedResource Include="Programmer\Formatters\C\MexProgram.resources" />
   </ItemGroup>
 </Project>

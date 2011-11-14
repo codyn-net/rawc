@@ -9,6 +9,7 @@ namespace Cpg.RawC.Programmer.Formatters
 		
 		void Compile(string filename, bool verbose);
 		string CompileSource();
+		string MexSource();
 	}
 }
 

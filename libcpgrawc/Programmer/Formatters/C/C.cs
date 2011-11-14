@@ -63,9 +63,9 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			return written.ToArray();
 		}
 		
-		public string CompileSource()
+		public string Source(string resource)
 		{
-			Stream program = Assembly.GetExecutingAssembly().GetManifestResourceStream("Cpg.RawC.Programmer.Formatters.C.TestProgram.resources");
+			Stream program = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource);
 			StreamReader reader = new StreamReader(program);
 			
 			StringWriter writer = new StringWriter();
@@ -106,6 +106,16 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 			writer.WriteLine(prog);
 			return writer.ToString();
+		}
+
+		public string CompileSource()
+		{
+			return Source("Cpg.RawC.Programmer.Formatters.C.TestProgram.resources");
+		}
+
+		public string MexSource()
+		{
+			return Source("Cpg.RawC.Programmer.Formatters.C.MexProgram.resources");
 		}
 		
 		public void Compile(string filename, bool verbose)
