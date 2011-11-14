@@ -48,9 +48,10 @@ print_states (FILE *f)
 int
 main (int argc, char *argv[])
 {
-	double from = 0;
-	double to = 1;
-	double step = 0.001;
+	double from;
+	double step;
+	double to;
+	unsigned int seed = 0;
 	
 	int monitors[255];
 	int num_monitors = 0;
@@ -61,33 +62,36 @@ main (int argc, char *argv[])
 		return 0;
 	}
 	
-	if (argc == 2 && (strcmp (argv[1], "help") == 0 || strcmp (argv[1], "--help") == 0 || strcmp (argv[1], "-h") == 0))
+	if (argc != 4 && argc != 5)
 	{
+		printf ("Usage: %s <from> <step> <to> [<seed>]\n", argv[0]);
 		printf ("\nThis program runs and monitors the CPG network.\n");
 		printf ("Specify a time range to monitor (from step to) as arguments on the command line.\n");
+		printf ("Optionnaly specify a random seed.\n");
+		printf ("By default, a random seed will be generated and printed to stderr.\n");
 		printf ("States to monitor can be specified (one per line) on standard in.\n");
 		printf ("State values are written to standard out (tab separated).\n");
 		printf ("Use `%s list' to show available states to monitor.\n\n", argv[0]);
 
-		return 0;
+		return 1;
 	}
 
-	if (argc == 2)
+	from = atof (argv[1]);
+	step = atof (argv[2]);
+	to = atof (argv[3]);
+
+	if (argc == 5)
 	{
-		step = atof (argv[1]);
+		seed = atoi (argv[4]);
 	}
-	else if (argc == 3)
+	else
 	{
-		step = atof (argv[1]);
-		to = atof (argv[2]);
+		FILE *file = fopen("/dev/urandom", "r");
+		fread (&seed, sizeof (seed), 1, file);
+		fclose (file);
+		fprintf (stderr, "Seed: %u\n", seed);
 	}
-	else if (argc == 4)
-	{
-		from = atof (argv[1]);
-		step = atof (argv[2]);
-		to = atof (argv[3]);
-	}
-	
+
 	if (to - (from + step) >= to - from)
 	{
 		fprintf (stderr, "Invalid simulation range specified...\n");
@@ -135,9 +139,11 @@ main (int argc, char *argv[])
 			return 1;
 		}
 		
-		monitors[num_monitors++] = id;		
+		monitors[num_monitors++] = id;
 	}
 
+	srand (seed);
+	
 	${name}_initialize ();
 	${name}_set (${NAME}_STATE_T, from);
 	
