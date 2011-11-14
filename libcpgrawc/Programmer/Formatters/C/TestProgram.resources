@@ -129,7 +129,7 @@ main (int argc, char *argv[])
 			return 1;
 		}
 		
-		if (num_monitors >= sizeof (monitors))
+		if (num_monitors >= sizeof (monitors) / sizeof (monitors[0]))
 		{
 			fprintf (stderr, "Too many monitors specified, maximum number of monitors is %ld\n", sizeof (monitors));
 			return 1;
