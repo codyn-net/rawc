@@ -9,7 +9,7 @@ namespace Cpg.RawC
 		
 		static Log()
 		{
-			s_base = Console.Out;
+			s_base = Console.Error;
 		}
 		
 		public static TextWriter Base

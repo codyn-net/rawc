@@ -62,7 +62,7 @@ namespace Cpg.RawC.Application
 							s = String.Format("{0} and {1}", String.Join(", ", files, 0, files.Length - 1), files[files.Length - 1]);
 						}
 
-						Console.Out.WriteLine("Generated {0} from `{1}'...", s, filename);
+						Log.WriteLine("Generated {0} from `{1}'...", s, filename);
 					}
 				}
 				catch (Cpg.RawC.Exception e)
