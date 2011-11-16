@@ -287,6 +287,8 @@ namespace Cpg.RawC
 				}
 			}
 
+			List<string > failures = new List<string>();
+
 			for (int i = 0; i < data.Count; ++i)
 			{
 				List<double > raw = data[i];
@@ -295,12 +297,19 @@ namespace Cpg.RawC
 				{
 					if (System.Math.Abs(d_monitored[j][i] - raw[j]) > opts.ValidatePrecision)
 					{
-						throw new Exception(String.Format("Discrepancy detected at t = {0} in {1} (got {2} but expected {3})",
-						                        opts.ValidateRange[0] + (i * opts.ValidateRange[1]),
-						                        d_monitors[j].Property.FullName,
-						                        raw[j],
-						                        d_monitored[j][i]));
+						failures.Add(String.Format("{0} (got {1} but expected {2})",
+							         d_monitors[j].Property.FullName,
+							         raw[j],
+							         d_monitored[j][i]));
 					}
+				}
+
+				if (failures.Count > 0)
+				{
+					throw new Exception(String.Format("Discrepancy detected at t = {0}:\n  {1}",
+						                              opts.ValidateRange[0] + (i * opts.ValidateRange[1]),
+						                              String.Join("\n  ", failures.ToArray())));
+
 				}
 			}
 			
