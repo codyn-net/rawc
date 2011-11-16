@@ -244,6 +244,15 @@ namespace Cpg.RawC
 		{
 			return DependsOn(expression, Cpg.RawC.State.Flags.Integrated);
 		}
+
+		public bool DependsTime(Cpg.Expression expression)
+		{
+			Cpg.Property tprop = d_network.Integrator.Property("t");
+			Cpg.Property dtprop = d_network.Integrator.Property("dt");
+
+			return Array.IndexOf(expression.Dependencies, tprop) != -1 ||
+				   Array.IndexOf(expression.Dependencies, dtprop) != -1;
+		}
 		
 		public bool DependsIn(Cpg.Expression expression)
 		{
@@ -296,6 +305,7 @@ namespace Cpg.RawC
 						bool dependsdirect = DependsDirect(prop.Expression);
 						bool dependsintegrated = DependsIntegrated(prop.Expression);
 						bool dependsin = DependsIn(prop.Expression);
+						bool dependstime = DependsTime(prop.Expression);
 						
 						bool beforedirect = dependsin && AnyStateDepends(d_direct, prop);
 
@@ -309,7 +319,7 @@ namespace Cpg.RawC
 							d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
 						}
 					
-						if (dependsintegrated || (dependsin && !beforedirect))
+						if (dependsintegrated || (dependsin && !beforedirect) || dependstime)
 						{
 							d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
 						}
