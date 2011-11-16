@@ -460,35 +460,38 @@ namespace Cpg.RawC.Programmer
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
 			List<State > st = new List<State>(states);
-			
-			// Extract loops from states. Scan for embeddings and replace them with
-			// looped stuff, creating temporary variables on the fly if needed
-			foreach (Tree.Embedding embedding in d_embeddings)
+
+			if (loops != null)
 			{
-				Function function = d_embeddingFunctionMap[embedding];
+				// Extract loops from states. Scan for embeddings and replace them with
+				// looped stuff, creating temporary variables on the fly if needed
+				foreach (Tree.Embedding embedding in d_embeddings)
+				{
+					Function function = d_embeddingFunctionMap[embedding];
 				
-				if (function.IsCustom)
-				{
-					continue;
-				}
-
-				LoopData loop = new LoopData(embedding, function);
-
-				foreach (Tree.Node node in embedding.Instances)
-				{
-					if (st.Contains(node.State))
+					if (function.IsCustom)
 					{
-						loop.Add(node);
+						continue;
 					}
-				}
+
+					LoopData loop = new LoopData(embedding, function);
+
+					foreach (Tree.Node node in embedding.Instances)
+					{
+						if (st.Contains(node.State))
+						{
+							loop.Add(node);
+						}
+					}
 				
-				if (loop.Instances.Count >= Cpg.RawC.Options.Instance.MinimumLoopSize)
-				{
-					// Create loop for this thing
-					Computation.Loop l = CreateLoop(st, loop);
+					if (loop.Instances.Count >= Cpg.RawC.Options.Instance.MinimumLoopSize)
+					{
+						// Create loop for this thing
+						Computation.Loop l = CreateLoop(st, loop);
 					
-					ret.Add(l);
-					loops.Add(l);
+						ret.Add(l);
+						loops.Add(l);
+					}
 				}
 			}
 
@@ -618,8 +621,9 @@ namespace Cpg.RawC.Programmer
 				
 				init.Add(state);
 			}
-			
-			d_initialization.AddRange(AssignmentStates(init, d_initLoops));
+
+			// Do not generate loops for now, otherwise use d_initLoops
+			d_initialization.AddRange(AssignmentStates(init, null));
 		}
 		
 		public IEnumerable<Cpg.Function> UsedCustomFunctions

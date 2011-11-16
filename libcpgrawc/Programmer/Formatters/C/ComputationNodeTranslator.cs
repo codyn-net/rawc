@@ -60,7 +60,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			ret.AppendLine("\t}");
 			ret.Append("}");
 			
-			Dictionary<DataTable, bool> seen = new Dictionary<DataTable, bool>();
+			Dictionary<DataTable, bool > seen = new Dictionary<DataTable, bool>();
 			bool first = true;
 			
 			// Update counter loop indices
@@ -109,6 +109,16 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(Computation.Assignment node, Context context)
 		{
+			if ((node.Item.Type & DataTable.DataItem.Flags.Initialization) != 0 &&
+				(node.Item.Type & DataTable.DataItem.Flags.Integrated) != 0)
+			{
+				return String.Format("{0}[{1}] = {0}[{2}] = {3};",
+			                     node.Item.Table.Name,
+			                     node.Item.AliasOrIndex,
+					             node.Item.Index + context.Program.IntegrateTable.Count,
+			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation)));
+			}
+
 			return String.Format("{0}[{1}] = {2};",
 			                     node.Item.Table.Name,
 			                     node.Item.AliasOrIndex,
