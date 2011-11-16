@@ -28,14 +28,21 @@ namespace Cpg.RawC.Programmer.Formatters.C
 
 		public static string Translate(double number)
 		{
-			string val = number.ToString();
-			
+			string val = Translate(number, 15);
+
 			if (val.IndexOf('.') == -1)
 			{
 				return val + ".0";
 			}
 			else
 			{
+				val = val.TrimEnd('0');
+
+				if (val.EndsWith("."))
+				{
+					val += "0";
+				}
+
 				return val;
 			}
 		}

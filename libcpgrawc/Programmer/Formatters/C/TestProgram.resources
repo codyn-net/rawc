@@ -160,7 +160,7 @@ main (int argc, char *argv[])
 				printf ("\t");
 			}
 			
-			printf ("%f", ${name}_get (monitors[i]));
+			printf ("%.15f", ${name}_get (monitors[i]));
 		}
 		
 		if (num_monitors > 0)
