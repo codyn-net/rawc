@@ -109,8 +109,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 		
 		private string Translate(Computation.Assignment node, Context context)
 		{
-			if ((node.Item.Type & DataTable.DataItem.Flags.Initialization) != 0 &&
-				(node.Item.Type & DataTable.DataItem.Flags.Integrated) != 0)
+			if ((node.Item.Type & DataTable.DataItem.Flags.Integrated) != 0 &&
+				context.Program.NodeIsInitialization(node))
 			{
 				return String.Format("{0}[{1}] = {0}[{2}] = {3};",
 			                     node.Item.Table.Name,

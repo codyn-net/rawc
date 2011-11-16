@@ -641,7 +641,12 @@ namespace Cpg.RawC.Programmer
 				return d_initialization;
 			}
 		}
-		
+
+		public bool NodeIsInitialization(Computation.INode node)
+		{
+			return d_initialization.Contains(node);
+		}
+
 		public IEnumerable<Computation.INode> SourceNodes
 		{
 			get
