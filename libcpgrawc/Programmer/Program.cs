@@ -518,15 +518,6 @@ namespace Cpg.RawC.Programmer
 				d_source.Add(new Computation.Empty());
 			}
 
-			int num = d_stateIntegratedUpdateIndex - d_stateIntegratedIndex;
-			
-			if (num > 0)
-			{
-				d_source.Add(new Computation.Comment("Make copy of current integrated state"));
-				d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, d_stateIntegratedIndex, num, d_stateIntegratedUpdateIndex));
-				d_source.Add(new Computation.Empty());
-			}
-
 			// Precompute for out properties
 			if (Knowledge.Instance.PrecomputeBeforeDirectStatesCount != 0)
 			{
@@ -558,12 +549,34 @@ namespace Cpg.RawC.Programmer
 				d_source.AddRange(AssignmentStates(Knowledge.Instance.IntegratedStates));
 				d_source.Add(new Computation.Empty());
 			}
+
+			int num = d_stateIntegratedUpdateIndex - d_stateIntegratedIndex;
 			
+			if (num > 0)
+			{
+				d_source.Add(new Computation.Comment("Make copy of current integrated state"));
+				d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, d_stateIntegratedIndex, num, d_stateIntegratedUpdateIndex));
+				d_source.Add(new Computation.Empty());
+			}
+
+			// Increase time before post computing out properties
+			Cpg.Property tprop = Knowledge.Instance.Network.Integrator.Property("t");
+			DataTable.DataItem t = d_statetable[tprop];
+
+			Tree.Node eq = new Tree.Node(null, new InstructionOperator((int)Cpg.MathOperatorType.Plus, "+", 2));
+			
+			eq.Add(new Tree.Node(null, new InstructionProperty(tprop, InstructionPropertyBinding.None)));
+			eq.Add(new Tree.Node(null, new InstructionProperty(dtprop, InstructionPropertyBinding.None)));
+
+			d_source.Add(new Computation.Comment("Increase time"));
+			d_source.Add(new Computation.Assignment(null, t, eq));
+			d_source.Add(new Computation.Empty());
+
 			// Postcompute for out properties
 			if (Knowledge.Instance.PrecomputeAfterIntegratedStatesCount != 0)
 			{
 				d_source.Add(new Computation.Comment("Out properties that depend on integrated states or IN states"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeAfterIntegratedStates));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeAfterIntegratedStates, null));
 				d_source.Add(new Computation.Empty());
 			}
 			
@@ -578,18 +591,6 @@ namespace Cpg.RawC.Programmer
 				d_source.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
 				d_source.Add(new Computation.Empty());
 			}
-			
-			// Increase time
-			Cpg.Property tprop = Knowledge.Instance.Network.Integrator.Property("t");
-			DataTable.DataItem t = d_statetable[tprop];
-
-			Tree.Node eq = new Tree.Node(null, new InstructionOperator((int)Cpg.MathOperatorType.Plus, "+", 2));
-			
-			eq.Add(new Tree.Node(null, new InstructionProperty(tprop, InstructionPropertyBinding.None)));
-			eq.Add(new Tree.Node(null, new InstructionProperty(dtprop, InstructionPropertyBinding.None)));
-
-			d_source.Add(new Computation.Comment("Increase time"));
-			d_source.Add(new Computation.Assignment(null, t, eq));
 		}
 		
 		private void ProgramInitialization()
