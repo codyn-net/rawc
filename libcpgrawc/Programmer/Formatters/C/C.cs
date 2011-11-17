@@ -900,7 +900,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			TextWriter math;
 			string guard = null;
 			
-			if (!d_options.NoSeparateMathHeader)
+			if (d_options.SeparateMathHeader)
 			{
 				string mathbase = d_program.Options.Basename + "_math.h";
 				string filename = Path.Combine(d_program.Options.Output, mathbase);
@@ -923,7 +923,7 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			WriteCustomMathDefines(math);
 			WriteFunctionDefines(math);
 			
-			if (!d_options.NoSeparateMathHeader)
+			if (d_options.SeparateMathHeader)
 			{
 				math.WriteLine("#endif /* __{0}__ */", guard);
 				math.Close();
