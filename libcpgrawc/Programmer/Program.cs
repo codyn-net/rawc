@@ -137,13 +137,13 @@ namespace Cpg.RawC.Programmer
 			}
 			
 			// Add in variables
-			foreach (Cpg.Property prop in Knowledge.Instance.InProperties)
+			foreach (Cpg.Property prop in Knowledge.Instance.FlaggedProperties(PropertyFlags.In))
 			{
 				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.In);
 			}
 			
 			// Add out variables
-			foreach (Cpg.Property prop in Knowledge.Instance.OutProperties)
+			foreach (Cpg.Property prop in Knowledge.Instance.FlaggedProperties(PropertyFlags.Out))
 			{
 				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Out);
 			}
@@ -166,6 +166,12 @@ namespace Cpg.RawC.Programmer
 			foreach (State state in Knowledge.Instance.InitializeStates)
 			{
 				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Initialization);
+			}
+
+			// Add once variables
+			foreach (Cpg.Property prop in Knowledge.Instance.FlaggedProperties(PropertyFlags.Once))
+			{
+				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Once);
 			}
 		}
 		

@@ -15,9 +15,8 @@ namespace Cpg.RawC
 		private List<State> d_precomputeAfterIntegrated;
 		private List<State> d_delayed;
 		private Dictionary<Cpg.Property, State> d_stateMap;
+		private Dictionary<Cpg.PropertyFlags, List<Cpg.Property>> d_flaggedproperties;
 		private List<Cpg.Property> d_properties;
-		private List<Cpg.Property> d_inproperties;
-		private List<Cpg.Property> d_outproperties;
 
 		public static Knowledge Initialize(Cpg.Network network)
 		{
@@ -48,9 +47,8 @@ namespace Cpg.RawC
 			d_stateMap = new Dictionary<Property, State>();
 
 			d_properties = new List<Property>();
-			d_inproperties = new List<Property>();
-			d_outproperties = new List<Property>();
-			
+			d_flaggedproperties = new Dictionary<PropertyFlags, List<Property>>();
+
 			Scan();
 		}
 
@@ -285,48 +283,64 @@ namespace Cpg.RawC
 			return false;
 		}
 
+		private void AddFlaggedProperty(Cpg.Property property)
+		{
+			foreach (Cpg.PropertyFlags flags in Enum.GetValues(typeof(Cpg.PropertyFlags)))
+			{
+				if ((property.Flags & flags) != 0)
+				{
+					List<Cpg.Property> lst;
+
+					if (!d_flaggedproperties.TryGetValue(flags, out lst))
+					{
+						lst = new List<Property>();
+						d_flaggedproperties[flags] = lst;
+					}
+
+					lst.Add(property);
+				}
+			}
+		}
+
 		private void ScanProperties(Cpg.Object obj)
 		{
 			d_properties.AddRange(obj.Properties);
 			
 			foreach (Cpg.Property prop in obj.Properties)
 			{
-				if ((prop.Flags & Cpg.PropertyFlags.In) != 0)
-				{
-					d_inproperties.Add(prop);
-				}
-				
-				if ((prop.Flags & Cpg.PropertyFlags.Out) != 0)
-				{
-					d_outproperties.Add(prop);
+				AddFlaggedProperty(prop);
+				bool needsinit = NeedsInitialization(prop, true);
+				bool isvar = IsVariadic(prop.Expression, true);
 
-					if ((prop.Flags & Cpg.PropertyFlags.In) == 0 && !d_stateMap.ContainsKey(prop))
+				if (((prop.Flags & Cpg.PropertyFlags.Out) != 0 ||
+					 (needsinit && isvar)) &&
+					(prop.Flags & (Cpg.PropertyFlags.In | Cpg.PropertyFlags.Once)) == 0 &&
+					!d_stateMap.ContainsKey(prop))
+				{
+					bool dependsdirect = DependsDirect(prop.Expression);
+					bool dependsintegrated = DependsIntegrated(prop.Expression);
+					bool dependsin = DependsIn(prop.Expression);
+					bool dependstime = DependsTime(prop.Expression);
+
+					bool beforedirect = dependsin && AnyStateDepends(d_direct, prop);
+
+					if (beforedirect)
 					{
-						bool dependsdirect = DependsDirect(prop.Expression);
-						bool dependsintegrated = DependsIntegrated(prop.Expression);
-						bool dependsin = DependsIn(prop.Expression);
-						bool dependstime = DependsTime(prop.Expression);
-						
-						bool beforedirect = dependsin && AnyStateDepends(d_direct, prop);
+						d_precomputeBeforeDirect.Add(new State(prop, RawC.State.Flags.BeforeDirect));
+					}
 
-						if (beforedirect)
-						{
-							d_precomputeBeforeDirect.Add(new State(prop, RawC.State.Flags.BeforeDirect));
-						}
-
-						if (dependsdirect && AnyStateDepends(d_integrated, prop))
-						{
-							d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
-						}
-					
-						if (dependsintegrated || (dependsin && !beforedirect) || dependstime)
-						{
-							d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
-						}
+					if (dependsdirect && AnyStateDepends(d_integrated, prop))
+					{
+						d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
+					}
+				
+					if (dependsintegrated || (dependsin && !beforedirect) || dependstime || isvar)
+					{
+						d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
 					}
 				}
-				
-				if (NeedsInitialization(prop, true))
+
+				if (needsinit)
 				{
 					d_initialize.Add(new State(prop, RawC.State.Flags.Initialization));
 				}
@@ -357,23 +371,20 @@ namespace Cpg.RawC
 				return d_properties;
 			}
 		}
-		
-		public IEnumerable<Cpg.Property> InProperties
+
+		public IEnumerable<Cpg.Property> FlaggedProperties(Cpg.PropertyFlags flags)
 		{
-			get
+			List<Cpg.Property> lst;
+
+			if (d_flaggedproperties.TryGetValue(flags, out lst))
 			{
-				return d_inproperties;
+				foreach (Cpg.Property prop in lst)
+				{
+					yield return prop;
+				}
 			}
 		}
-		
-		public IEnumerable<Cpg.Property> OutProperties
-		{
-			get
-			{
-				return d_outproperties;
-			}
-		}
-		
+
 		public State State(Cpg.Property property)
 		{
 			State state = null;

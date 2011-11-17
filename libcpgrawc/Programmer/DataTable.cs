@@ -30,11 +30,12 @@ namespace Cpg.RawC.Programmer
 				Direct = 1 << 5,
 				In = 1 << 6,
 				Out = 1 << 7,
-				Update = 1 << 8,
-				Counter = 1 << 9,
-				Size = 1 << 10,
-				Initialization = 1 << 11,
-				Temporary = 1 << 12
+				Once = 1 << 8,
+				Update = 1 << 9,
+				Counter = 1 << 10,
+				Size = 1 << 11,
+				Initialization = 1 << 12,
+				Temporary = 1 << 13
 			}
 
 			private DataTable d_table;
@@ -388,7 +389,7 @@ namespace Cpg.RawC.Programmer
 			int num = 0;
 			int cur = d_list.Count;
 			
-			List<int> ids = new List<int>(indices);
+			List<int > ids = new List<int>(indices);
 			ids.Sort();
 
 			foreach (int idx in ids)
