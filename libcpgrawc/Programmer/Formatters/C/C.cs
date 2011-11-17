@@ -313,8 +313,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 				
 				while (unique.ContainsKey(enumname))
 				{
-					enumname = String.Format("{0}_STATE_{1}_{2}", CPrefixUp, orig, ++id);
-					shortname = String.Format("{0}_{1}", orig, id);
+					enumname = String.Format("{0}_STATE_{1}__{2}", CPrefixUp, orig, ++id);
+					shortname = String.Format("{0}__{1}", orig, id);
 				}
 				
 				names.Add(enumname);
@@ -329,6 +329,8 @@ namespace Cpg.RawC.Programmer.Formatters.C
 					item.Alias = enumname;
 				}
 				
+				unique[enumname] = true;
+
 				d_enumMap.Add(new EnumItem(prop, shortname, enumname));
 			}
 			
