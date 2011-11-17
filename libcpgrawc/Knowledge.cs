@@ -343,9 +343,7 @@ namespace Cpg.RawC
 				bool isout = (prop.Flags & Cpg.PropertyFlags.Out) != 0;
 				bool isonce = (prop.Flags & Cpg.PropertyFlags.Once) != 0;
 
-				if (((prop.Flags & Cpg.PropertyFlags.Out) != 0 ||
-					 (needsinit && isvar)) &&
-					!isin && !isonce &&
+				if ((isout || (needsinit && isvar)) && !isin && !isonce &&
 					!d_stateMap.ContainsKey(prop))
 				{
 					bool dependsdirect = DependsDirect(prop.Expression);
@@ -365,7 +363,7 @@ namespace Cpg.RawC
 						d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
 					}
 				
-					if ((dependsin && !beforedirect) || dependstime || isvar)
+					if ((dependsin && !beforedirect) || dependstime || isvar || dependsintegrated)
 					{
 						d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
 					}
