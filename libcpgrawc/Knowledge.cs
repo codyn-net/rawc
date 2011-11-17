@@ -108,6 +108,53 @@ namespace Cpg.RawC
 			
 			return state;
 		}
+
+		private void AllDependencies(Cpg.Expression expr, Dictionary<Cpg.Property, bool> ret)
+		{
+			foreach (Instruction instr in expr.Instructions)
+			{
+				InstructionProperty p = instr as InstructionProperty;
+
+				if (p != null && !ret.ContainsKey(p.Property))
+				{
+					ret[p.Property] = true;
+					AllDependencies(p.Property.Expression, ret);
+				}
+			}
+		}
+
+		private List<State> SortOnDependencies(List<State> lst)
+		{
+			List<State > ret = new List<State>();
+			List<Dictionary<Cpg.Property, bool >> deps = new List<Dictionary<Cpg.Property, bool>>();
+			
+			foreach (State st in lst)
+			{
+				bool found = false;
+
+				Dictionary<Cpg.Property, bool > pdeps = new Dictionary<Cpg.Property, bool>();
+				AllDependencies(st.Property.Expression, pdeps);
+
+				for (int i = 0; i < ret.Count; ++i)
+				{
+					if (deps[i].ContainsKey(st.Property))
+					{
+						ret.Insert(i, st);
+						deps.Insert(i, pdeps);
+						found = true;
+						break;
+					}
+				}
+				
+				if (!found)
+				{
+					ret.Add(st);
+					deps.Add(pdeps);
+				}
+			}
+
+			return ret;
+		}
 		
 		private void Scan()
 		{
@@ -128,30 +175,11 @@ namespace Cpg.RawC
 			ScanProperties(d_network);
 			
 			// Sort initialize list on dependencies
-			List<State > initialize = new List<State>();
-			
-			foreach (State st in d_initialize)
-			{
-				bool found = false;
+			d_initialize = SortOnDependencies(d_initialize);
+			d_precomputeAfterIntegrated = SortOnDependencies(d_precomputeAfterIntegrated);
+			d_precomputeBeforeDirect = SortOnDependencies(d_precomputeBeforeDirect);
+			d_precomputeBeforeIntegrated = SortOnDependencies(d_precomputeBeforeIntegrated);
 
-				for (int i = 0; i < initialize.Count; ++i)
-				{
-					if (Array.IndexOf(initialize[i].Property.Expression.Dependencies, st.Property) != -1)
-					{
-						initialize.Insert(i, st);
-						found = true;
-						break;
-					}
-				}
-				
-				if (!found)
-				{
-					initialize.Add(st);
-				}
-			}
-
-			d_initialize = initialize;
-			
 			ExtractDelayedStates();
 		}
 		
@@ -311,10 +339,13 @@ namespace Cpg.RawC
 				AddFlaggedProperty(prop);
 				bool needsinit = NeedsInitialization(prop, true);
 				bool isvar = IsVariadic(prop.Expression, true);
+				bool isin = (prop.Flags & Cpg.PropertyFlags.In) != 0;
+				bool isout = (prop.Flags & Cpg.PropertyFlags.Out) != 0;
+				bool isonce = (prop.Flags & Cpg.PropertyFlags.Once) != 0;
 
 				if (((prop.Flags & Cpg.PropertyFlags.Out) != 0 ||
 					 (needsinit && isvar)) &&
-					(prop.Flags & (Cpg.PropertyFlags.In | Cpg.PropertyFlags.Once)) == 0 &&
+					!isin && !isonce &&
 					!d_stateMap.ContainsKey(prop))
 				{
 					bool dependsdirect = DependsDirect(prop.Expression);
@@ -334,7 +365,7 @@ namespace Cpg.RawC
 						d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
 					}
 				
-					if (dependsintegrated || (dependsin && !beforedirect) || dependstime || isvar)
+					if ((dependsin && !beforedirect) || dependstime || isvar)
 					{
 						d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
 					}
