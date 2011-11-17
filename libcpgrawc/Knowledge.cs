@@ -450,7 +450,7 @@ namespace Cpg.RawC
 				return true;
 			}
 			
-			if ((property.Flags & (PropertyFlags.In | PropertyFlags.Out)) != PropertyFlags.None)
+			if ((property.Flags & (PropertyFlags.In | PropertyFlags.Out | PropertyFlags.Once)) != PropertyFlags.None)
 			{
 				return true;
 			}
