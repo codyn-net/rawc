@@ -883,12 +883,6 @@ namespace Cpg.RawC.Programmer.Formatters.C
 			
 			writer.WriteLine();
 
-			writer.WriteLine("#ifndef NINIT");
-			writer.WriteLine("#define NINIT NAN");
-			writer.WriteLine("#endif");
-			
-			writer.WriteLine();
-			
 			if (d_options.CustomHeaders != null)
 			{
 				foreach (string header in d_options.CustomHeaders)
@@ -896,7 +890,13 @@ namespace Cpg.RawC.Programmer.Formatters.C
 					writer.WriteLine("#include \"{0}\"", header);
 				}
 			}
-			
+
+			writer.WriteLine("#ifndef NINIT");
+			writer.WriteLine("#define NINIT NAN");
+			writer.WriteLine("#endif");
+
+			writer.WriteLine();
+
 			TextWriter math;
 			string guard = null;
 			
