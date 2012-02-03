@@ -14,6 +14,8 @@ namespace Cdn.RawC.Programmer
 		public string Basename;
 		
 		public double FixedStepSize;
+
+		public bool Validate;
 	}
 }
 

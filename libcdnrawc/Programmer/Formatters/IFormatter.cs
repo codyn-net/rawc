@@ -8,6 +8,7 @@ namespace Cdn.RawC.Programmer.Formatters
 		string[] Write(Program program);
 		
 		void Compile(string filename, bool verbose);
+
 		string CompileSource();
 		string MexSource();
 	}

@@ -85,6 +85,7 @@ namespace Cdn.RawC
 				Directory.CreateDirectory(path);
 
 				program.Options.Output = path;
+				program.Options.Validate = true;
 			}
 
 			d_writtenFiles = Options.Instance.Formatter.Write(program);

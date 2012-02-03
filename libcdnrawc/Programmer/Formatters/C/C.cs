@@ -117,7 +117,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return Source("Cdn.RawC.Programmer.Formatters.C.MexProgram.resources");
 		}
-		
+
 		public void Compile(string filename, bool verbose)
 		{
 			if (String.IsNullOrEmpty(d_sourceFilename))
@@ -889,7 +889,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				foreach (string header in d_options.CustomHeaders)
 				{
-					writer.WriteLine("#include \"{0}\"", header);
+					string path = header;
+
+					if (d_program.Options.Validate && !Path.IsPathRooted(path))
+					{
+						// For validation, include a absolute path for custom
+						// headers
+						path = Path.GetFullPath(header);
+					}
+
+					writer.WriteLine("#include \"{0}\"", path);
 				}
 			}
 
