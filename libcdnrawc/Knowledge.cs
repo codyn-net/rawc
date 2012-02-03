@@ -17,6 +17,7 @@ namespace Cdn.RawC
 		private Dictionary<Cdn.Variable, State> d_stateMap;
 		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedproperties;
 		private List<Cdn.Variable> d_properties;
+		private Dictionary<Cdn.Expression, HashSet<Cdn.Variable>> d_dependencyCache;
 
 		public static Knowledge Initialize(Cdn.Network network)
 		{
@@ -48,6 +49,7 @@ namespace Cdn.RawC
 
 			d_properties = new List<Variable>();
 			d_flaggedproperties = new Dictionary<VariableFlags, List<Variable>>();
+			d_dependencyCache = new Dictionary<Expression, HashSet<Variable>>();
 
 			Scan();
 		}
@@ -70,7 +72,7 @@ namespace Cdn.RawC
 			}
 		}
 
-		private IEnumerable<Edge> EdgesForVariable(Variable prop)
+		private IEnumerable<Edge> EdgesForVariableAll(Variable prop)
 		{
 			foreach (Edge link in ((Node)prop.Object).Edges)
 			{
@@ -82,7 +84,20 @@ namespace Cdn.RawC
 				yield return link;
 			}
 		}
-		
+
+		private IEnumerable<Edge> EdgesForVariable(Variable prop)
+		{
+			var s = new HashSet<Edge>();
+
+			foreach (Edge item in EdgesForVariableAll(prop))
+			{
+				if (s.Add(item))
+				{
+					yield return item;
+				}
+			}
+		}
+
 		private State ExpandedState(Variable prop)
 		{
 			List<EdgeAction > actions = new List<EdgeAction>();
@@ -109,35 +124,21 @@ namespace Cdn.RawC
 			return state;
 		}
 
-		private void AllDependencies(Cdn.Expression expr, Dictionary<Cdn.Variable, bool> ret)
-		{
-			foreach (Instruction instr in expr.Instructions)
-			{
-				InstructionVariable p = instr as InstructionVariable;
-
-				if (p != null && !ret.ContainsKey(p.Variable))
-				{
-					ret[p.Variable] = true;
-					AllDependencies(p.Variable.Expression, ret);
-				}
-			}
-		}
-
 		private List<State> SortOnDependencies(List<State> lst)
 		{
 			List<State > ret = new List<State>();
-			List<Dictionary<Cdn.Variable, bool >> deps = new List<Dictionary<Cdn.Variable, bool>>();
+			List<HashSet<Cdn.Variable>> deps = new List<HashSet<Cdn.Variable>>();
 			
 			foreach (State st in lst)
 			{
 				bool found = false;
 
-				Dictionary<Cdn.Variable, bool > pdeps = new Dictionary<Cdn.Variable, bool>();
-				AllDependencies(st.Variable.Expression, pdeps);
+				HashSet<Cdn.Variable> pdeps = new HashSet<Cdn.Variable>();
+				RecursiveDependencies(st.Variable.Expression, pdeps);
 
 				for (int i = 0; i < ret.Count; ++i)
 				{
-					if (deps[i].ContainsKey(st.Variable))
+					if (deps[i].Contains(st.Variable))
 					{
 						ret.Insert(i, st);
 						deps.Insert(i, pdeps);
@@ -240,7 +241,7 @@ namespace Cdn.RawC
 		private bool DependsOn(Cdn.Expression expression, Cdn.RawC.State.Flags flags)
 		{
 			// Check if the expression depends on any other property that has direct actors
-			foreach (Cdn.Variable dependency in expression.Dependencies)
+			foreach (Cdn.Variable dependency in RecursiveDependencies(expression))
 			{
 				State state;
 
@@ -250,11 +251,6 @@ namespace Cdn.RawC
 					{
 						return true;
 					}
-				}
-				
-				if (DependsOn(dependency.Expression, flags))
-				{
-					return true;
 				}
 			}
 			
@@ -271,25 +267,48 @@ namespace Cdn.RawC
 			return DependsOn(expression, Cdn.RawC.State.Flags.Integrated);
 		}
 
+		private void RecursiveDependencies(Cdn.Expression expression, HashSet<Cdn.Variable> un)
+		{
+			foreach (Cdn.Variable v in expression.VariableDependencies)
+			{
+				if (un.Add(v))
+				{
+					RecursiveDependencies(v.Expression, un);
+				}
+			}
+		}
+
+		private HashSet<Cdn.Variable> RecursiveDependencies(Cdn.Expression expression)
+		{
+			HashSet<Cdn.Variable> ret;
+
+			if (d_dependencyCache.TryGetValue(expression, out ret))
+			{
+				return ret;
+			}
+
+			ret = new HashSet<Cdn.Variable>();
+			RecursiveDependencies(expression, ret);
+
+			d_dependencyCache[expression] = ret;
+			return ret;
+		}
+
 		public bool DependsTime(Cdn.Expression expression)
 		{
 			Cdn.Variable tprop = d_network.Integrator.Variable("t");
 			Cdn.Variable dtprop = d_network.Integrator.Variable("dt");
 
-			return Array.IndexOf(expression.Dependencies, tprop) != -1 ||
-				   Array.IndexOf(expression.Dependencies, dtprop) != -1;
+			HashSet<Cdn.Variable> deps = RecursiveDependencies(expression);
+
+			return deps.Contains(tprop) || deps.Contains(dtprop);
 		}
 		
 		public bool DependsIn(Cdn.Expression expression)
 		{
-			foreach (Cdn.Variable dependency in expression.Dependencies)
+			foreach (Cdn.Variable dependency in RecursiveDependencies(expression))
 			{
 				if ((dependency.Flags & Cdn.VariableFlags.In) != 0)
-				{
-					return true;
-				}
-				
-				if (DependsIn(dependency.Expression))
 				{
 					return true;
 				}
@@ -302,7 +321,7 @@ namespace Cdn.RawC
 		{
 			foreach (State state in states)
 			{
-				if (Array.IndexOf(state.Expression.Dependencies, property) != -1)
+				if (RecursiveDependencies(state.Expression).Contains(property))
 				{
 					return true;
 				}
@@ -337,6 +356,7 @@ namespace Cdn.RawC
 			foreach (Cdn.Variable prop in obj.Variables)
 			{
 				AddFlaggedVariable(prop);
+
 				bool needsinit = NeedsInitialization(prop, true);
 				bool isvar = IsVariadic(prop.Expression, true);
 				bool isin = (prop.Flags & Cdn.VariableFlags.In) != 0;
@@ -350,20 +370,22 @@ namespace Cdn.RawC
 					bool dependsintegrated = DependsIntegrated(prop.Expression);
 					bool dependsin = DependsIn(prop.Expression);
 					bool dependstime = DependsTime(prop.Expression);
+					bool directdepends = AnyStateDepends(d_direct, prop);
+					bool integrateddepends = AnyStateDepends(d_integrated, prop);
 
-					bool beforedirect = dependsin && AnyStateDepends(d_direct, prop);
+					bool beforedirect = dependsin && directdepends;
 
 					if (beforedirect)
 					{
 						d_precomputeBeforeDirect.Add(new State(prop, RawC.State.Flags.BeforeDirect));
 					}
 
-					if (dependsdirect && AnyStateDepends(d_integrated, prop))
+					if (dependsdirect && integrateddepends)
 					{
 						d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
 					}
 				
-					if ((dependsin && !beforedirect) || dependstime || isvar || dependsintegrated)
+					if ((isout || integrateddepends || directdepends) && ((dependsin && !beforedirect) || dependstime || isvar || dependsintegrated))
 					{
 						d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
 					}
@@ -461,7 +483,7 @@ namespace Cdn.RawC
 			}
 			
 			// Check if any of its dependencies are then variadic maybe
-			foreach (Variable property in expression.Dependencies)
+			foreach (Variable property in expression.VariableDependencies)
 			{
 				if (IsVariadic(property.Expression, samestep))
 				{
