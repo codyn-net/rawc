@@ -342,6 +342,8 @@ namespace Cdn.RawC
 			{
 				ret.Output = Path.GetDirectoryName(ret.Network.Filename);
 			}
+
+			ret.OriginalOutput = ret.Output;
 			
 			return ret;
 		}

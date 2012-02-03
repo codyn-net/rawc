@@ -9,6 +9,9 @@ namespace Cdn.RawC.Programmer
 
 		/* Output directory */
 		public string Output;
+
+		/* Original output directory */
+		public string OriginalOutput;
 		
 		/* Output file basename */
 		public string Basename;

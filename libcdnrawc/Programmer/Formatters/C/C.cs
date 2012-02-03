@@ -894,8 +894,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					if (d_program.Options.Validate && !Path.IsPathRooted(path))
 					{
 						// For validation, include a absolute path for custom
-						// headers
-						path = Path.GetFullPath(header);
+						// headers, relative to the original output path
+						path = Path.GetFullPath(Path.Combine(d_program.Options.OriginalOutput, header));
 					}
 
 					writer.WriteLine("#include \"{0}\"", path);
