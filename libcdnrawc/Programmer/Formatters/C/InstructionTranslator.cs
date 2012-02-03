@@ -218,6 +218,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
 		}
+
+		private string Translate(InstructionRand instruction, Context context)
+		{
+			int numpop = instruction.GetStackManipulation().NumPop;
+
+			string name = String.Format("RAND{0}", numpop);
+
+			string[] args = new string[instruction.GetStackManipulation().NumPop];
+			
+			for (int i = 0; i < instruction.GetStackManipulation().NumPop; ++i)
+			{
+				args[i] = Translate(context, i);
+			}
+			
+			return String.Format("{0} ({1})", name, String.Join(", ", args));
+		}
 		
 		private string Translate(InstructionFunction instruction, Context context)
 		{
