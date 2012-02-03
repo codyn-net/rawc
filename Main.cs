@@ -1,6 +1,6 @@
 using System;
 
-namespace Cpg.RawC.Application
+namespace Cdn.RawC.Application
 {
 	class MainClass
 	{
@@ -65,7 +65,7 @@ namespace Cpg.RawC.Application
 						Log.WriteLine("Generated {0} from `{1}'...", s, filename);
 					}
 				}
-				catch (Cpg.RawC.Exception e)
+				catch (Cdn.RawC.Exception e)
 				{
 					Console.Error.WriteLine(e.Message);
 					Environment.Exit(1);

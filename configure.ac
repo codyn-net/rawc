@@ -1,14 +1,14 @@
 dnl Warning: This is an automatically generated file, do not edit!
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
-AC_INIT(cpgrawc, 2.0)
+AC_INIT(cdnrawc, 2.0)
 AM_INIT_AUTOMAKE([foreign])
 
 AC_CONFIG_MACRO_DIR([m4])
 AM_MAINTAINER_MODE
 
-LIBCPG_RAWC_SHARP_API_VERSION=2.0
-AC_SUBST(LIBCPG_RAWC_SHARP_API_VERSION)
+LIBCDNRAWC_SHARP_API_VERSION=2.0
+AC_SUBST(LIBCDNRAWC_SHARP_API_VERSION)
 
 dnl pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
@@ -54,12 +54,12 @@ AC_SUBST(RUN_DEBUG)
 
 
 dnl package checks, common for all configs
-PKG_CHECK_MODULES([CPG_NETWORK_SHARP], [cpg-network-sharp-2.0])
+PKG_CHECK_MODULES([CODYN_SHARP], [codyn-sharp-3.0])
 PKG_CHECK_MODULES([GLIB_SHARP], [glib-sharp-2.0])
 
 dnl find assembly paths for unstable installed assemblies that will be
 dnl copied into monoskel installation directory for local usage with the app
-UNSTABLE_INSTALL_ASSEMBLIES="cpg-network-sharp-2.0"
+UNSTABLE_INSTALL_ASSEMBLIES="codyn-sharp-3.0"
 INSTALLED_ASSEMBLIES="`$PKG_CONFIG --variable=Libraries $UNSTABLE_INSTALL_ASSEMBLIES`"
 AC_SUBST(INSTALLED_ASSEMBLIES)
 
@@ -67,10 +67,10 @@ dnl package checks, per config
 
 
 AC_CONFIG_FILES([
-cpgrawc
+cdnrawc
 Makefile
-libcpgrawc/Makefile
-libcpgrawc/cpg-rawc-sharp.pc
+libcdnrawc/Makefile
+libcdnrawc/codyn-rawc-sharp.pc
 completion/Makefile
 m4/Makefile
 ])

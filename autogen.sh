@@ -1,6 +1,6 @@
 #! /bin/sh
 
-PROJECT=cpgrawc
+PROJECT=cdnrawc
 FILE=
 CONFIGURE=configure.ac
 
