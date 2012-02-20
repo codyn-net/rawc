@@ -34,19 +34,9 @@ namespace Cdn.RawC.Tree
 
 				int numargs = 0;
 				
-				InstructionFunction ifunc = inst as InstructionFunction;
-				InstructionCustomFunction icfunc = inst as InstructionCustomFunction;
 				InstructionCustomOperator icop = inst as InstructionCustomOperator;
-				
-				if (ifunc != null)
-				{
-					numargs = ifunc.GetStackManipulation().NumPop;
-				}
-				else if (icfunc != null)
-				{
-					numargs = icfunc.GetStackManipulation().NumPop;
-				}
-				
+				numargs = inst.GetStackManipulation().NumPop;
+
 				for (int j = 0; j < numargs; ++j)
 				{
 					node.Add(stack.Pop());
@@ -108,21 +98,16 @@ namespace Cdn.RawC.Tree
 			
 			d_state = state;
 
+			d_instruction = instruction;
+
 			if (instruction != null)
 			{
 				d_label = Expression.InstructionCode(instruction);
+				size = instruction.GetStackManipulation().NumPop;
 			}
-
-			d_instruction = instruction;
 
 			InstructionFunction ifunc = instruction as InstructionFunction;
 				
-			if (ifunc != null)
-			{
-				StackManipulation smanip = ifunc.GetStackManipulation();
-				size = smanip.NumPop;
-			}
-
 			if (ifunc != null)
 			{
 				d_isCommutative = Cdn.Math.FunctionIsCommutative((Cdn.MathFunctionType)ifunc.Id);
@@ -132,14 +117,6 @@ namespace Cdn.RawC.Tree
 				d_isCommutative = false;
 			}
 
-			InstructionCustomFunction icfunc = instruction as InstructionCustomFunction;
-
-			if (icfunc != null)
-			{
-				StackManipulation smanip = icfunc.GetStackManipulation();
-				size = smanip.NumPop;
-			}
-			
 			d_isLeaf = size == 0;
 			
 			d_children = new List<Node>(size);
@@ -529,6 +506,10 @@ namespace Cdn.RawC.Tree
 			else if (inum != null)
 			{
 				lbl = "?" + inum.Representation;
+			}
+			else if (d_instruction is InstructionRand)
+			{
+				lbl = "rand";
 			}
 			
 			string par = "";
