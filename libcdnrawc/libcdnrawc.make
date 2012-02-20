@@ -110,6 +110,7 @@ REFERENCES =  \
 	System \
 	System.Xml \
 	System.Data \
+	System.Core \
 	$(CODYN_SHARP_LIBS) \
 	$(GLIB_SHARP_LIBS)
 
