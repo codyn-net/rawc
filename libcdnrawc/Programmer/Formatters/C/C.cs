@@ -568,7 +568,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			foreach (Cdn.InstructionFunction inst in d_program.CollectInstructions<Cdn.InstructionFunction>())
 			{
-				if (!(inst is Cdn.InstructionFunction))
+				if (inst.Id > (uint)MathFunctionType.NumOperators)
 				{
 					WriteCustomMathDefine(writer, (Cdn.MathFunctionType)inst.Id, inst.GetStackManipulation().NumPop, generated);
 				}
