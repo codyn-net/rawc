@@ -545,11 +545,6 @@ namespace Cdn.RawC
 				return false;
 			}
 
-			if (property.Object is Cdn.Edge)
-			{
-				return false;
-			}
-
 			// Always initialize dynamically if the property is persistent
 			if (alwaysDynamic)
 			{
