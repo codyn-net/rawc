@@ -487,11 +487,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Lerp:
 				return "(x0 + (x1 - x0) * x2)";
 			case MathFunctionType.Max:
-				return NestedImplementation("CPG_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
+				return NestedImplementation("CDM_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
 			case MathFunctionType.Min:
-				return NestedImplementation("CPG_MATH_MIN", arguments, "(x0 < x1 ? x0 : x1)");
+				return NestedImplementation("CDN_MATH_MIN", arguments, "(x0 < x1 ? x0 : x1)");
 			case MathFunctionType.Sqsum:
-				return NestedImplementation("CPG_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
+				return NestedImplementation("CDN_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
 			case MathFunctionType.Invsqrt:
 				return IsDouble ? "1 / sqrt(x0)" : "1 / sqrtf(x0)";
 			default:
