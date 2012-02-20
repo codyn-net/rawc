@@ -660,9 +660,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("{0}_initialize (void)", CPrefixDown);
 			writer.WriteLine("{");
 
-			if (d_program.InitLoopsCount > 0 || Knowledge.Instance.DelayedStatesCount > 0)
+			if (d_program.InitLoopsCount > 0)
 			{
-				writer.WriteLine("\tint i;");
+				writer.WriteLine("\tint i;\n");
 			}
 			
 			WriteComputationNodes(writer, d_program.InitializationNodes);
@@ -707,7 +707,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("{");
 			
-			if (d_program.LoopsCount != 0)
+			if (d_program.LoopsCount != 0 || Knowledge.Instance.DelayedStatesCount > 0)
 			{
 				writer.WriteLine("\tint i;\n");
 			}
