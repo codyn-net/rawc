@@ -205,7 +205,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			if (!context.Program.StateTable.Contains(prop))
 			{
-				throw new NotImplementedException(String.Format("The property `{0}' is not implemented", prop.FullName));
+				throw new NotImplementedException(String.Format("The variable `{0}' is not implemented", prop.FullName));
 			}
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
@@ -263,10 +263,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				throw new NotSupportedException(String.Format("The custom operator `{0}' is not yet implemented in rawc...", instruction.Operator.Name));
 			}
-			
-			uint size = (uint)System.Math.Round(delayed.Delay / Cdn.RawC.Options.Instance.FixedTimeStep) + 1;
 
-			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed)];
+			double delay;
+
+			if (!Knowledge.Instance.Delays.TryGetValue(delayed, out delay))
+			{
+				throw new NotSupportedException("Enable to determine delay of delayed operator");
+			}
+			
+			uint size = (uint)System.Math.Round(delay / Cdn.RawC.Options.Instance.FixedTimeStep) + 1;
+
+			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed, delay)];
 			DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
 				
 			return String.Format("{0}[{1} + {2}[{3}]]",

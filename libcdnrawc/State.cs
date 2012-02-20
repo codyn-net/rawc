@@ -62,8 +62,16 @@ namespace Cdn.RawC
 		
 		public State(Cdn.Expression expression, Cdn.Expression initialValue, Flags type)
 		{
-			d_expression = expression;
-			d_initialValue = initialValue;
+			if (expression != null)
+			{
+				d_expression = Tree.Expression.Expand(expression);
+			}
+
+			if (initialValue != null)
+			{
+				d_initialValue = Tree.Expression.Expand(initialValue);
+			}
+
 			d_type = type;
 		}
 		
@@ -87,7 +95,7 @@ namespace Cdn.RawC
 			{
 				exprs.Add(Variable.Expression);
 			}
-			
+
 			d_expression = RawC.Tree.Expression.Expand(exprs.ToArray());
 			
 			if (Actions.Length != 0)
@@ -103,9 +111,9 @@ namespace Cdn.RawC
 					// Add to original state variable as well
 					instructions.Add(new InstructionVariable(Variable, Cdn.InstructionVariableBinding.None));
 					instructions.Add(new InstructionFunction((int)Cdn.MathFunctionType.Plus, "+", 2));
-				}
 
-				d_expression.Instructions = instructions.ToArray();
+					d_expression.Instructions = instructions.ToArray();
+				}
 			}
 		}
 		

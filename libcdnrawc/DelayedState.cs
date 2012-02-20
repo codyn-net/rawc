@@ -44,10 +44,12 @@ namespace Cdn.RawC
 		public class Key
 		{
 			private OperatorDelayed d_delayed;
+			private double d_delay;
 			
-			public Key(OperatorDelayed delayed)
+			public Key(OperatorDelayed delayed, double delay)
 			{
 				d_delayed = delayed;
+				d_delay = delay;
 			}
 			
 			public OperatorDelayed Operator
@@ -62,7 +64,7 @@ namespace Cdn.RawC
 			{
 				get
 				{
-					return new Size((uint)System.Math.Round(d_delayed.Delay / Options.Instance.FixedTimeStep) + 1);
+					return new Size((uint)System.Math.Round(d_delay / Options.Instance.FixedTimeStep) + 1);
 				}
 			}
 
@@ -101,23 +103,25 @@ namespace Cdn.RawC
 
 		private OperatorDelayed d_delayed;
 		private Size d_size;
+		private double d_delay;
 		
-		public DelayedState(OperatorDelayed delayed) : this(delayed, Flags.None)
+		public DelayedState(OperatorDelayed delayed, double delay) : this(delayed, delay, Flags.None)
 		{
 		}
 
-		public DelayedState(OperatorDelayed delayed, Flags type) : base(delayed.Expression, delayed.InitialValue, Flags.Delayed | type)
+		public DelayedState(OperatorDelayed delayed, double delay, Flags type) : base(delayed.Expression, delayed.InitialValue, Flags.Delayed | type)
 		{
 			d_delayed = delayed;
+			d_delay = delay;
 			
-			d_size = new Size((uint)System.Math.Round(d_delayed.Delay / Options.Instance.FixedTimeStep) + 1);
+			d_size = new Size((uint)System.Math.Round(d_delay / Options.Instance.FixedTimeStep) + 1);
 		}
 		
 		public double Delay
 		{
 			get
 			{
-				return d_delayed.Delay;
+				return d_delay;
 			}
 		}
 		

@@ -14,6 +14,7 @@ namespace Cdn.RawC
 		private List<State> d_precomputeBeforeIntegrated;
 		private List<State> d_precomputeAfterIntegrated;
 		private List<State> d_delayed;
+		private Dictionary<OperatorDelayed, double> d_delays;
 		private Dictionary<Cdn.Variable, State> d_stateMap;
 		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedproperties;
 		private List<Cdn.Variable> d_properties;
@@ -44,6 +45,7 @@ namespace Cdn.RawC
 			d_precomputeBeforeIntegrated = new List<State>();
 			d_precomputeAfterIntegrated = new List<State>();
 			d_delayed = new List<State>();
+			d_delays = new Dictionary<OperatorDelayed, double>();
 			
 			d_stateMap = new Dictionary<Variable, State>();
 
@@ -185,10 +187,27 @@ namespace Cdn.RawC
 
 			ExtractDelayedStates();
 		}
+
+		private double ComputeDelayedDelay(Instruction[] instructions, Expression e, InstructionCustomOperator instr)
+		{
+			Cdn.Stack stack = new Cdn.Stack(e.StackSize);
+
+			foreach (Cdn.Instruction i in instructions)
+			{
+				if (i == instr)
+				{
+					return stack.Pop();
+				}
+
+				i.Execute(stack);
+			}
+
+			return 0;
+		}
 		
 		private void ExtractDelayedStates()
 		{
-			Dictionary<DelayedState.Key, bool > same = new Dictionary<DelayedState.Key, bool>();
+			HashSet<DelayedState.Key> same = new HashSet<DelayedState.Key>();
 
 			foreach (State st in States)
 			{
@@ -210,34 +229,44 @@ namespace Cdn.RawC
 					{
 						throw new Exception("The network uses the `delayed' operator but no fixed time step was specified (--fixed-time-step)...");
 					}
+
+					double delay = ComputeDelayedDelay(st.Instructions, st.Expression, op);
 					
 					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
-					DelayedState.Key key = new DelayedState.Key(opdel);
+					DelayedState.Key key = new DelayedState.Key(opdel, delay);
 					
-					if (same.ContainsKey(key))
+					if (!same.Add(key))
 					{
 						continue;
 					}
 
-					double size = (opdel.Delay / Options.Instance.FixedTimeStep);
-					
-					if (size % 1 > 0.0000001)
+					double size;;
+
+					size = System.Math.Max(delay, Options.Instance.FixedTimeStep) /
+						   System.Math.Min(delay, Options.Instance.FixedTimeStep);
+
+					if (size % 1 > double.Epsilon)
 					{
-						Console.Error.WriteLine("Warning: the delayed time ({0}) is not a multiple of the time step ({1})...",
-						                        opdel.Delay,
-						                        Options.Instance.FixedTimeStep);
+						throw new Exception(String.Format("Time delay `{0}' is not a multiple of the fixed time step `{1}'",
+						                    delay, Options.Instance.FixedTimeStep));
 					}
-					
-					DelayedState s = new DelayedState(opdel);					
+
+					d_delays.Add(opdel, delay);
+
+					DelayedState s = new DelayedState(opdel, delay);
 					d_delayed.Add(s);
-					same.Add(key, true);
-					
+
 					if (NeedsInitialization(opdel.InitialValue, true))
 					{
-						d_initialize.Add(new DelayedState(opdel, Cdn.RawC.State.Flags.Initialization));
+						d_initialize.Add(new DelayedState(opdel, delay, Cdn.RawC.State.Flags.Initialization));
 					}
 				}
 			}
+		}
+
+		public Dictionary<OperatorDelayed, double> Delays
+		{
+			get { return d_delays; }
 		}
 		
 		private bool DependsOn(Cdn.Expression expression, Cdn.RawC.State.Flags flags)

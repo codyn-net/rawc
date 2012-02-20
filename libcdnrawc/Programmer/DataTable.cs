@@ -286,7 +286,7 @@ namespace Cdn.RawC.Programmer
 			}
 			else if (As(key, out dstate))
 			{
-				return new DelayedState.Key(dstate.Operator);
+				return new DelayedState.Key(dstate.Operator, dstate.Delay);
 			}
 			else if (As(key, out node))
 			{
@@ -308,7 +308,11 @@ namespace Cdn.RawC.Programmer
 				
 				if (op != null && op.Operator is OperatorDelayed)
 				{
-					return new DelayedState.Key((OperatorDelayed)op.Operator);
+					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
+					double delay = 0;
+
+					Knowledge.Instance.Delays.TryGetValue(opdel, out delay);
+					return new DelayedState.Key(opdel, delay);
 				}
 				
 				InstructionNumber opnum = node.Instruction as InstructionNumber;
