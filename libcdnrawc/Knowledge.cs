@@ -174,6 +174,8 @@ namespace Cdn.RawC
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
 			ScanProperties(d_network.Integrator);
 			ScanProperties(d_network);
+
+			ResolveLists();
 			
 			// Sort initialize list on dependencies
 			d_initialize = SortOnDependencies(d_initialize);
@@ -330,6 +332,19 @@ namespace Cdn.RawC
 			return false;
 		}
 
+		private bool AnyVariableDepends(IEnumerable<Cdn.Variable> variables, Cdn.Variable property)
+		{
+			foreach (Cdn.Variable v in variables)
+			{
+				if (RecursiveDependencies(v.Expression).Contains(property))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		private void AddFlaggedVariable(Cdn.Variable property)
 		{
 			foreach (Cdn.VariableFlags flags in Enum.GetValues(typeof(Cdn.VariableFlags)))
@@ -356,7 +371,25 @@ namespace Cdn.RawC
 			foreach (Cdn.Variable prop in obj.Variables)
 			{
 				AddFlaggedVariable(prop);
+			}
+			
+			Cdn.Node grp = obj as Cdn.Node;
+			
+			if (grp == null)
+			{
+				return;
+			}
+			
+			foreach (Cdn.Object child in grp.Children)
+			{
+				ScanProperties(child);
+			}
+		}
 
+		private void ResolveLists()
+		{
+			foreach (Cdn.Variable prop in d_properties)
+			{
 				bool needsinit = NeedsInitialization(prop, true);
 				bool isvar = IsVariadic(prop.Expression, true);
 				bool isin = (prop.Flags & Cdn.VariableFlags.In) != 0;
@@ -372,6 +405,7 @@ namespace Cdn.RawC
 					bool dependstime = DependsTime(prop.Expression);
 					bool directdepends = AnyStateDepends(d_direct, prop);
 					bool integrateddepends = AnyStateDepends(d_integrated, prop);
+					bool outdepends = AnyVariableDepends(FlaggedProperties(VariableFlags.Out), prop);
 
 					bool beforedirect = dependsin && directdepends;
 
@@ -384,8 +418,8 @@ namespace Cdn.RawC
 					{
 						d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
 					}
-				
-					if ((isout || integrateddepends || directdepends) && ((dependsin && !beforedirect) || dependstime || isvar || dependsintegrated))
+
+					if ((isout || integrateddepends || directdepends || outdepends) && ((dependsin && !beforedirect) || dependstime || isvar || dependsintegrated))
 					{
 						d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
 					}
@@ -395,18 +429,6 @@ namespace Cdn.RawC
 				{
 					d_initialize.Add(new State(prop, RawC.State.Flags.Initialization));
 				}
-			}
-			
-			Cdn.Node grp = obj as Cdn.Node;
-			
-			if (grp == null)
-			{
-				return;
-			}
-			
-			foreach (Cdn.Object child in grp.Children)
-			{
-				ScanProperties(child);
 			}
 		}
 
