@@ -223,7 +223,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			int numpop = instruction.GetStackManipulation().NumPop;
 
-			string name = String.Format("RAND{0}", numpop);
+			string name = String.Format("CDN_MATH_RAND{0}", numpop);
 
 			string[] args = new string[instruction.GetStackManipulation().NumPop];
 			
