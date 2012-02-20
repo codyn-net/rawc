@@ -76,6 +76,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			string prog = reader.ReadToEnd();
 			prog = prog.Replace("${name}", CPrefixDown);
 			prog = prog.Replace("${NAME}", CPrefixUp);
+			prog = prog.Replace("${step_func}", String.Format("{0}_step ({1})", CPrefixDown, d_program.Options.FixedStepSize > 0 ? "" : "step"));
 			
 			// Generate state map
 			StringBuilder statemap = new StringBuilder();

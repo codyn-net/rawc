@@ -67,7 +67,7 @@ main (int argc, char *argv[])
 		printf ("Usage: %s <from> <step> <to> [<seed>]\n", argv[0]);
 		printf ("\nThis program runs and monitors the CPG network.\n");
 		printf ("Specify a time range to monitor (from step to) as arguments on the command line.\n");
-		printf ("Optionnaly specify a random seed.\n");
+		printf ("Optionally specify a random seed.\n");
 		printf ("By default, a random seed will be generated and printed to stderr.\n");
 		printf ("States to monitor can be specified (one per line) on standard in.\n");
 		printf ("State values are written to standard out (tab separated).\n");
@@ -168,7 +168,7 @@ main (int argc, char *argv[])
 			printf ("\n");
 		}
 
-		${name}_step (step);
+		${step_func};
 	}
 
 	return 0;
