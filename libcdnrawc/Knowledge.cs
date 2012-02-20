@@ -234,9 +234,10 @@ namespace Cdn.RawC
 					
 					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
 					DelayedState.Key key = new DelayedState.Key(opdel, delay);
-					
+
 					if (!same.Add(key))
 					{
+						d_delays.Add(opdel, delay);
 						continue;
 					}
 
