@@ -101,7 +101,8 @@ FILES = \
 DATA_FILES =
 
 RESOURCES = \
-	Programmer/Formatters/C/TestProgram.resources,Cdn.RawC.Programmer.Formatters.C.TestProgram.resources
+	Programmer/Formatters/C/TestProgram.resources,Cdn.RawC.Programmer.Formatters.C.TestProgram.resources \
+	Programmer/Formatters/C/MexProgram.resources,Cdn.RawC.Programmer.Formatters.C.MexProgram.resources
 
 EXTRAS = \
 	codyn-rawc-sharp.pc.in
