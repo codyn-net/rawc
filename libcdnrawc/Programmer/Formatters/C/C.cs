@@ -660,7 +660,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("{0}_initialize (void)", CPrefixDown);
 			writer.WriteLine("{");
 
-			if (d_program.InitLoopsCount > 0)
+			if (d_program.InitLoopsCount > 0 || Knowledge.Instance.DelayedStatesCount > 0)
 			{
 				writer.WriteLine("\tint i;");
 			}
