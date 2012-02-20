@@ -596,6 +596,13 @@ namespace Cdn.RawC
 				return false;
 			}
 
+			// Do not initialize fixed timestep again...
+			if (property == d_network.Integrator.Variable("dt") &&
+			    Options.Instance.FixedTimeStep > 0)
+			{
+				return false;
+			}
+
 			// Always initialize dynamically if the property is persistent
 			if (alwaysDynamic)
 			{
