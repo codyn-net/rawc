@@ -64,7 +64,7 @@ namespace Cdn.RawC
 			{
 				get
 				{
-					return new Size((uint)System.Math.Round(d_delay / Options.Instance.FixedTimeStep) + 1);
+					return new Size((uint)System.Math.Round(d_delay / Options.Instance.DelayTimeStep) + 1);
 				}
 			}
 
@@ -114,7 +114,7 @@ namespace Cdn.RawC
 			d_delayed = delayed;
 			d_delay = delay;
 			
-			d_size = new Size((uint)System.Math.Round(d_delay / Options.Instance.FixedTimeStep) + 1);
+			d_size = new Size((uint)System.Math.Round(d_delay / Options.Instance.DelayTimeStep) + 1);
 		}
 		
 		public double Delay

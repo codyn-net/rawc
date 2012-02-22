@@ -514,15 +514,14 @@ namespace Cdn.RawC.Programmer
 			Cdn.Variable dtprop = Knowledge.Instance.Network.Integrator.Variable("dt");
 			DataTable.DataItem dt = d_statetable[dtprop];
 
-			if (d_options.FixedStepSize <= 0)
-			{
-				Tree.Node dteq = new Tree.Node(null, new Instructions.Variable("timestep"));
-			
-				// Set dt
-				d_source.Add(new Computation.Comment("Set timestep"));
-				d_source.Add(new Computation.Assignment(null, dt, dteq));
-				d_source.Add(new Computation.Empty());
-			}
+			Tree.Node dteq;
+
+			dteq = new Tree.Node(null, new Instructions.Variable("timestep"));
+
+			// Set dt
+			d_source.Add(new Computation.Comment("Set timestep"));
+			d_source.Add(new Computation.Assignment(null, dt, dteq));
+			d_source.Add(new Computation.Empty());
 
 			// Precompute for out properties
 			if (Knowledge.Instance.PrecomputeBeforeDirectStatesCount != 0)
@@ -601,22 +600,6 @@ namespace Cdn.RawC.Programmer
 		
 		private void ProgramInitialization()
 		{
-			if (d_options.FixedStepSize > 0)
-			{
-				Cdn.Variable dtprop = Knowledge.Instance.Network.Integrator.Variable("dt");
-				DataTable.DataItem dt = d_statetable[dtprop];
-				
-				Tree.Node node = new Tree.Node(null, new Cdn.InstructionNumber(d_options.FixedStepSize));
-				
-				d_initialization.Add(new Computation.Comment("Set the fixed time step"));
-				d_initialization.Add(new Computation.Assignment(null, dt, node));
-				
-				if (Knowledge.Instance.InitializeStatesCount > 0)
-				{
-					d_initialization.Add(new Computation.Empty());
-				}
-			}
-			
 			List<State > init = new List<State>();
 
 			foreach (State state in Knowledge.Instance.InitializeStates)

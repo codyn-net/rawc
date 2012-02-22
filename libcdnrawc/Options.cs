@@ -40,8 +40,8 @@ namespace Cdn.RawC
 		private bool d_noEmbeddings;
 		[CommandLine.Option("minimum-loop-size", Description="Minimum number of items in a loop")]
 		public uint MinimumLoopSize = 3;
-		[CommandLine.Option("fixed-time-step", Description="Fixed time step that will be used in the network")]
-		public double FixedTimeStep = -1;
+		[CommandLine.Option("delay-time-step", Description="Fixed time step that will be used for delays")]
+		public double DelayTimeStep = -1;
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;
 		private List<string> d_files;

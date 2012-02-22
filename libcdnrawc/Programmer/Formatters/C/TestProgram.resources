@@ -20,7 +20,7 @@ static int
 lookup_monitor (char const *name)
 {
 	int i;
-	
+
 	for (i = 0; i < NUM_STATES; ++i)
 	{
 		if (strcmp (states_map[i].name, name) == 0)
@@ -28,7 +28,7 @@ lookup_monitor (char const *name)
 			return states_map[i].id;
 		}
 	}
-	
+
 	return -1;
 }
 
@@ -36,7 +36,7 @@ static void
 print_states (FILE *f)
 {
 	int i;
-	
+
 	fprintf (f, "Available monitors:\n\n");
 
 	for (i = 0; i < NUM_STATES; ++i)
@@ -52,16 +52,16 @@ main (int argc, char *argv[])
 	double step;
 	double to;
 	unsigned int seed = 0;
-	
+
 	int monitors[255];
 	int num_monitors = 0;
-	
+
 	if (argc == 2 && strcmp (argv[1], "list") == 0)
 	{
 		print_states (stdout);
 		return 0;
 	}
-	
+
 	if (argc != 4 && argc != 5)
 	{
 		printf ("Usage: %s <from> <step> <to> [<seed>]\n", argv[0]);
@@ -97,34 +97,34 @@ main (int argc, char *argv[])
 		fprintf (stderr, "Invalid simulation range specified...\n");
 		return 1;
 	}
-	
+
 	if (isatty (STDIN_FILENO))
 	{
 		fprintf (stdout, "Specify states to monitor (one per line, use `%s list' to list available monitors):\n", argv[0]);
 	}
 
 	char buffer[255];
-	
+
 	while (!feof (stdin))
 	{
 		if (!fgets (buffer, sizeof (buffer), stdin))
 		{
 			break;
 		}
-		
+
 		if (buffer[strlen (buffer) - 1] == '\n')
 		{
 			buffer[strlen (buffer) - 1] = '\0';
 		}
-		
+
 		if (strlen (buffer) == 0)
 		{
 			break;
 		}
-		
+
 		// Lookup in table
 		int id = lookup_monitor (buffer);
-		
+
 		if (id == -1)
 		{
 			fprintf (stderr, "\nCould not find state to monitor: %s\n\n", buffer);
@@ -132,43 +132,43 @@ main (int argc, char *argv[])
 
 			return 1;
 		}
-		
+
 		if (num_monitors >= sizeof (monitors) / sizeof (monitors[0]))
 		{
 			fprintf (stderr, "Too many monitors specified, maximum number of monitors is %ld\n", sizeof (monitors));
 			return 1;
 		}
-		
+
 		monitors[num_monitors++] = id;
 	}
 
 	srand (seed);
-	
+
 	${name}_initialize ();
 	${name}_set (${NAME}_STATE_T, from);
-	
+
 	to += step / 2;
 
 	while (${name}_get (${NAME}_STATE_T) < to)
 	{
 		int i;
-		
+
 		for (i = 0; i < num_monitors; ++i)
 		{
 			if (i != 0)
 			{
 				printf ("\t");
 			}
-			
+
 			printf ("%.15f", ${name}_get (monitors[i]));
 		}
-		
+
 		if (num_monitors > 0)
 		{
 			printf ("\n");
 		}
 
-		${step_func};
+		${name}_step (step);
 	}
 
 	return 0;

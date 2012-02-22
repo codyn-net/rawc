@@ -271,7 +271,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				throw new NotSupportedException("Enable to determine delay of delayed operator");
 			}
 			
-			uint size = (uint)System.Math.Round(delay / Cdn.RawC.Options.Instance.FixedTimeStep) + 1;
+			uint size = (uint)System.Math.Round(delay / Cdn.RawC.Options.Instance.DelayTimeStep) + 1;
 
 			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed, delay)];
 			DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];

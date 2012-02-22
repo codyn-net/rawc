@@ -16,7 +16,7 @@ namespace Cdn.RawC.Programmer
 		/* Output file basename */
 		public string Basename;
 		
-		public double FixedStepSize;
+		public double DelayTimeStep;
 
 		public bool Validate;
 	}

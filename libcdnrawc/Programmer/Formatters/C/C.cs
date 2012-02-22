@@ -76,8 +76,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			string prog = reader.ReadToEnd();
 			prog = prog.Replace("${name}", CPrefixDown);
 			prog = prog.Replace("${NAME}", CPrefixUp);
-			prog = prog.Replace("${step_func}", String.Format("{0}_step ({1})", CPrefixDown, d_program.Options.FixedStepSize > 0 ? "" : "step"));
-			
+
 			// Generate state map
 			StringBuilder statemap = new StringBuilder();
 			
@@ -382,15 +381,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
  			
 			writer.WriteLine("void {0}_initialize (void);", CPrefixDown);
  			
-			if (d_program.Options.FixedStepSize <= 0)
-			{
-				writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
-			}
-			else
-			{
-				writer.WriteLine("void {0}_step ();", CPrefixDown);
-			}
- 			
+			writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
+
 			writer.WriteLine();
 
 			// End protect for including this from C++
@@ -696,14 +688,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			writer.WriteLine("void");
 			
-			if (d_program.Options.FixedStepSize <= 0)
-			{
-				writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
-			}
-			else
-			{
-				writer.WriteLine("{0}_step ()", CPrefixDown);
-			}
+			writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
 
 			writer.WriteLine("{");
 			
@@ -1000,25 +985,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("\t\t\t}");
 			writer.WriteLine();
 
-			if (d_program.Options.FixedStepSize <= 0)
-			{
-				writer.WriteLine("\t\t\tstatic void step({0} timestep)", ValueType);
-			}
-			else
-			{
-				writer.WriteLine("\t\t\tstatic void step()", ValueType);
-			}
+			writer.WriteLine("\t\t\tstatic void step({0} timestep)", ValueType);
 
 			writer.WriteLine("\t\t\t{");
 			
-			if (d_program.Options.FixedStepSize <= 0)
-			{
-				writer.WriteLine("\t\t\t\t{0}_step (timestep);", CPrefixDown);
-			}
-			else
-			{
-				writer.WriteLine("\t\t\t\t{0}_step ();", CPrefixDown);
-			}
+			writer.WriteLine("\t\t\t\t{0}_step (timestep);", CPrefixDown);
 
 			writer.WriteLine("\t\t\t}");
 			writer.WriteLine();

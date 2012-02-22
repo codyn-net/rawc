@@ -225,9 +225,9 @@ namespace Cdn.RawC
 						continue;
 					}
 					
-					if (Options.Instance.FixedTimeStep <= 0)
+					if (Options.Instance.DelayTimeStep <= 0)
 					{
-						throw new Exception("The network uses the `delayed' operator but no fixed time step was specified (--fixed-time-step)...");
+						throw new Exception("The network uses the `delayed' operator but no delay time step was specified (--delay-time-step)...");
 					}
 
 					double delay = ComputeDelayedDelay(st.Instructions, st.Expression, op);
@@ -243,13 +243,12 @@ namespace Cdn.RawC
 
 					double size;;
 
-					size = System.Math.Max(delay, Options.Instance.FixedTimeStep) /
-						   System.Math.Min(delay, Options.Instance.FixedTimeStep);
+					size = delay / Options.Instance.DelayTimeStep;
 
 					if (size % 1 > double.Epsilon)
 					{
-						throw new Exception(String.Format("Time delay `{0}' is not a multiple of the fixed time step `{1}'",
-						                    delay, Options.Instance.FixedTimeStep));
+						throw new Exception(String.Format("Time delay `{0}' is not a multiple of the delay time step `{1}'",
+						                    delay, Options.Instance.DelayTimeStep));
 					}
 
 					d_delays.Add(opdel, delay);
@@ -593,13 +592,6 @@ namespace Cdn.RawC
 		public bool NeedsInitialization(Variable property, bool alwaysDynamic)
 		{
 			if (property == null)
-			{
-				return false;
-			}
-
-			// Do not initialize fixed timestep again...
-			if (property == d_network.Integrator.Variable("dt") &&
-			    Options.Instance.FixedTimeStep > 0)
 			{
 				return false;
 			}

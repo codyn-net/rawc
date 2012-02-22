@@ -60,6 +60,16 @@ namespace Cdn.RawC
 				}
 			}
 
+			if (Options.Instance.DelayTimeStep > 0)
+			{
+				Cdn.Expression expr = new Cdn.Expression(Options.Instance.DelayTimeStep.ToString("R"));
+				Cdn.Instruction[] instr = new Cdn.Instruction[1];
+				instr[0] = new Cdn.InstructionNumber(Options.Instance.DelayTimeStep);
+				expr.Instructions = instr;
+
+				d_network.Integrator.AddVariable(new Cdn.Variable("delay_dt", expr, Cdn.VariableFlags.Out));
+			}
+
 			// Initialize the knowledge
 			Knowledge.Initialize(d_network);
 			
@@ -331,7 +341,7 @@ namespace Cdn.RawC
 			ret.Network = d_network;
 			ret.Basename = Options.Instance.Basename;
 			ret.Output = Options.Instance.Output;
-			ret.FixedStepSize = Options.Instance.FixedTimeStep;
+			ret.DelayTimeStep = Options.Instance.DelayTimeStep;
 			
 			if (String.IsNullOrEmpty(ret.Basename))
 			{
