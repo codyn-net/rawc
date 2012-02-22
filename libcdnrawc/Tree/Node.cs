@@ -516,7 +516,7 @@ namespace Cdn.RawC.Tree
 			
 			Node top = Top;
 			
-			if (top != null && top.State != null && withstate)
+			if (top != null && top.State != null && top.State.Variable != null && withstate)
 			{
 				par = String.Format("{0}, ", top.State.Variable.FullNameForDisplay);
 			}
