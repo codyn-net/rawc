@@ -47,8 +47,24 @@ namespace Cdn.RawC
 					d_monitors.Add(new Cdn.Monitor(d_network, state.Variable));
 				}
 
+				foreach (Variable v in Knowledge.Instance.FlaggedProperties(VariableFlags.Out))
+				{
+					d_monitors.Add(new Cdn.Monitor(d_network, v));
+				}
+
+				double ts;
+
+				if (Options.Instance.DelayTimeStep <= 0)
+				{
+					ts = Options.Instance.ValidateRange[1];
+				}
+				else
+				{
+					ts = Options.Instance.DelayTimeStep;
+				}
+
 				d_network.Run(Options.Instance.ValidateRange[0],
-					          Options.Instance.ValidateRange[1],
+					          ts,
 					          Options.Instance.ValidateRange[2]);
 
 				// Extract the validation data
@@ -240,10 +256,21 @@ namespace Cdn.RawC
 			
 			Options opts = Options.Instance;
 			opts.Formatter.Compile(tmpprog, opts.Verbose);
+
+			double ts;
+
+			if (opts.DelayTimeStep <= 0)
+			{
+				ts = opts.ValidateRange[1];
+			}
+			else
+			{
+				ts = opts.DelayTimeStep;
+			}
 			
 			Process process = new Process();
 			process.StartInfo.FileName = tmpprog;
-			process.StartInfo.Arguments = String.Format("{0} {1} {2}", opts.ValidateRange[0], opts.ValidateRange[1], opts.ValidateRange[2]);
+			process.StartInfo.Arguments = String.Format("{0} {1} {2}", opts.ValidateRange[0], ts, opts.ValidateRange[2]);
 			process.StartInfo.RedirectStandardOutput = true;
 			process.StartInfo.RedirectStandardInput = true;
 			process.StartInfo.UseShellExecute = false;
@@ -317,7 +344,7 @@ namespace Cdn.RawC
 				if (failures.Count > 0)
 				{
 					throw new Exception(String.Format("Discrepancy detected at t = {0}:\n  {1}",
-						                              opts.ValidateRange[0] + (i * opts.ValidateRange[1]),
+						                              opts.ValidateRange[0] + (i * ts),
 						                              String.Join("\n  ", failures.ToArray())));
 
 				}
