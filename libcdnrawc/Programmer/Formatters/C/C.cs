@@ -746,6 +746,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			string[,] vals = new string[rows, cols];
 			InitialValueTranslator translator = new InitialValueTranslator();
+			int maxs = 0;
 			
 			for (int i = 0; i < table.Count; ++i)
 			{
@@ -754,13 +755,20 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				string val = table.NeedsInitialization ? translator.Translate(table[i].Key) : InitialValueTranslator.NotInitialized;
 				vals[row, col] = val;
+
+				if (val.Length > maxs)
+				{
+					maxs = val.Length;
+				}
 				
 				int pos = val.IndexOf('.');
 
 				colsize[col, 0] = System.Math.Max(colsize[col, 0], pos == -1 ? val.Length : pos);
 				colsize[col, 1] = System.Math.Max(colsize[col, 1], pos == -1 ? 0 : (val.Length - pos));
 			}
-			
+
+			int numdec = (int)System.Math.Floor(System.Math.Log10(table.Count)) + 1;
+
 			for (int i = 0; i < table.Count; ++i)
 			{
 				int row = i / cols;
@@ -773,14 +781,20 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						writer.WriteLine("{");
 					}
 
-					writer.Write("\t{0}", vals[row, col]);
+					string v = vals[row, col];
+
+					writer.Write("\t{0}", v);
 					
 					if (i != table.Count - 1)
 					{
-						writer.Write(",");
+						writer.Write(", ".PadRight(maxs - v.Length + 2));
 					}
-					
-					writer.WriteLine(" /* {0}) {1} [{2}] */", i, table[i].Description, table[i].Type);
+					else
+					{
+						writer.Write(" ".PadLeft(maxs - v.Length + 2));
+					}
+
+					writer.WriteLine("/* {0}) {1} [{2}] */", i.ToString().PadLeft(numdec), table[i].Description, table[i].Type);
 					
 					if (table.Columns > 0 && col == table.Columns - 1)
 					{
