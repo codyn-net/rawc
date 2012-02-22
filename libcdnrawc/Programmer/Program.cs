@@ -437,8 +437,7 @@ namespace Cdn.RawC.Programmer
 
 		public int InitLoopsCount
 		{
-			get
-																										{ return d_initLoops.Count; }
+			get { return d_initLoops.Count; }
 		}
 		
 		public int LoopsCount
