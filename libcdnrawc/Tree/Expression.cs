@@ -253,6 +253,11 @@ namespace Cdn.RawC.Tree
 
 		public static Expression Expand(params Cdn.Expression[] expressions)
 		{
+			return Expand(null, expressions);
+		}
+
+		public static Expression Expand(Dictionary<Instruction, Instruction> instmap, params Cdn.Expression[] expressions)
+		{
 			Cdn.Expression expression = new Cdn.Expression("0");
 			List<Instruction> instructions = new List<Instruction>();
 
@@ -265,7 +270,7 @@ namespace Cdn.RawC.Tree
 			for (int i = 0; i < expressions.Length; ++i)
 			{
 				// Concatenate all the expressions together
-				Expand(expressions[i], instructions);
+				Expand(instmap, expressions[i], instructions);
 				
 				if (i != 0)
 				{
@@ -274,11 +279,11 @@ namespace Cdn.RawC.Tree
 				}
 			}
 			
-			expression.Instructions = instructions.ToArray();
+			expression.SetInstructionsTake(instructions.ToArray());
 			return new Expression(expression);
 		}
 		
-		private static void Expand(Cdn.Expression expr, List<Instruction> instructions)
+		private static void Expand(Dictionary<Instruction, Instruction> instmap, Cdn.Expression expr, List<Instruction> instructions)
 		{
 			foreach (Instruction inst in expr.Instructions)
 			{
@@ -292,12 +297,19 @@ namespace Cdn.RawC.Tree
 					if (Knowledge.Instance.State(property) == null)
 					{
 						// Expand the instruction
-						Expand(property.Expression, instructions);
+						Expand(instmap, property.Expression, instructions);
 						continue;
 					}
 				}
 
-				instructions.Add(inst);
+				var cp = inst.Copy() as Instruction;
+
+				if (instmap != null)
+				{
+					instmap.Add(inst, cp);
+				}
+
+				instructions.Add(cp);
 			}
 		}
 		

@@ -148,7 +148,7 @@ namespace Cdn.RawC.Tree
 					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
 					double delay = 0;
 
-					Knowledge.Instance.Delays.TryGetValue(opdel, out delay);
+					Knowledge.Instance.LookupDelay(op, out delay);
 					return new DelayedState.Key(opdel, delay);
 				}
 

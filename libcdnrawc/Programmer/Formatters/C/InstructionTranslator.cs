@@ -285,13 +285,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			double delay;
 
-			if (!Knowledge.Instance.Delays.TryGetValue(delayed, out delay))
+			if (!Knowledge.Instance.LookupDelay(instruction, out delay))
 			{
 				throw new NotSupportedException("Unable to determine delay of delayed operator");
 			}
 			
-			uint size = (uint)System.Math.Round(delay / Cdn.RawC.Options.Instance.DelayTimeStep) + 1;
-
 			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed, delay)];
 
 			return String.Format("{0}[{1}]",

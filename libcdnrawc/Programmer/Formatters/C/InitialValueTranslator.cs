@@ -23,7 +23,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return NotInitialized;
 		}
-		
+
 		private string Translate(Computation.Loop.Index val)
 		{
 			return val.DataItem.AliasOrIndex;

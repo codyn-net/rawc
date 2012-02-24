@@ -379,7 +379,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
  			
 			writer.WriteLine();
  			
-			writer.WriteLine("void {0}_initialize (void);", CPrefixDown);
+			writer.WriteLine("void {0}_initialize ({1} t);", CPrefixDown, ValueType);
  			
 			writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
 
@@ -630,6 +630,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
 		{
 			bool empty = false;
+			bool written = false;
 
 			foreach (Computation.INode node in nodes)
 			{
@@ -638,27 +639,23 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					empty = true;
 					continue;
 				}
-				else if (empty)
+				else if (empty && written)
 				{
 					WriteComputationNode(writer, new Computation.Empty());
 					empty = false;
 				}
 
 				WriteComputationNode(writer, node);
+				written = true;
 			}
 		}
 		
 		private void WriteInitialization(TextWriter writer)
 		{
 			writer.WriteLine("void");
-			writer.WriteLine("{0}_initialize (void)", CPrefixDown);
+			writer.WriteLine("{0}_initialize ({1} t)", CPrefixDown, ValueType);
 			writer.WriteLine("{");
 
-			if (d_program.InitLoopsCount > 0)
-			{
-				writer.WriteLine("\tint i;\n");
-			}
-			
 			WriteComputationNodes(writer, d_program.InitializationNodes);
 			
 			writer.WriteLine("}");
@@ -693,11 +690,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
 
 			writer.WriteLine("{");
-			
-			if (d_program.LoopsCount != 0)
-			{
-				writer.WriteLine("\tint i;\n");
-			}
 			
 			WriteComputationNodes(writer, d_program.SourceNodes);
 			
@@ -754,7 +746,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				int row = i / cols;
 				int col = i % cols;
-				
 				string val = table.NeedsInitialization ? translator.Translate(table[i].Key) : InitialValueTranslator.NotInitialized;
 				vals[row, col] = val;
 
@@ -995,9 +986,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("\tclass Network");
 			writer.WriteLine("\t{");
 			writer.WriteLine("\t\tpublic:");
-			writer.WriteLine("\t\t\tstatic void initialize()");
+			writer.WriteLine("\t\t\tstatic void initialize({0} t)", ValueType);
 			writer.WriteLine("\t\t\t{");
-			writer.WriteLine("\t\t\t\t{0}_initialize ();", CPrefixDown);
+			writer.WriteLine("\t\t\t\t{0}_initialize ({1} t);", CPrefixDown, ValueType);
 			writer.WriteLine("\t\t\t}");
 			writer.WriteLine();
 

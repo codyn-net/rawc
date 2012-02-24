@@ -100,7 +100,9 @@ namespace Cdn.RawC
 				}
 			}
 
-			d_expression = RawC.Tree.Expression.Expand(exprs.ToArray());
+			Dictionary<Instruction, Instruction> instmap = new Dictionary<Instruction, Instruction>();
+
+			d_expression = RawC.Tree.Expression.Expand(instmap, exprs.ToArray());
 
 			if (d_actions.Length != 0 && v != null)
 			{
@@ -116,9 +118,11 @@ namespace Cdn.RawC
 					instructions.Add(new InstructionVariable(v, Cdn.InstructionVariableBinding.None));
 					instructions.Add(new InstructionFunction((int)Cdn.MathFunctionType.Plus, "+", 2));
 
-					d_expression.Instructions = instructions.ToArray();
+					d_expression.SetInstructionsTake(instructions.ToArray());
 				}
 			}
+
+			Knowledge.Instance.UpdateInstructionMap(instmap);
 		}
 		
 		public Cdn.Expression Expression

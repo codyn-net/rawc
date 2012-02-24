@@ -109,12 +109,16 @@ namespace Cdn.RawC
 		{
 		}
 
-		public DelayedState(InstructionCustomOperator delayed, double delay, Flags type) : base(delayed, (type & Flags.Initialization) != 0 ? ((OperatorDelayed)delayed.Operator).InitialValue : (Cdn.Expression)null, type)
+		public DelayedState(InstructionCustomOperator delayed, double delay, Flags type) : this(delayed, delay, null, type)
+		{
+		}
+
+		public DelayedState(InstructionCustomOperator delayed, double delay, Cdn.Expression expr, Flags type) : base(delayed, expr, type)
 		{
 			d_delayed = delayed;
 			d_delay = delay;
 			
-			d_size = new Size((uint)System.Math.Round(d_delay / Options.Instance.DelayTimeStep) + 1);
+			d_size = new Size((uint)System.Math.Round(d_delay / Options.Instance.DelayTimeStep));
 		}
 
 		public override object DataKey

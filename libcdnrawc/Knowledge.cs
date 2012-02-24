@@ -11,8 +11,12 @@ namespace Cdn.RawC
 		private List<State> d_initialize;
 		private List<State> d_auxStates;
 		private List<State> d_randStates;
-		private Dictionary<OperatorDelayed, double> d_delays;
+		private List<State> d_delayedStates;
+		private Dictionary<Instruction, Instruction> d_instructionMapping;
+
+		private Dictionary<Instruction, double> d_delays;
 		private Dictionary<object, State> d_stateMap;
+		private Dictionary<object, State> d_initializeMap;
 		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedVariables;
 		private List<Cdn.Variable> d_variables;
 		private Dictionary<Cdn.Expression, HashSet<Cdn.Variable>> d_dependencyCache;
@@ -36,9 +40,10 @@ namespace Cdn.RawC
 		
 		private void Init()
 		{
-			d_delays = new Dictionary<OperatorDelayed, double>();
+			d_delays = new Dictionary<Instruction, double>();
 			
 			d_stateMap = new Dictionary<object, State>();
+			d_initializeMap = new Dictionary<object, State>();
 
 			d_variables = new List<Variable>();
 			d_flaggedVariables = new Dictionary<VariableFlags, List<Variable>>();
@@ -48,6 +53,8 @@ namespace Cdn.RawC
 			d_auxStates = new List<State>();
 			d_initialize = new List<State>();
 			d_randStates = new List<State>();
+			d_delayedStates = new List<State>();
+			d_instructionMapping = new Dictionary<Instruction, Instruction>();
 
 			Scan();
 		}
@@ -105,7 +112,7 @@ namespace Cdn.RawC
 
 		private State ExpandedState(Variable prop)
 		{
-			List<EdgeAction > actions = new List<EdgeAction>();
+			List<EdgeAction> actions = new List<EdgeAction>();
 
 			foreach (Edge link in EdgesForVariable(prop))
 			{
@@ -119,6 +126,14 @@ namespace Cdn.RawC
 			}
 			
 			return new State(prop, actions.ToArray());
+		}
+
+		public void UpdateInstructionMap(Dictionary<Instruction, Instruction> mapping)
+		{
+			foreach (KeyValuePair<Instruction, Instruction> pair in mapping)
+			{
+				d_instructionMapping[pair.Key] = pair.Value;
+			}
 		}
 
 		private bool SortDependsOn(List<State> lst, State s)
@@ -171,6 +186,12 @@ namespace Cdn.RawC
 			return AddState(unique, state, true);
 		}
 
+		private void AddInitialize(State state)
+		{
+			d_initializeMap[state.Object] = state;
+			d_initialize.Add(state);
+		}
+
 		private bool AddState(HashSet<object> unique, State state, bool autoinit)
 		{
 			if (unique == null || unique.Add(state.Object))
@@ -181,7 +202,9 @@ namespace Cdn.RawC
 				{
 					d_stateMap[state.Object] = state;
 
-					if (autoinit)
+					var v = state.Object as Variable;
+
+					if (autoinit && (v == null || v.Object != d_network.Integrator || v.Name != "t"))
 					{
 						Instruction[] instrs;
 
@@ -194,7 +217,7 @@ namespace Cdn.RawC
 							instrs = (state.Object as Variable).Expression.Instructions;
 						}
 
-						d_initialize.Add(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
+						AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
 					}
 				}
 
@@ -268,7 +291,7 @@ namespace Cdn.RawC
 						expr.Compile(null, null);
 	
 						State rs = new State(r, expr, RawC.State.Flags.None);
-	
+
 						if (AddState(un, rs))
 						{
 							d_randStates.Add(rs);
@@ -293,6 +316,11 @@ namespace Cdn.RawC
 			get { return d_randStates; }
 		}
 
+		public IEnumerable<State> DelayedStates
+		{
+			get { return d_delayedStates; }
+		}
+
 		public IEnumerable<State> InitializeStates
 		{
 			get { return d_initialize; }
@@ -307,6 +335,16 @@ namespace Cdn.RawC
 			ExtractStates();
 			ExtractRand();
 			ExtractDelayedStates();
+		}
+
+		public State Time
+		{
+			get { return d_stateMap[d_network.Integrator.Variable("t")]; }
+		}
+
+		public State TimeStep
+		{
+			get { return d_stateMap[d_network.Integrator.Variable("dt")]; }
 		}
 
 		private double ComputeDelayedDelay(Instruction[] instructions, Expression e, InstructionCustomOperator instr)
@@ -325,6 +363,62 @@ namespace Cdn.RawC
 
 			return 0;
 		}
+
+		private void ExtractDelayedState(State st, HashSet<DelayedState.Key> same)
+		{
+			if (st.Instructions == null)
+			{
+				return;
+			}
+
+			foreach (Cdn.Instruction instruction in st.Instructions)
+			{
+				InstructionCustomOperator op = instruction as InstructionCustomOperator;
+
+				if (op == null || !(op.Operator is OperatorDelayed))
+				{
+					continue;
+				}
+
+				if (Options.Instance.DelayTimeStep <= 0)
+				{
+					throw new Exception("The network uses the `delayed' operator but no delay time step was specified (--delay-time-step)...");
+				}
+
+				double delay = ComputeDelayedDelay(st.Instructions, st.Expression, op);
+
+				OperatorDelayed opdel = (OperatorDelayed)op.Operator;
+				DelayedState.Key key = new DelayedState.Key(opdel, delay);
+
+				if (!same.Add(key))
+				{
+					d_delays.Add(op, delay);
+					continue;
+				}
+
+				double size;;
+
+				size = delay / Options.Instance.DelayTimeStep;
+
+				if (size % 1 > double.Epsilon)
+				{
+					throw new Exception(String.Format("Time delay `{0}' is not a multiple of the delay time step `{1}'",
+					                    delay, Options.Instance.DelayTimeStep));
+				}
+
+				d_delays.Add(op, delay);
+
+				DelayedState s = new DelayedState(op, delay, opdel.Expression, Cdn.RawC.State.Flags.None);
+				AddState(null, s, false);
+
+				// Create a new expression for the initial value of this state
+				AddInitialize(new DelayedState(op, delay, opdel.InitialValue, Cdn.RawC.State.Flags.Initialization));
+				d_delayedStates.Add(s);
+
+				// Recurse into state
+				ExtractDelayedState(s, same);
+			}
+		}
 		
 		private void ExtractDelayedStates()
 		{
@@ -332,60 +426,30 @@ namespace Cdn.RawC
 
 			foreach (State st in new List<State>(States))
 			{
-				if (st.Instructions == null)
-				{
-					continue;
-				}
-				
-				foreach (Cdn.Instruction instruction in st.Instructions)
-				{
-					InstructionCustomOperator op = instruction as InstructionCustomOperator;
-					
-					if (op == null || !(op.Operator is OperatorDelayed))
-					{
-						continue;
-					}
-
-					if (Options.Instance.DelayTimeStep <= 0)
-					{
-						throw new Exception("The network uses the `delayed' operator but no delay time step was specified (--delay-time-step)...");
-					}
-
-					double delay = ComputeDelayedDelay(st.Instructions, st.Expression, op);
-					
-					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
-					DelayedState.Key key = new DelayedState.Key(opdel, delay);
-
-					if (!same.Add(key))
-					{
-						d_delays.Add(opdel, delay);
-						continue;
-					}
-
-					double size;;
-
-					size = delay / Options.Instance.DelayTimeStep;
-
-					if (size % 1 > double.Epsilon)
-					{
-						throw new Exception(String.Format("Time delay `{0}' is not a multiple of the delay time step `{1}'",
-						                    delay, Options.Instance.DelayTimeStep));
-					}
-
-					d_delays.Add(opdel, delay);
-
-					DelayedState s = new DelayedState(op, delay);
-					AddState(null, s, false);
-
-					//d_delayed.Add(s);
-					d_initialize.Add(new DelayedState(op, delay, Cdn.RawC.State.Flags.Initialization));
-				}
+				ExtractDelayedState(st, same);
 			}
 		}
 
-		public Dictionary<OperatorDelayed, double> Delays
+		public bool LookupDelay(Instruction instruction, out double delay)
 		{
-			get { return d_delays; }
+			while (true)
+			{
+				Instruction mapped;
+
+				if (d_delays.TryGetValue(instruction, out delay))
+				{
+					return true;
+				}
+
+				if (d_instructionMapping.TryGetValue(instruction, out mapped))
+				{
+					instruction = mapped;
+				}
+				else
+				{
+					return false;
+				}
+			}
 		}
 
 		public bool DependsOn(State state, Cdn.Instruction i)
@@ -395,7 +459,27 @@ namespace Cdn.RawC
 				return false;
 			}
 
-			foreach (Cdn.Instruction instr in state.Instructions)
+			DelayedState ds = state as DelayedState;
+			Instruction[] instructions;
+
+			if (ds != null && (ds.Type & RawC.State.Flags.Initialization) != 0)
+			{
+				if (ds.Operator.InitialValue != null)
+				{
+					instructions = ds.Operator.InitialValue.Instructions;
+				}
+				else
+				{
+					instructions = new Instruction[] {};
+				}
+			}
+			else
+			{
+				instructions = state.Instructions;
+			}
+
+
+			foreach (Cdn.Instruction instr in instructions)
 			{
 				if (instr == i)
 				{
@@ -518,16 +602,6 @@ namespace Cdn.RawC
 
 			d_expressionDependencyCache[expression] = ret;
 			return ret;
-		}
-
-		public bool DependsTime(Cdn.Expression expression)
-		{
-			Cdn.Variable tprop = d_network.Integrator.Variable("t");
-			Cdn.Variable dtprop = d_network.Integrator.Variable("dt");
-
-			HashSet<Cdn.Variable> deps = RecursiveDependencies(expression);
-
-			return deps.Contains(tprop) || deps.Contains(dtprop);
 		}
 
 		public bool DependsDelay(Cdn.Expression expression)
@@ -677,6 +751,19 @@ namespace Cdn.RawC
 
 			State state = null;
 			d_stateMap.TryGetValue(o, out state);
+			
+			return state;
+		}
+
+		public State InitializeState(object o)
+		{
+			if (o == null)
+			{
+				return null;
+			}
+
+			State state = null;
+			d_initializeMap.TryGetValue(o, out state);
 			
 			return state;
 		}

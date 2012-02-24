@@ -21,7 +21,10 @@ namespace Cdn.RawC.Programmer
 		private DataTable d_delayedCounters;
 		private DataTable d_delayedCountersSize;
 		private List<DataTable> d_indexTables;
+		private List<DataTable> d_delayHistoryTables;
+		private Dictionary<DelayedState, DataTable> d_delayHistoryMap;
 		private Dictionary<State, Tree.Node> d_equations;
+		private List<DelayedState> d_delayedStates;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
@@ -40,6 +43,9 @@ namespace Cdn.RawC.Programmer
 			d_loops = new List<Computation.Loop>();
 			d_initLoops = new List<Computation.Loop>();
 			d_indexTables = new List<DataTable>();
+			d_delayHistoryTables = new List<DataTable>();
+			d_delayedStates = new List<DelayedState>();
+			d_delayHistoryMap = new Dictionary<DelayedState, DataTable>();
 
 			d_delayedCounters = new DataTable("delay_counters", true);
 			d_delayedCounters.IntegerType = true;
@@ -169,8 +175,32 @@ namespace Cdn.RawC.Programmer
 
 					d_delayedCountersSize.Add((uint)size).Type = DataTable.DataItem.Flags.Size;
 					d_delayedCountersSize.MaxSize = size;
+
+					var dt = new DataTable(String.Format("delay_{0}", d_delayHistoryTables.Count), true);
+
+					d_delayHistoryTables.Add(dt);
+					d_delayedStates.Add(ds);
+
+					d_delayHistoryMap[ds] = dt;
+
+					for (int i = 0; i < size; ++i)
+					{
+						dt.Add(new State(i, (Cdn.Expression)null, State.Flags.None)).Type |= DataTable.DataItem.Flags.Delayed;
+					}
 				}
 			}
+		}
+
+		public DataTable DelayHistoryTable(DelayedState state)
+		{
+			DataTable ret;
+
+			if (d_delayHistoryMap.TryGetValue(state, out ret))
+			{
+				return ret;
+			}
+
+			return null;
 		}
 		
 		private string GenerateFunctionName(string templ)
@@ -506,21 +536,41 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
-		private IEnumerable<State> FilterDependsDirection(IEnumerable<State> states,
-		                                           IEnumerable<State> depon,
-		                                           bool ison)
+		private delegate object ObjectSelector(State state);
+
+		private HashSet<State> FilterDependsDirection(IEnumerable<State> states,
+		                                              IEnumerable<State> depon,
+		                                              bool ison,
+			                                          HashSet<State> rest,
+			                                          ObjectSelector selector)
 		{
 			HashSet<State> ret = new HashSet<State>();
 
 			foreach (State s in states)
 			{
+				bool found = false;
+
 				foreach (State dep in depon)
 				{
-					if (Knowledge.Instance.DependsOn(s, dep.Object))
+					object obj;
+
+					if (selector == null)
+					{
+						obj = dep.Object;
+					}
+					else
+					{
+						obj = selector(dep);
+					}
+
+					var isdep = Knowledge.Instance.DependsOn(s, obj);
+
+					if (isdep)
 					{
 						if (ison)
 						{
 							ret.Add(s);
+							found = true;
 							break;
 						}
 						else
@@ -528,25 +578,67 @@ namespace Cdn.RawC.Programmer
 							ret.Add(dep);
 						}
 					}
+					else if (!ison && rest != null)
+					{
+						rest.Add(dep);
+					}
+				}
+
+				if (!found && ison && rest != null)
+				{
+					rest.Add(s);
 				}
 			}
 
-			foreach (State s in ret)
-			{
-				yield return s;
-			}
+			return ret;
 		}
 
-		private IEnumerable<State> FilterDependsMe(IEnumerable<State> states,
-		                                           IEnumerable<State> depme)
+		private HashSet<State> FilterDependsMe(
+			IEnumerable<State> states,
+			IEnumerable<State> depme,
+			HashSet<State> rest,
+			ObjectSelector selector)
 		{
-			return FilterDependsDirection(states, depme, false);
+			return FilterDependsDirection(states, depme, false, rest, selector);
 		}
 
-		private IEnumerable<State> FilterDependsOn(IEnumerable<State> states,
-		                                           IEnumerable<State> depon)
+		private HashSet<State> FilterDependsMe(
+			IEnumerable<State> states,
+			IEnumerable<State> depme,
+			HashSet<State> rest)
 		{
-			return FilterDependsDirection(states, depon, true);
+			return FilterDependsMe(states, depme, rest, null);
+		}
+
+		private HashSet<State> FilterDependsMe(
+			IEnumerable<State> states,
+			IEnumerable<State> depme)
+		{
+			return FilterDependsMe(states, depme, null);
+		}
+
+		private HashSet<State> FilterDependsOn(
+			IEnumerable<State> states,
+			IEnumerable<State> depon,
+			HashSet<State> rest)
+		{
+			return FilterDependsOn(states, depon, rest, null);
+		}
+
+		private HashSet<State> FilterDependsOn(
+			IEnumerable<State> states,
+			IEnumerable<State> depon)
+		{
+			return FilterDependsOn(states, depon, null);
+		}
+
+		private HashSet<State> FilterDependsOn(
+			IEnumerable<State> states,
+			IEnumerable<State> depon,
+			HashSet<State> rest,
+			ObjectSelector selector)
+		{
+			return FilterDependsDirection(states, depon, true, rest, selector);
 		}
 
 		private List<State> InitialModSet
@@ -647,39 +739,140 @@ namespace Cdn.RawC.Programmer
 
 			// Postcompute aux
 			modset.Add(new State(tprop));
+			modset.AddRange(Knowledge.Instance.DelayedStates);
 
-			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(FilterDependsOn(auxset, modset)))
+			HashSet<State> later = new HashSet<State>();
+
+			// Split postcompute in states that need to be computed before the delays (because delays depend on them)
+			// and those states that can be computed after the delays
+			HashSet<State> now = FilterDependsMe(Knowledge.Instance.DelayedStates, FilterDependsOn(auxset, modset), later);
+
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(now))
 			{
-				d_source.Add(new Computation.Comment("Dependencies of auxiliary variables that depend on t, integrated or rand"));
+				d_source.Add(new Computation.Comment("Auxiliary variables that depend on t, integrated or rand"));
 				d_source.AddRange(AssignmentStates(grp));
 				d_source.Add(new Computation.Empty());
 			}
 
+			// Update delayed states
+			List<List<State>> grps = Knowledge.Instance.SortOnDependencies(Knowledge.Instance.DelayedStates);
 
-			// Compute delayed values using the current counters
-			/*if (Knowledge.Instance.DelayedStatesCount != 0)
+			if (grps.Count > 0)
 			{
-				d_source.Add(new Computation.Comment("Write values of delayed expressions"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.DelayedStates));
 				d_source.Add(new Computation.Empty());
-				
+				d_source.Add(new Computation.Comment("Write values of delayed expressions"));
+
+				foreach (List<State> grp in grps)
+				{
+					d_source.AddRange(AssignmentStates(grp));
+					d_source.Add(new Computation.Empty());
+
+					modset.AddRange(grp);
+				}
+
 				d_source.Add(new Computation.Comment("Increment delayed counters"));
 				d_source.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
 				d_source.Add(new Computation.Empty());
 			}
 
-			if (Knowledge.Instance.PrecomputeAfterDelayStatesCount != 0)
+			// Update aux variables that depend on delays
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(later))
 			{
-				d_source.Add(new Computation.Comment("Out properties that depend on delays"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeAfterDelayStates, null));
+				d_source.Add(new Computation.Comment("Auxiliary variables that depend on delays"));
+				d_source.AddRange(AssignmentStates(grp));
 				d_source.Add(new Computation.Empty());
-			}*/
+			}
 		}
 		
 		private void ProgramInitialization()
 		{
-			// Do not generate loops for now, otherwise use d_initLoops
-			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(Knowledge.Instance.InitializeStates))
+			// Initialize values that do not depend on t
+			HashSet<State> not = new HashSet<State>();
+			HashSet<State> ontime = new HashSet<State>();
+			HashSet<DelayedState> dontime = new HashSet<DelayedState>();
+
+			List<State> ddd = new List<State>();
+
+			ddd.AddRange(Array.ConvertAll<DelayedState, State>(d_delayedStates.ToArray(), (a) => { return a; }));
+			ddd.Add(Knowledge.Instance.Time);
+
+			ontime = FilterDependsOn(Knowledge.Instance.InitializeStates, ddd, not);
+
+			ontime.RemoveWhere((s) => {
+				var ds = s as DelayedState;
+
+				if (ds != null)
+				{
+					dontime.Add(ds);
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			});
+
+			not.RemoveWhere((s) => {
+				return s is DelayedState;
+			});
+
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(not))
+			{
+				d_initialization.Add(new Computation.Empty());
+				d_initialization.AddRange(AssignmentStates(grp, null));
+				d_initialization.Add(new Computation.Empty());
+			}
+
+			HashSet<State> ontimeleft = new HashSet<State>(ontime);
+
+			if (d_delayedStates.Count > 0)
+			{
+				d_initialization.Add(new Computation.Empty());
+				d_initialization.Add(new Computation.Comment("Initialize delayed history"));
+
+				// Generate delay initialization
+				for (int i = 0; i < d_delayedStates.Count; ++i)
+				{
+					DelayedState ds = d_delayedStates[i];
+					DelayedState ids = Knowledge.Instance.InitializeState(ds.Object) as DelayedState;
+
+					List<Computation.INode> deps = new List<Computation.INode>();
+
+					if (ds.Operator.InitialValue != null)
+					{
+						// Find vars on which the initial value depends and which depend on t
+						HashSet<State> dd = FilterDependsMe(new State[] {ids}, ontime);
+
+						dd.RemoveWhere((s) => {
+							return s is DelayedState;
+						});
+
+						foreach (State l in dd)
+						{
+							ontimeleft.Remove(l);
+						}
+
+						deps.AddRange(AssignmentStates(dd, null));
+					}
+
+					d_initialization.Add(new Computation.InitializeDelayHistory(ids, d_delayHistoryTables[i], d_equations[ids], deps, dontime.Contains(ids)));
+					d_initialization.Add(new Computation.Empty());
+				}
+			}
+			else
+			{
+				// Ok, now we are ready to set t
+				Tree.Node node = new Tree.Node(null, new Instructions.Variable("t"));
+				var st = Knowledge.Instance.State(Knowledge.Instance.Network.Integrator.Variable("t"));
+
+				d_initialization.Add(new Computation.Empty());
+				d_initialization.Add(new Computation.Comment("Assign t"));
+				d_initialization.Add(new Computation.Assignment(st, d_statetable[st], node));
+				d_initialization.Add(new Computation.Empty());
+			}
+
+			// Finally, initialize those states that depend on t again
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(ontimeleft))
 			{
 				d_initialization.AddRange(AssignmentStates(grp, d_initLoops));
 			}
@@ -727,6 +920,11 @@ namespace Cdn.RawC.Programmer
 				
 				yield return d_delayedCounters;
 				yield return d_delayedCountersSize;
+
+				foreach (DataTable table in d_delayHistoryTables)
+				{
+					yield return table;
+				}
 			}
 		}
 		
