@@ -6,7 +6,7 @@ using System.IO;
 
 namespace Cdn.RawC.Tree
 {
-	public class Node : IEnumerable<Node>, IComparable<Node>, ICloneable
+	public class Node : IEnumerable<Node>, IComparable<Node>, ICloneable, Programmer.DataTable.IKey
 	{
 		private State d_state;
 		private Instruction d_instruction;
@@ -121,6 +121,46 @@ namespace Cdn.RawC.Tree
 			
 			d_children = new List<Node>(size);
 			d_leafs = new SortedList<Node>();
+		}
+
+		public object DataKey
+		{
+			get
+			{
+				InstructionVariable prop = Instruction as InstructionVariable;
+				
+				if (prop != null)
+				{
+					return prop.Variable;
+				}
+
+				Programmer.Instructions.State st = Instruction as Programmer.Instructions.State;
+
+				if (st != null)
+				{
+					return st.Item;
+				}
+				
+				InstructionCustomOperator op = Instruction as InstructionCustomOperator;
+				
+				if (op != null && op.Operator is OperatorDelayed)
+				{
+					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
+					double delay = 0;
+
+					Knowledge.Instance.Delays.TryGetValue(opdel, out delay);
+					return new DelayedState.Key(opdel, delay);
+				}
+
+				InstructionNumber opnum = Instruction as InstructionNumber;
+				
+				if (opnum != null)
+				{
+					return opnum.Value;
+				}
+
+				return null;
+			}
 		}
 		
 		public void UpdateTreeId()
@@ -516,9 +556,14 @@ namespace Cdn.RawC.Tree
 			
 			Node top = Top;
 			
-			if (top != null && top.State != null && top.State.Variable != null && withstate)
+			if (top != null && top.State != null && withstate)
 			{
-				par = String.Format("{0}, ", top.State.Variable.FullNameForDisplay);
+				Variable v = top.State.Object as Variable;
+
+				if (v != null)
+				{
+					par = String.Format("{0}, ", v.FullNameForDisplay);
+				}
 			}
 
 			string cs = "";

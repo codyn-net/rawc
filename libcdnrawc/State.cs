@@ -3,78 +3,69 @@ using System.Collections.Generic;
 
 namespace Cdn.RawC
 {
-	public class State
+	public class State : Programmer.DataTable.IKey
 	{
 		[Flags()]
 		public enum Flags
 		{
 			None = 0,
 			Integrated = 1 << 0,
-			Direct = 1 << 1,
-			Initialization = 1 << 2,
-			BeforeDirect = 1 << 3,
-			BeforeIntegrated = 1 << 4,
-			AfterIntegrated = 1 << 5,
-			Update = 1 << 6,
-			Delayed = 1 << 7
+			Initialization = 1 << 1,
+			Update = 1 << 2
 		}
 
-		public Variable Variable;
-		public EdgeAction[] Actions;
+		private object d_object;
+		private EdgeAction[] d_actions;
+
 		private Cdn.Expression d_expression;
 		private Instruction[] d_instructions;
-		private Cdn.Expression d_initialValue;
+
 		private Flags d_type;
 		
 		public State(Flags type)
 		{
 			d_type = type;
 		}
-		
-		public State(Variable property, params EdgeAction[] actions) : this(property, Flags.None, actions)
+
+		public State(object obj, params EdgeAction[] actions) : this(obj, (Cdn.Expression)null, Flags.None, actions)
 		{
 		}
-		
-		public State(Variable property, Flags type, params EdgeAction[] actions)
+
+		public State(object obj, Cdn.Instruction[] instructions, Flags type, params EdgeAction[] actions) : this(obj, (Cdn.Expression)null, type, actions)
 		{
-			Variable = property;
-			Actions = actions;
+			d_instructions = instructions;
+		}
+
+		public State(object obj, Cdn.Expression expr, Flags type, params EdgeAction[] actions)
+		{
+			d_object = obj;
+			d_actions = actions;
+
+			if (d_actions == null)
+			{
+				d_actions = new EdgeAction[0];
+			}
+
+			Variable variable = obj as Variable;
 			
-			if (property != null && property.Integrated)
+			if (variable != null && variable.Integrated)
 			{
 				d_type = Flags.Integrated;
 			}
-			else if (property != null)
+
+			if (expr != null)
 			{
-				d_type = Flags.Direct;
+				d_expression = Tree.Expression.Expand(expr);
 			}
-			
+
 			d_type |= type;
 		}
-		
-		public State(Cdn.Expression expression) : this(expression, null, Flags.None)
-		{
-		}
-		
-		public State(Cdn.Expression expression, Flags type) : this(expression, null, type)
-		{
-		}
-		
-		public State(Cdn.Expression expression, Cdn.Expression initialValue, Flags type)
-		{
-			if (expression != null)
-			{
-				d_expression = Tree.Expression.Expand(expression);
-			}
 
-			if (initialValue != null)
-			{
-				d_initialValue = Tree.Expression.Expand(initialValue);
-			}
-
-			d_type = type;
+		public virtual object DataKey
+		{
+			get { return d_object; }
 		}
-		
+
 		private void Expand()
 		{
 			if (d_expression != null)
@@ -83,22 +74,35 @@ namespace Cdn.RawC
 			}
 			
 			List<Cdn.Expression> exprs = new List<Cdn.Expression>();
+			Variable v = d_object as Variable;
 			
-			if (Actions.Length != 0)
+			if (d_actions.Length != 0)
 			{
-				foreach (EdgeAction action in Actions)
+				foreach (EdgeAction action in d_actions)
 				{
 					exprs.Add(action.Equation);
 				}
 			}
 			else
 			{
-				exprs.Add(Variable.Expression);
+				if (v != null)
+				{
+					exprs.Add(v.Expression);
+				}
+				else
+				{
+					Expression e = d_object as Expression;
+
+					if (e != null)
+					{
+						exprs.Add(e);
+					}
+				}
 			}
 
 			d_expression = RawC.Tree.Expression.Expand(exprs.ToArray());
-			
-			if (Actions.Length != 0)
+
+			if (d_actions.Length != 0 && v != null)
 			{
 				List<Cdn.Instruction> instructions = new List<Cdn.Instruction>(d_expression.Instructions);
 				
@@ -109,7 +113,7 @@ namespace Cdn.RawC
 					instructions.Add(new InstructionFunction((int)Cdn.MathFunctionType.Multiply, "*", 2));
 
 					// Add to original state variable as well
-					instructions.Add(new InstructionVariable(Variable, Cdn.InstructionVariableBinding.None));
+					instructions.Add(new InstructionVariable(v, Cdn.InstructionVariableBinding.None));
 					instructions.Add(new InstructionFunction((int)Cdn.MathFunctionType.Plus, "+", 2));
 
 					d_expression.Instructions = instructions.ToArray();
@@ -121,28 +125,14 @@ namespace Cdn.RawC
 		{
 			get
 			{
-				if ((d_type & Flags.Initialization) != 0 && d_initialValue != null)
-				{
-					return InitialValue;
-				}
-				else
-				{
-					Expand();
-					return d_expression;
-				}
+				Expand();
+				return d_expression;
 			}
 		}
-		
-		public Cdn.Expression InitialValue
+
+		public EdgeAction[] Actions
 		{
-			get
-			{
-				return d_initialValue != null ? d_initialValue : Expression;
-			}
-			set
-			{
-				d_initialValue = value;
-			}
+			get { return d_actions; }
 		}
 		
 		public Instruction[] Instructions
@@ -173,6 +163,11 @@ namespace Cdn.RawC
 			{
 				d_type = value;
 			}
+		}
+
+		public object Object
+		{
+			get { return d_object; }
 		}
 	}
 }

@@ -13,8 +13,6 @@ namespace Cdn.RawC.Programmer
 		private List<Cdn.Function> d_usedCustomFunctions;
 		private Dictionary<string, Function> d_functionMap;
 		private List<State> d_updateStates;
-		private int d_stateIntegratedIndex;
-		private int d_stateIntegratedUpdateIndex;
 		private Dictionary<DataTable.DataItem, State> d_integrateTable;
 		private List<Computation.Loop> d_loops;
 		private List<Computation.Loop> d_initLoops;
@@ -52,13 +50,14 @@ namespace Cdn.RawC.Programmer
 
 			d_equations = equations;
 			d_options = options;
-			
-			ProgramDataTables();			
+
+			ProgramDataTables();
+
 			ProgramFunctions();
 			ProgramCustomFunctions();
 			ProgramInitialization();
 			ProgramSource();
-			
+
 			foreach (DataTable table in DataTables)
 			{
 				table.Lock();
@@ -104,74 +103,73 @@ namespace Cdn.RawC.Programmer
 				return d_integrateTable;
 			}
 		}
-		
+
 		private void ProgramDataTables()
 		{
-			// Add direct state variables
-			foreach (State state in Knowledge.Instance.DirectStates)
-			{
-				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Direct);
-			}
-			
-			d_stateIntegratedIndex = d_statetable.Count;
+			bool addedups = false;
 
-			// Add integrated state variables
-			foreach (State state in Knowledge.Instance.IntegratedStates)
+			foreach (var state in Knowledge.Instance.States)
 			{
-				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Integrated);
-			}
-			
-			d_stateIntegratedUpdateIndex = d_statetable.Count;
-			
-			// Add update values for integrated state variables
-			foreach (State state in Knowledge.Instance.IntegratedStates)
-			{
-				State update = new State(State.Flags.Update);
-				
-				d_updateStates.Add(update);
-				d_statetable.Add(update).Type |= (DataTable.DataItem.Flags.State |
-				                                  DataTable.DataItem.Flags.Integrated |
-				                                  DataTable.DataItem.Flags.Update);
+				Variable v = state.Object as Variable;
 
-				d_integrateTable[d_statetable[state]] = update;
-			}
-			
-			// Add in variables
-			foreach (Cdn.Variable prop in Knowledge.Instance.FlaggedProperties(VariableFlags.In))
-			{
-				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.In);
-			}
-			
-			// Add out variables
-			foreach (Cdn.Variable prop in Knowledge.Instance.FlaggedProperties(VariableFlags.Out))
-			{
-				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Out);
-			}
-			
-			// Add delayed
-			foreach (State state in Knowledge.Instance.DelayedStates)
-			{
-				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Delayed);
-				
-				DelayedState.Size size = ((DelayedState)state).Count;
+				if (v != null &&
+				    !v.Integrated &&
+				    d_updateStates.Count != 0 && !addedups)
+				{
+					addedups = true;
 
-				d_delayedCounters.Add(size).Type = DataTable.DataItem.Flags.Counter;
-				d_delayedCounters.MaxSize = size - 1;
-				
-				d_delayedCountersSize.Add((uint)size).Type = DataTable.DataItem.Flags.Size;
-				d_delayedCountersSize.MaxSize = size;
-			}
-			
-			// Add intialized variables
-			foreach (State state in Knowledge.Instance.InitializeStates)
-			{
-				d_statetable.Add(state).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Initialization);
-			}
+					foreach (State update in d_updateStates)
+					{
+						d_statetable.Add(update).Type |= (DataTable.DataItem.Flags.State |
+						                                  DataTable.DataItem.Flags.Integrated |
+						                                  DataTable.DataItem.Flags.Update);
+					}
+				}
 
-			// Add once variables
-			foreach (Cdn.Variable prop in Knowledge.Instance.FlaggedProperties(VariableFlags.Once))
-			{
-				d_statetable.Add(prop).Type |= (DataTable.DataItem.Flags.State | DataTable.DataItem.Flags.Once);
+				DataTable.DataItem item = d_statetable.Add(state);
+
+				if (v != null)
+				{
+					item.Type |= DataTable.DataItem.Flags.State;
+
+					if (v.Integrated)
+					{
+						State update = new State(State.Flags.Update);
+	
+						d_updateStates.Add(update);
+						d_integrateTable[d_statetable[state]] = update;
+	
+						item.Type |= DataTable.DataItem.Flags.Integrated;
+					}
+	
+					if ((v.Flags & VariableFlags.In) != 0)
+					{
+						item.Type |= DataTable.DataItem.Flags.In;
+					}
+	
+					if ((v.Flags & VariableFlags.Out) != 0)
+					{
+						item.Type |= DataTable.DataItem.Flags.Out;
+					}
+
+					if ((v.Flags & VariableFlags.Once) != 0)
+					{
+						item.Type |= DataTable.DataItem.Flags.Once;
+					}
+				}
+
+				DelayedState ds = state as DelayedState;
+
+				if (ds != null)
+				{
+					DelayedState.Size size = ds.Count;
+
+					d_delayedCounters.Add(size).Type = DataTable.DataItem.Flags.Counter;
+					d_delayedCounters.MaxSize = size - 1;
+
+					d_delayedCountersSize.Add((uint)size).Type = DataTable.DataItem.Flags.Size;
+					d_delayedCountersSize.MaxSize = size;
+				}
 			}
 		}
 		
@@ -504,8 +502,73 @@ namespace Cdn.RawC.Programmer
 			{
 				ret.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
 			}
-			
+
 			return ret;
+		}
+
+		private IEnumerable<State> FilterDependsDirection(IEnumerable<State> states,
+		                                           IEnumerable<State> depon,
+		                                           bool ison)
+		{
+			HashSet<State> ret = new HashSet<State>();
+
+			foreach (State s in states)
+			{
+				foreach (State dep in depon)
+				{
+					if (Knowledge.Instance.DependsOn(s, dep.Object))
+					{
+						if (ison)
+						{
+							ret.Add(s);
+							break;
+						}
+						else
+						{
+							ret.Add(dep);
+						}
+					}
+				}
+			}
+
+			foreach (State s in ret)
+			{
+				yield return s;
+			}
+		}
+
+		private IEnumerable<State> FilterDependsMe(IEnumerable<State> states,
+		                                           IEnumerable<State> depme)
+		{
+			return FilterDependsDirection(states, depme, false);
+		}
+
+		private IEnumerable<State> FilterDependsOn(IEnumerable<State> states,
+		                                           IEnumerable<State> depon)
+		{
+			return FilterDependsDirection(states, depon, true);
+		}
+
+		private List<State> InitialModSet
+		{
+			get
+			{
+				List<State> ret = new List<State>();
+
+				ret.Add(new State(Knowledge.Instance.Network.Integrator.Variable("dt")));
+
+				foreach (State o in Knowledge.Instance.States)
+				{
+					Variable v = o.Object as Variable;
+
+					if (v != null && (v.Flags & VariableFlags.In) != 0)
+					{
+						ret.Add(o);
+					}
+				}
+
+				return ret;
+			}
 		}
 		
 		private void ProgramSource()
@@ -522,48 +585,42 @@ namespace Cdn.RawC.Programmer
 			d_source.Add(new Computation.Assignment(null, dt, dteq));
 			d_source.Add(new Computation.Empty());
 
-			// Precompute for out properties
-			if (Knowledge.Instance.PrecomputeBeforeDirectStatesCount != 0)
+			// Auxiliary states are outs and temporaries (i.e. things that
+			// ended up in the state table and will be used from there)
+			List<State> auxset = new List<State>(Knowledge.Instance.AuxiliaryStates);
+
+			// Current modset is dt and in-variables
+			List<State> modset = InitialModSet;
+			List<State> integrated = new List<State>(Knowledge.Instance.FlaggedStates(VariableFlags.Integrated));
+
+			IEnumerable<State> deps = FilterDependsMe(integrated, FilterDependsOn(auxset, modset));
+
+			// Extract states from aux that need to be calculated because they
+			// depend on modset and are used by the integrated set
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(deps))
 			{
-				d_source.Add(new Computation.Comment("Out properties that depend on IN states and are needed by direct calculations"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeBeforeDirectStates));
+				d_source.Add(new Computation.Comment("Dependencies of integrated variables that depend on dt or IN"));
+				d_source.AddRange(AssignmentStates(grp));
 				d_source.Add(new Computation.Empty());
 			}
-			
-			// Direct links	
-			if (Knowledge.Instance.DirectStatesCount != 0)
-			{
-				d_source.Add(new Computation.Comment("Direct equations"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.DirectStates));
-				d_source.Add(new Computation.Empty());
-			}
-			
-			// Precompute for out properties
-			if (Knowledge.Instance.PrecomputeBeforeIntegratedStatesCount != 0)
-			{
-				d_source.Add(new Computation.Comment("Out properties that depend on direct states and are needed by integration calculations"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeBeforeIntegratedStates));
-				d_source.Add(new Computation.Empty());
-			}
-			
-			// Integrated links			
-			if (Knowledge.Instance.IntegratedStatesCount != 0)
+
+			modset.Clear();
+
+			// Integrated links
+			if (integrated.Count > 0)
 			{
 				d_source.Add(new Computation.Comment("Integration equations"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.IntegratedStates));
+				d_source.AddRange(AssignmentStates(integrated));
 				d_source.Add(new Computation.Empty());
-			}
 
-			int num = d_stateIntegratedUpdateIndex - d_stateIntegratedIndex;
-			
-			if (num > 0)
-			{
 				d_source.Add(new Computation.Comment("Make copy of current integrated state"));
-				d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, d_stateIntegratedIndex, num, d_stateIntegratedUpdateIndex));
+				d_source.Add(new Computation.CopyTable(d_statetable, d_statetable, 0, integrated.Count, integrated.Count));
 				d_source.Add(new Computation.Empty());
+
+				modset.AddRange(integrated);
 			}
 
-			// Increase time before post computing out properties
+			// Increase time
 			Cdn.Variable tprop = Knowledge.Instance.Network.Integrator.Variable("t");
 			DataTable.DataItem t = d_statetable[tprop];
 
@@ -576,16 +633,31 @@ namespace Cdn.RawC.Programmer
 			d_source.Add(new Computation.Assignment(null, t, eq));
 			d_source.Add(new Computation.Empty());
 
-			// Postcompute for out properties
-			if (Knowledge.Instance.PrecomputeAfterIntegratedStatesCount != 0)
+			// Generate new random values
+			List<State> rands = new List<State>(Knowledge.Instance.RandStates);
+
+			if (rands.Count > 0)
 			{
-				d_source.Add(new Computation.Comment("Out properties that depend on integrated states or IN states"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeAfterIntegratedStates, null));
+				d_source.Add(new Computation.Comment("Compute new random values"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.RandStates));
+				d_source.Add(new Computation.Empty());
+
+				modset.AddRange(rands);
+			}
+
+			// Postcompute aux
+			modset.Add(new State(tprop));
+
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(FilterDependsOn(auxset, modset)))
+			{
+				d_source.Add(new Computation.Comment("Dependencies of auxiliary variables that depend on t, integrated or rand"));
+				d_source.AddRange(AssignmentStates(grp));
 				d_source.Add(new Computation.Empty());
 			}
-			
+
+
 			// Compute delayed values using the current counters
-			if (Knowledge.Instance.DelayedStatesCount != 0)
+			/*if (Knowledge.Instance.DelayedStatesCount != 0)
 			{
 				d_source.Add(new Computation.Comment("Write values of delayed expressions"));
 				d_source.AddRange(AssignmentStates(Knowledge.Instance.DelayedStates));
@@ -595,24 +667,22 @@ namespace Cdn.RawC.Programmer
 				d_source.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
 				d_source.Add(new Computation.Empty());
 			}
+
+			if (Knowledge.Instance.PrecomputeAfterDelayStatesCount != 0)
+			{
+				d_source.Add(new Computation.Comment("Out properties that depend on delays"));
+				d_source.AddRange(AssignmentStates(Knowledge.Instance.PrecomputeAfterDelayStates, null));
+				d_source.Add(new Computation.Empty());
+			}*/
 		}
 		
 		private void ProgramInitialization()
 		{
-			List<State > init = new List<State>();
-
-			foreach (State state in Knowledge.Instance.InitializeStates)
-			{
-				if (!d_statetable.Contains(state))
-				{
-					continue;
-				}
-				
-				init.Add(state);
-			}
-
 			// Do not generate loops for now, otherwise use d_initLoops
-			d_initialization.AddRange(AssignmentStates(init, null));
+			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(Knowledge.Instance.InitializeStates))
+			{
+				d_initialization.AddRange(AssignmentStates(grp, d_initLoops));
+			}
 		}
 		
 		public IEnumerable<Cdn.Function> UsedCustomFunctions

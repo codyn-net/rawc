@@ -35,12 +35,16 @@ namespace Cdn.RawC.Tree
 		{
 			s_hashMapping.Clear();
 		}
+
+		public Expression(Cdn.Expression expression) : this(expression, false)
+		{
+		}
 		
-		public Expression(Cdn.Expression expression)
+		public Expression(Cdn.Expression expression, bool strict)
 		{
 			d_expression = expression;
 			
-			ComputeHash();
+			ComputeHash(strict);
 		}
 		
 		private static bool InstructionIs<T>(Instruction inst, out T t)
@@ -57,44 +61,126 @@ namespace Cdn.RawC.Tree
 			
 			return false;
 		}
-		
+
+		public static IEnumerable<uint> InstructionCodes(Instruction inst)
+		{
+			return InstructionCodes(inst, false);
+		}
+
 		public static uint InstructionCode(Instruction inst)
+		{
+			return InstructionCode(inst, false);
+		}
+
+		public static uint InstructionCode(Instruction inst, bool strict)
+		{
+			foreach (uint i in InstructionCodes(inst, strict))
+			{
+				return i;
+			}
+
+			return 0;
+		}
+		
+		public static IEnumerable<uint> InstructionCodes(Instruction inst, bool strict)
 		{
 			InstructionFunction ifunc;
 			InstructionCustomOperator icusop;
 			InstructionCustomFunction icusf;
+			InstructionVariable ivar;
+			InstructionNumber inum;
 
 			if (InstructionIs(inst, out icusf))
 			{
 				// Generate byte code for this function by name
-				return HashMap("f_" + icusf.Function.Id);
+				yield return HashMap("f_" + icusf.Function.FullId);
 			}
 			else if (InstructionIs(inst, out icusop))
 			{
-				if (icusop.Operator is OperatorDelayed)
+				if (icusop.Operator is OperatorDelayed && !strict)
 				{
 					// These are actually part of the state table, so we use
 					// a placeholder code here
-					return PlaceholderCode;
+					yield return PlaceholderCode;
 				}
 				else
 				{
-					return HashMap("co_" + icusop.Operator.Name);
+					bool ns = strict || icusop.Operator is OperatorDelayed;
+
+					yield return HashMap("co_" + icusop.Operator.Name);
+
+					Cdn.Function f = icusop.Operator.PrimaryFunction;
+
+					if (f != null && f.Expression != null)
+					{
+						foreach (Instruction i in f.Expression.Instructions)
+						{
+							foreach (uint id in InstructionCodes(i, ns))
+							{
+								yield return id;
+							}
+						}
+					}
+					else
+					{
+						foreach (Cdn.Expression[] exprs in icusop.Operator.AllExpressions())
+						{
+							foreach (Cdn.Expression e in exprs)
+							{
+								foreach (Instruction i in e.Instructions)
+								{
+									foreach (uint id in InstructionCodes(i, ns))
+									{
+										yield return id;
+									}
+								}
+							}
+						}
+
+						foreach (Cdn.Expression[] exprs in icusop.Operator.AllIndices())
+						{
+							foreach (Cdn.Expression e in exprs)
+							{
+								foreach (Instruction i in e.Instructions)
+								{
+									foreach (uint id in InstructionCodes(i, ns))
+									{
+										yield return id;
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 			else if (InstructionIs(inst, out ifunc))
 			{
 				// Functions just store the id
-				return (uint)ifunc.Id + 1;
+				yield return (uint)ifunc.Id + 1;
+			}
+			else if (strict)
+			{
+				if (InstructionIs(inst, out ivar))
+				{
+					yield return HashMap(String.Format("var_{0}", ivar.Variable.FullName));
+				}
+				else if (InstructionIs(inst, out inum))
+				{
+					yield return HashMap(String.Format("num_{0}", inum.Value));
+				}
+				else
+				{
+					yield return PlaceholderCode;
+				}
 			}
 			else
 			{
 				// Placeholder for numbers and properties
-				return PlaceholderCode;
+				yield return PlaceholderCode;
 			}
 		}
 		
-		private void ComputeHash()
+		private void ComputeHash(bool strict)
 		{
 			Instruction[] instructions = d_expression.Instructions;
 
@@ -104,11 +190,10 @@ namespace Cdn.RawC.Tree
 			// [MathFunctionNum]: Functions
 			// [MathOperatorNum]: Operators
 			// [...]:             Custom functions and operators
-			// 255 (byte max):    Variable or number
-			
+			// (uintmax):         Variable or number
 			foreach (Instruction inst in instructions)
 			{
-				hash.Add(InstructionCode(inst));
+				hash.AddRange(InstructionCodes(inst, strict));
 			}
 			
 			d_hash = hash.ToArray();
@@ -170,6 +255,12 @@ namespace Cdn.RawC.Tree
 		{
 			Cdn.Expression expression = new Cdn.Expression("0");
 			List<Instruction> instructions = new List<Instruction>();
+
+			if (expressions.Length == 0)
+			{
+				expression.Compile(null, null);
+				return new Expression(expression);
+			}
 			
 			for (int i = 0; i < expressions.Length; ++i)
 			{
@@ -198,7 +289,7 @@ namespace Cdn.RawC.Tree
 					// See if we need to expand it
 					Variable property = prop.Variable;
 					
-					if (!Knowledge.Instance.IsPersist(property))
+					if (Knowledge.Instance.State(property) == null)
 					{
 						// Expand the instruction
 						Expand(property.Expression, instructions);

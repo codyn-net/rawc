@@ -18,43 +18,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return Invoke<string>(parameters);
 		}
-		
-		private string Translate(Tree.Node node)
+
+		private string Translate(object obj)
 		{
 			return NotInitialized;
-		}
-		
-		private string Translate(State state)
-		{
-			return NotInitialized;
-		}
-		
-		private string Translate(Cdn.Variable property)
-		{
-			if (Knowledge.Instance.NeedsInitialization(property, true))
-			{
-				return NotInitialized;
-			}
-			else
-			{
-				return NumberTranslator.Translate(property);
-			}
-		}
-		
-		private string Translate(DelayedState.Key op)
-		{
-			if (Knowledge.Instance.NeedsInitialization(op.Operator.InitialValue, true))
-			{
-				return NotInitialized;
-			}
-			else if (op.Operator.InitialValue != null)
-			{
-				return NumberTranslator.Translate(op.Operator.InitialValue.Value);
-			}
-			else
-			{
-				return "0.0";
-			}
 		}
 		
 		private string Translate(Computation.Loop.Index val)

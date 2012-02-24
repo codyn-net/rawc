@@ -210,7 +210,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
 			
-			if ((context.State == null || (context.State.Type & (State.Flags.Initialization | State.Flags.AfterIntegrated)) == 0) && context.Program.IntegrateTable.ContainsKey(item))
+			if (context.Program.IntegrateTable.ContainsKey(item))
 			{
 				// Instead use the conserved state
 				item = context.Program.StateTable[context.Program.IntegrateTable[item]];
@@ -221,18 +221,37 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private string Translate(InstructionRand instruction, Context context)
 		{
+			string val;
+
+			if (context.Program.StateTable.Contains(instruction))
+			{
+				var item = context.Program.StateTable[instruction];
+				val = String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
+			}
+			else
+			{
+				val = "CDN_MATH_RAND ()";
+			}
+
 			int numpop = instruction.GetStackManipulation().NumPop;
 
-			string name = String.Format("CDN_MATH_RAND{0}", numpop);
-
-			string[] args = new string[instruction.GetStackManipulation().NumPop];
-			
-			for (int i = 0; i < instruction.GetStackManipulation().NumPop; ++i)
+			if (numpop == 0)
 			{
-				args[i] = Translate(context, i);
+				return val;
 			}
-			
-			return String.Format("{0} ({1})", name, String.Join(", ", args));
+			else if (numpop == 1)
+			{
+				return String.Format("CDN_MATH_SCALE ({0}, 0, {1})",
+				                     val,
+				                     Translate(context, 0));
+			}
+			else
+			{
+				return String.Format("CDN_MATH_SCALE ({0}, {1}, {2})",
+				                     val,
+				                     Translate(context, 0),
+				                     Translate(context, 1));
+			}
 		}
 		
 		private string Translate(InstructionFunction instruction, Context context)
@@ -268,19 +287,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			if (!Knowledge.Instance.Delays.TryGetValue(delayed, out delay))
 			{
-				throw new NotSupportedException("Enable to determine delay of delayed operator");
+				throw new NotSupportedException("Unable to determine delay of delayed operator");
 			}
 			
 			uint size = (uint)System.Math.Round(delay / Cdn.RawC.Options.Instance.DelayTimeStep) + 1;
 
 			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed, delay)];
-			DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
-				
-			return String.Format("{0}[{1} + {2}[{3}]]",
+
+			return String.Format("{0}[{1}]",
 			                     context.Program.StateTable.Name,
-			                     item.AliasOrIndex,
-			                     context.Program.DelayedCounters.Name,
-			                     counter.Index);
+			                     item.AliasOrIndex);
 		}
 		
 		private string Translate(Instructions.Function instruction, Context context)

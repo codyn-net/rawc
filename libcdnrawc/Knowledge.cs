@@ -7,18 +7,16 @@ namespace Cdn.RawC
 	{
 		private static Knowledge s_instance;
 		private Cdn.Network d_network;
-		private List<State> d_integrated;
-		private List<State> d_direct;
+		private List<State> d_states;
 		private List<State> d_initialize;
-		private List<State> d_precomputeBeforeDirect;
-		private List<State> d_precomputeBeforeIntegrated;
-		private List<State> d_precomputeAfterIntegrated;
-		private List<State> d_delayed;
+		private List<State> d_auxStates;
+		private List<State> d_randStates;
 		private Dictionary<OperatorDelayed, double> d_delays;
-		private Dictionary<Cdn.Variable, State> d_stateMap;
-		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedproperties;
-		private List<Cdn.Variable> d_properties;
+		private Dictionary<object, State> d_stateMap;
+		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedVariables;
+		private List<Cdn.Variable> d_variables;
 		private Dictionary<Cdn.Expression, HashSet<Cdn.Variable>> d_dependencyCache;
+		private Dictionary<Cdn.Expression, HashSet<Cdn.Expression>> d_expressionDependencyCache;
 
 		public static Knowledge Initialize(Cdn.Network network)
 		{
@@ -38,20 +36,18 @@ namespace Cdn.RawC
 		
 		private void Init()
 		{
-			d_integrated = new List<State>();
-			d_direct = new List<State>();
-			d_initialize = new List<State>();
-			d_precomputeBeforeDirect = new List<State>();
-			d_precomputeBeforeIntegrated = new List<State>();
-			d_precomputeAfterIntegrated = new List<State>();
-			d_delayed = new List<State>();
 			d_delays = new Dictionary<OperatorDelayed, double>();
 			
-			d_stateMap = new Dictionary<Variable, State>();
+			d_stateMap = new Dictionary<object, State>();
 
-			d_properties = new List<Variable>();
-			d_flaggedproperties = new Dictionary<VariableFlags, List<Variable>>();
+			d_variables = new List<Variable>();
+			d_flaggedVariables = new Dictionary<VariableFlags, List<Variable>>();
 			d_dependencyCache = new Dictionary<Expression, HashSet<Variable>>();
+			d_expressionDependencyCache = new Dictionary<Cdn.Expression, HashSet<Cdn.Expression>>();
+			d_states = new List<State>();
+			d_auxStates = new List<State>();
+			d_initialize = new List<State>();
+			d_randStates = new List<State>();
 
 			Scan();
 		}
@@ -76,7 +72,14 @@ namespace Cdn.RawC
 
 		private IEnumerable<Edge> EdgesForVariableAll(Variable prop)
 		{
-			foreach (Edge link in ((Node)prop.Object).Edges)
+			Node node = prop.Object as Node;
+
+			if (node == null)
+			{
+				yield break;
+			}
+
+			foreach (Edge link in node.Edges)
 			{
 				yield return link;
 			}
@@ -117,74 +120,192 @@ namespace Cdn.RawC
 			
 			return new State(prop, actions.ToArray());
 		}
-		
-		private State AddState(Cdn.Variable prop)
+
+		private bool SortDependsOn(List<State> lst, State s)
 		{
-			State state = ExpandedState(prop);
-			d_stateMap[prop] = state;
-			
-			return state;
+			foreach (State l in lst)
+			{
+				if (DependsOn(l, s.Object))
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
-		private List<State> SortOnDependencies(List<State> lst)
+		public List<List<State>> SortOnDependencies(IEnumerable<State> lst)
 		{
-			List<State > ret = new List<State>();
-			List<HashSet<Cdn.Variable>> deps = new List<HashSet<Cdn.Variable>>();
-			
+			List<List<State>> ret = new List<List<State>>();
+
 			foreach (State st in lst)
 			{
 				bool found = false;
 
-				HashSet<Cdn.Variable> pdeps = new HashSet<Cdn.Variable>();
-				RecursiveDependencies(st.Variable.Expression, pdeps);
-
-				for (int i = 0; i < ret.Count; ++i)
+				foreach (List<State> got in ret)
 				{
-					if (deps[i].Contains(st.Variable))
+					if (!SortDependsOn(got, st))
 					{
-						ret.Insert(i, st);
-						deps.Insert(i, pdeps);
+						got.Add(st);
 						found = true;
 						break;
 					}
 				}
-				
+
 				if (!found)
 				{
-					ret.Add(st);
-					deps.Add(pdeps);
+					List<State> got = new List<State>();
+					got.Add(st);
+
+					ret.Add(got);
 				}
+
 			}
 
+			ret.Reverse();
 			return ret;
 		}
-		
+
+		private bool AddState(HashSet<object> unique, State state)
+		{
+			return AddState(unique, state, true);
+		}
+
+		private bool AddState(HashSet<object> unique, State state, bool autoinit)
+		{
+			if (unique == null || unique.Add(state.Object))
+			{
+				d_states.Add(state);
+
+				if (state.Object != null)
+				{
+					d_stateMap[state.Object] = state;
+
+					if (autoinit)
+					{
+						Instruction[] instrs;
+
+						if (state.Actions.Length == 0)
+						{
+							instrs = state.Instructions;
+						}
+						else
+						{
+							instrs = (state.Object as Variable).Expression.Instructions;
+						}
+
+						d_initialize.Add(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
+					}
+				}
+
+				return true;
+			}
+
+			return false;
+		}
+
+		private void ExtractStates()
+		{
+			HashSet<object> unique = new HashSet<object>();
+
+			// Add integrated state variables
+			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
+			{
+				AddState(unique, ExpandedState(v));
+			}
+
+			// Add in variables
+			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.In))
+			{
+				AddState(unique, ExpandedState(v));
+			}
+
+			// Add out variables
+			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
+			{
+				State s = ExpandedState(v);
+
+				AddState(unique, s);
+				d_auxStates.Add(s);
+			}
+
+			// Add once variables
+			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Once))
+			{
+				AddState(unique, ExpandedState(v));
+			}
+		}
+
+		private IEnumerable<State> AllStates
+		{
+			get
+			{
+				foreach (State s in d_states)
+				{
+					yield return s;
+				}
+
+				foreach (State s in d_initialize)
+				{
+					yield return s;
+				}
+			}
+		}
+
+		private void ExtractRand()
+		{
+			HashSet<object> un = new HashSet<object>();
+
+			foreach (var state in new List<State>(AllStates))
+			{
+				foreach (Instruction i in state.Instructions)
+				{
+					InstructionRand r = i as InstructionRand;
+
+					if (r != null)
+					{
+						Expression expr = new Expression("rand()");
+						expr.Compile(null, null);
+	
+						State rs = new State(r, expr, RawC.State.Flags.None);
+	
+						if (AddState(un, rs))
+						{
+							d_randStates.Add(rs);
+						}
+					}
+				}
+			}
+		}
+
+		public IEnumerable<State> States
+		{
+			get { return d_states; }
+		}
+
+		public IEnumerable<State> AuxiliaryStates
+		{
+			get { return d_auxStates; }
+		}
+
+		public IEnumerable<State> RandStates
+		{
+			get { return d_randStates; }
+		}
+
+		public IEnumerable<State> InitializeStates
+		{
+			get { return d_initialize; }
+		}
+
 		private void Scan()
 		{
-			IntegratorState state = d_network.Integrator.State;
-			
-			foreach (Variable prop in state.IntegratedProperties())
-			{
-				d_integrated.Add(AddState(prop));
-			}
-			
-			foreach (Variable prop in state.DirectProperties())
-			{
-				d_direct.Add(AddState(prop));
-			}
-
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
-			ScanProperties(d_network.Integrator);
-			ScanProperties(d_network);
+			ScanVariables(d_network.Integrator);
+			ScanVariables(d_network);
 
-			ResolveLists();
-			
-			// Sort initialize list on dependencies
-			d_initialize = SortOnDependencies(d_initialize);
-			d_precomputeAfterIntegrated = SortOnDependencies(d_precomputeAfterIntegrated);
-			d_precomputeBeforeDirect = SortOnDependencies(d_precomputeBeforeDirect);
-			d_precomputeBeforeIntegrated = SortOnDependencies(d_precomputeBeforeIntegrated);
-
+			ExtractStates();
+			ExtractRand();
 			ExtractDelayedStates();
 		}
 
@@ -209,7 +330,7 @@ namespace Cdn.RawC
 		{
 			HashSet<DelayedState.Key> same = new HashSet<DelayedState.Key>();
 
-			foreach (State st in States)
+			foreach (State st in new List<State>(States))
 			{
 				if (st.Instructions == null)
 				{
@@ -224,7 +345,7 @@ namespace Cdn.RawC
 					{
 						continue;
 					}
-					
+
 					if (Options.Instance.DelayTimeStep <= 0)
 					{
 						throw new Exception("The network uses the `delayed' operator but no delay time step was specified (--delay-time-step)...");
@@ -253,13 +374,11 @@ namespace Cdn.RawC
 
 					d_delays.Add(opdel, delay);
 
-					DelayedState s = new DelayedState(opdel, delay);
-					d_delayed.Add(s);
+					DelayedState s = new DelayedState(op, delay);
+					AddState(null, s, false);
 
-					if (NeedsInitialization(opdel.InitialValue, true))
-					{
-						d_initialize.Add(new DelayedState(opdel, delay, Cdn.RawC.State.Flags.Initialization));
-					}
+					//d_delayed.Add(s);
+					d_initialize.Add(new DelayedState(op, delay, Cdn.RawC.State.Flags.Initialization));
 				}
 			}
 		}
@@ -268,36 +387,84 @@ namespace Cdn.RawC
 		{
 			get { return d_delays; }
 		}
-		
-		private bool DependsOn(Cdn.Expression expression, Cdn.RawC.State.Flags flags)
-		{
-			// Check if the expression depends on any other property that has direct actors
-			foreach (Cdn.Variable dependency in RecursiveDependencies(expression))
-			{
-				State state;
 
-				if (d_stateMap.TryGetValue(dependency, out state))
+		public bool DependsOn(State state, Cdn.Instruction i)
+		{
+			if (state == null || i == null)
+			{
+				return false;
+			}
+
+			foreach (Cdn.Instruction instr in state.Instructions)
+			{
+				if (instr == i)
 				{
-					if ((state.Type & flags) != 0)
+					return true;
+				}
+
+				InstructionVariable v = instr as InstructionVariable;
+				State s = Knowledge.Instance.State(v);
+
+				if (s != null)
+				{
+					if (DependsOn(s, i))
+					{
+						return true;
+					}
+				}
+
+				InstructionRand r = instr as InstructionRand;
+				s = Knowledge.Instance.State(r);
+
+				if (s != null)
+				{
+					if (DependsOn(s, i))
 					{
 						return true;
 					}
 				}
 			}
-			
+
+			return false;
+		}
+
+		public bool DependsOn(State state, object o)
+		{
+			if (state == null || o == null)
+			{
+				return false;
+			}
+
+			Variable v = o as Variable;
+
+			if (v != null)
+			{
+				return DependsOn(state, v);
+			}
+
+			Instruction instr = o as Instruction;
+
+			if (instr != null)
+			{
+				return DependsOn(state, instr);
+			}
+
 			return false;
 		}
 		
-		public bool DependsDirect(Cdn.Expression expression)
+		public bool DependsOn(State state, Cdn.Variable other)
 		{
-			return DependsOn(expression, Cdn.RawC.State.Flags.Direct);
+			if (state == null || other == null)
+			{
+				return false;
+			}
+
+			// Check if the expression depends on any other property that has direct actors
+			HashSet<Variable> deps = RecursiveDependencies(state.Expression);
+
+			return deps.Contains(other);
 		}
 		
-		public bool DependsIntegrated(Cdn.Expression expression)
-		{
-			return DependsOn(expression, Cdn.RawC.State.Flags.Integrated);
-		}
-
 		private void RecursiveDependencies(Cdn.Expression expression, HashSet<Cdn.Variable> un)
 		{
 			foreach (Cdn.Variable v in expression.VariableDependencies)
@@ -325,6 +492,34 @@ namespace Cdn.RawC
 			return ret;
 		}
 
+		private void RecursiveExpressionDependencies(Cdn.Expression expression, HashSet<Cdn.Expression> un)
+		{
+			foreach (Cdn.Expression e in expression.Dependencies)
+			{
+				if (un.Add(e))
+				{
+					RecursiveExpressionDependencies(e, un);
+				}
+			}
+		}
+
+		private HashSet<Cdn.Expression> RecursiveExpressionDependencies(Cdn.Expression expression)
+		{
+			HashSet<Cdn.Expression> ret;
+
+			if (d_expressionDependencyCache.TryGetValue(expression, out ret))
+			{
+				return ret;
+			}
+
+			ret = new HashSet<Cdn.Expression>();
+			ret.Add(expression);
+			RecursiveExpressionDependencies(expression, ret);
+
+			d_expressionDependencyCache[expression] = ret;
+			return ret;
+		}
+
 		public bool DependsTime(Cdn.Expression expression)
 		{
 			Cdn.Variable tprop = d_network.Integrator.Variable("t");
@@ -333,6 +528,26 @@ namespace Cdn.RawC
 			HashSet<Cdn.Variable> deps = RecursiveDependencies(expression);
 
 			return deps.Contains(tprop) || deps.Contains(dtprop);
+		}
+
+		public bool DependsDelay(Cdn.Expression expression)
+		{
+			HashSet<Cdn.Expression> deps = RecursiveExpressionDependencies(expression);
+
+			foreach (Cdn.Expression e in deps)
+			{
+				foreach (Cdn.Instruction i in e.Instructions)
+				{
+					InstructionCustomOperator op = i as InstructionCustomOperator;
+
+					if (op != null && op.Operator is OperatorDelayed)
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
 		}
 		
 		public bool DependsIn(Cdn.Expression expression)
@@ -382,10 +597,10 @@ namespace Cdn.RawC
 				{
 					List<Cdn.Variable> lst;
 
-					if (!d_flaggedproperties.TryGetValue(flags, out lst))
+					if (!d_flaggedVariables.TryGetValue(flags, out lst))
 					{
 						lst = new List<Variable>();
-						d_flaggedproperties[flags] = lst;
+						d_flaggedVariables[flags] = lst;
 					}
 
 					lst.Add(property);
@@ -393,9 +608,9 @@ namespace Cdn.RawC
 			}
 		}
 
-		private void ScanProperties(Cdn.Object obj)
+		private void ScanVariables(Cdn.Object obj)
 		{
-			d_properties.AddRange(obj.Variables);
+			d_variables.AddRange(obj.Variables);
 			
 			foreach (Cdn.Variable prop in obj.Variables)
 			{
@@ -411,53 +626,7 @@ namespace Cdn.RawC
 			
 			foreach (Cdn.Object child in grp.Children)
 			{
-				ScanProperties(child);
-			}
-		}
-
-		private void ResolveLists()
-		{
-			foreach (Cdn.Variable prop in d_properties)
-			{
-				bool needsinit = NeedsInitialization(prop, true);
-				bool isvar = IsVariadic(prop.Expression, true);
-				bool isin = (prop.Flags & Cdn.VariableFlags.In) != 0;
-				bool isout = (prop.Flags & Cdn.VariableFlags.Out) != 0;
-				bool isonce = (prop.Flags & Cdn.VariableFlags.Once) != 0;
-
-				if ((isout || (needsinit && isvar)) && !isin && !isonce &&
-					!d_stateMap.ContainsKey(prop))
-				{
-					bool dependsdirect = DependsDirect(prop.Expression);
-					bool dependsintegrated = DependsIntegrated(prop.Expression);
-					bool dependsin = DependsIn(prop.Expression);
-					bool dependstime = DependsTime(prop.Expression);
-					bool directdepends = AnyStateDepends(d_direct, prop);
-					bool integrateddepends = AnyStateDepends(d_integrated, prop);
-					bool outdepends = AnyVariableDepends(FlaggedProperties(VariableFlags.Out), prop);
-
-					bool beforedirect = dependsin && directdepends;
-
-					if (beforedirect)
-					{
-						d_precomputeBeforeDirect.Add(new State(prop, RawC.State.Flags.BeforeDirect));
-					}
-
-					if (dependsdirect && integrateddepends)
-					{
-						d_precomputeBeforeIntegrated.Add(new State(prop, RawC.State.Flags.BeforeIntegrated));
-					}
-
-					if ((isout || integrateddepends || directdepends || outdepends) && ((dependsin && !beforedirect) || dependstime || isvar || dependsintegrated))
-					{
-						d_precomputeAfterIntegrated.Add(new State(prop, RawC.State.Flags.AfterIntegrated));
-					}
-				}
-
-				if (needsinit)
-				{
-					d_initialize.Add(new State(prop, RawC.State.Flags.Initialization));
-				}
+				ScanVariables(child);
 			}
 		}
 
@@ -466,19 +635,31 @@ namespace Cdn.RawC
 			d_network = network;
 		}
 		
-		public IEnumerable<Cdn.Variable> Properties
+		public IEnumerable<Cdn.Variable> Variables
 		{
 			get
 			{
-				return d_properties;
+				return d_variables;
 			}
 		}
 
-		public IEnumerable<Cdn.Variable> FlaggedProperties(Cdn.VariableFlags flags)
+		public int FlaggedVariablesCount(Cdn.VariableFlags flags)
 		{
 			List<Cdn.Variable> lst;
 
-			if (d_flaggedproperties.TryGetValue(flags, out lst))
+			if (d_flaggedVariables.TryGetValue(flags, out lst))
+			{
+				return lst.Count;
+			}
+
+			return 0;
+		}
+
+		public IEnumerable<Cdn.Variable> FlaggedVariables(Cdn.VariableFlags flags)
+		{
+			List<Cdn.Variable> lst;
+
+			if (d_flaggedVariables.TryGetValue(flags, out lst))
 			{
 				foreach (Cdn.Variable prop in lst)
 				{
@@ -487,281 +668,32 @@ namespace Cdn.RawC
 			}
 		}
 
-		public State State(Cdn.Variable property)
+		public State State(object o)
 		{
+			if (o == null)
+			{
+				return null;
+			}
+
 			State state = null;
-			d_stateMap.TryGetValue(property, out state);
+			d_stateMap.TryGetValue(o, out state);
 			
 			return state;
 		}
-		
-		public bool IsVariadic(Cdn.Variable property)
-		{
-			// A property is variadic if it is acted upon, or if it is an IN
-			State state = State(property);
-			
-			if (state != null)
-			{
-				return true;
-			}
-			
-			return (property.Flags & Cdn.VariableFlags.In) != 0;
-		}
 
-		public bool IsVariadic(Cdn.Expression expression, bool samestep)
+		public IEnumerable<State> FlaggedStates(Cdn.VariableFlags flags)
 		{
-			// See if the expression is variadic. An expression is variadic if it depends on a variadic operator/function
-			foreach (Instruction inst in expression.Instructions)
+			foreach (var v in FlaggedVariables(flags))
 			{
-				if (inst is InstructionRand)
-				{
-					return true;
-				}
-				
-				InstructionCustomOperator icop = inst as InstructionCustomOperator;
-				
-				if (icop != null)
-				{
-					// TODO: operators
-					/*foreach (Cdn.Expression ex in icop.Operator.Expressions)
-					{
-						if (IsVariadic(ex, samestep))
-						{
-							return true;
-						}
-					}*/
-				}
-			}
-			
-			// Check if any of its dependencies are then variadic maybe
-			foreach (Variable property in expression.VariableDependencies)
-			{
-				if (IsVariadic(property.Expression, samestep))
-				{
-					return true;
-				}
-				
-				if (!samestep && IsVariadic(property))
-				{
-					return true;
-				}
-			}
-			
-			return false;
-		}
-		
-		public bool IsPersist(Variable property)
-		{
-			// A property is persistent (i.e. needs a persistent storage) if:
-			//
-			// 1) it is a state (has links that act on it)
-			// 2) is either IN or OUT
-			// 3) needs separate initialization
-			State state = State(property);
-			
-			if (state != null)
-			{
-				return true;
-			}
-			
-			if ((property.Flags & (VariableFlags.In | VariableFlags.Out | VariableFlags.Once)) != VariableFlags.None)
-			{
-				return true;
-			}
-			
-			return NeedsInitialization(property, false);
-		}
+				State s = this.State(v);
 
-		public bool NeedsInitialization(Cdn.Expression expression, bool alwaysDynamic)
-		{
-			if (expression == null)
-			{
-				return false;
-			}
-
-			if (alwaysDynamic)
-			{
-				return true;
-			}
-			else
-			{
-				return IsVariadic(expression, true);
-			}
-		}
-		
-		public bool NeedsInitialization(Variable property, bool alwaysDynamic)
-		{
-			if (property == null)
-			{
-				return false;
-			}
-
-			// Always initialize dynamically if the property is persistent
-			if (alwaysDynamic)
-			{
-				return IsPersist(property);
-			}
-			else
-			{
-				// Dynamic initialization is needed only if the property is variadic within the same
-				// step
-				return NeedsInitialization(property.Expression, alwaysDynamic);
-			}
-		}
-		
-		public IEnumerable<State> States
-		{
-			get
-			{
-				foreach (State state in d_integrated)
+				if (s != null)
 				{
-					yield return state;
-				}
-
-				foreach (State state in d_direct)
-				{
-					yield return state;
-				}
-				
-				foreach (State state in d_initialize)
-				{
-					yield return state;
-				}
-				
-				foreach (State state in d_delayed)
-				{
-					yield return state;
-				}
-				
-				foreach (State state in d_precomputeBeforeDirect)
-				{
-					yield return state;
-				}
-				
-				foreach (State state in d_precomputeBeforeIntegrated)
-				{
-					yield return state;
-				}
-				
-				foreach (State state in d_precomputeAfterIntegrated)
-				{
-					yield return state;
+					yield return s;
 				}
 			}
 		}
 
-		public IEnumerable<State> IntegratedStates
-		{
-			get
-			{
-				return d_integrated;
-			}
-		}
-		
-		public IEnumerable<State> DirectStates
-		{
-			get
-			{
-				return d_direct;
-			}
-		}
-		
-		public int DirectStatesCount
-		{
-			get
-			{
-				return d_direct.Count;
-			}
-		}
-		
-		public int IntegratedStatesCount
-		{
-			get
-			{
-				return d_integrated.Count;
-			}
-		}
-		
-		public IEnumerable<State> InitializeStates
-		{
-			get
-			{
-				return d_initialize;
-			}
-		}
-		
-		public IEnumerable<State> DelayedStates
-		{
-			get
-			{
-				return d_delayed;
-			}
-		}
-		
-		public int DelayedStatesCount
-		{
-			get
-			{
-				return d_delayed.Count;
-			}
-		}
-		
-		public int InitializeStatesCount
-		{
-			get
-			{
-				return d_initialize.Count;
-			}
-		}
-		
-		public IEnumerable<State> PrecomputeBeforeDirectStates
-		{
-			get
-			{
-				return d_precomputeBeforeDirect;
-			}
-		}
-		
-		public int PrecomputeBeforeDirectStatesCount
-		{
-			get
-			{
-				return d_precomputeBeforeDirect.Count;
-			}
-		}
-		
-		public IEnumerable<State> PrecomputeBeforeIntegratedStates
-		{
-			get
-			{
-				return d_precomputeBeforeIntegrated;
-			}
-		}
-		
-		public int PrecomputeBeforeIntegratedStatesCount
-		{
-			get
-			{
-				return d_precomputeBeforeIntegrated.Count;
-			}
-		}
-		
-		public IEnumerable<State> PrecomputeAfterIntegratedStates
-		{
-			get
-			{
-				return d_precomputeAfterIntegrated;
-			}
-		}
-		
-		public int PrecomputeAfterIntegratedStatesCount
-		{
-			get
-			{
-				return d_precomputeAfterIntegrated.Count;
-			}
-		}
-		
 		public Cdn.Network Network
 		{
 			get

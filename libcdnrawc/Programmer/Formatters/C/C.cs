@@ -495,11 +495,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 		}
 		
-		private void WriteCustomMathDefine(TextWriter writer, Cdn.MathFunctionType type, int arguments, Dictionary<string, bool> generated)
+		private void WriteCustomMathDefine(TextWriter writer, Cdn.MathFunctionType type, int arguments, HashSet<string> generated)
 		{
 			string def = Context.MathFunctionDefine(type, arguments);
 			
-			if (generated.ContainsKey(def))
+			if (!generated.Add(def))
 			{
 				return;
 			}
@@ -519,8 +519,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			
 			WriteDefine(writer, def, String.Format("({0})", GenerateArgsList("x", arguments)), mathmap);
-
-			generated[def] = true;
 		}
 		
 		private void WriteDefine(TextWriter writer, string name, string args, string val, params object[] objs)
@@ -545,20 +543,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteCustomMathDefines(TextWriter writer)
 		{
 			// Always define random stuff, it's a bit special...
-			string rdef2 = "CDN_MATH_RAND2";
-			string rdef1 = "CDN_MATH_RAND1";
-			string rdef0 = "CDN_MATH_RAND0";
-
-			WriteDefine(writer, rdef2, "(a, b)", "(({0})(a + (rand () / (double)RAND_MAX) * (b - a)))", null, ValueType);
-			WriteDefine(writer, rdef1, "(a)", rdef2 + "(0, a)");
-			WriteDefine(writer, rdef0, "()", rdef1 + "(1)");
+			WriteDefine(writer, "CDN_MATH_SCALE", "(val, min, max)", "(({0})((min) + ((val) * ((max) - (min)))))", null, ValueType);
+			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random() / (double)RAND_MAX)");
 			
-			Dictionary<string, bool > generated = new Dictionary<string, bool>();
+			HashSet<string> generated = new HashSet<string>();
 			
-			generated[rdef2] = true;
-			generated[rdef1] = true;
-			generated[rdef0] = true;
-
 			foreach (Cdn.InstructionFunction inst in d_program.CollectInstructions<Cdn.InstructionFunction>())
 			{
 				if (inst.Id > (uint)MathFunctionType.NumOperators)
@@ -640,8 +629,21 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
 		{
+			bool empty = false;
+
 			foreach (Computation.INode node in nodes)
 			{
+				if (node is Computation.Empty)
+				{
+					empty = true;
+					continue;
+				}
+				else if (empty)
+				{
+					WriteComputationNode(writer, new Computation.Empty());
+					empty = false;
+				}
+
 				WriteComputationNode(writer, node);
 			}
 		}
@@ -692,7 +694,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("{");
 			
-			if (d_program.LoopsCount != 0 || Knowledge.Instance.DelayedStatesCount > 0)
+			if (d_program.LoopsCount != 0)
 			{
 				writer.WriteLine("\tint i;\n");
 			}

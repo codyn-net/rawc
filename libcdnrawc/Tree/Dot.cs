@@ -80,9 +80,16 @@ namespace Cdn.RawC.Tree
 		
 		private void WriteNode(TextWriter writer, Node node)
 		{
-			if (node.Parent == null)
+			Variable v = null;
+
+			if (node.State != null)
 			{
-				writer.WriteLine("{0} [shape=record,style=filled,fillcolor=lightblue,label=\"{1}|{2}.{3}\"];", Id(node), Label(node), node.State.Variable.Object.FullId, node.State.Variable.Name);
+				v = node.State.Object as Variable;
+			}
+
+			if (node.Parent == null && v != null)
+			{
+				writer.WriteLine("{0} [shape=record,style=filled,fillcolor=lightblue,label=\"{1}|{2}.{3}\"];", Id(node), Label(node), v.Object.FullId, v.Name);
 			}
 			else if (node.Instruction is InstructionFunction || node.Instruction is InstructionCustomFunction)
 			{

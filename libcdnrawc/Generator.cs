@@ -37,17 +37,12 @@ namespace Cdn.RawC
 
 				Knowledge.Initialize(d_network);
 
-				foreach (State state in Knowledge.Instance.IntegratedStates)
+				foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
 				{
-					d_monitors.Add(new Cdn.Monitor(d_network, state.Variable));
+					d_monitors.Add(new Cdn.Monitor(d_network, v));
 				}
 
-				foreach (State state in Knowledge.Instance.DirectStates)
-				{
-					d_monitors.Add(new Cdn.Monitor(d_network, state.Variable));
-				}
-
-				foreach (Variable v in Knowledge.Instance.FlaggedProperties(VariableFlags.Out))
+				foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
 				{
 					d_monitors.Add(new Cdn.Monitor(d_network, v));
 				}
@@ -426,6 +421,11 @@ namespace Cdn.RawC
 			{
 				ResolveState(state, embeddings, mapping, ret);
 			}
+
+			foreach (State state in Knowledge.Instance.InitializeStates)
+			{
+				ResolveState(state, embeddings, mapping, ret);
+			}
 			
 			return ret;
 		}
@@ -519,8 +519,12 @@ namespace Cdn.RawC
 			
 			foreach (State state in Knowledge.Instance.States)
 			{
-				Tree.Node tree = Tree.Node.Create(state);
-				forest.Add(tree);
+				forest.Add(Tree.Node.Create(state));
+			}
+
+			foreach (State state in Knowledge.Instance.InitializeStates)
+			{
+				forest.Add(Tree.Node.Create(state));
 			}
 			
 			return collector.Collect(forest.ToArray());

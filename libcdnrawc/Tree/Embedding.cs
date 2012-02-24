@@ -215,23 +215,11 @@ namespace Cdn.RawC.Tree
 		private bool SameArguments(Node a, Node b)
 		{
 			// Check if the nodes in a and b, at 'path' are the same thing
-			if (!a.Instruction.Equal(b.Instruction))
+			if (!a.Instruction.Equal(b.Instruction, false))
 			{
 				return false;
 			}
-			
-			// We need an additional check for properties because Instruction.Equal
-			// defines property instructions to be equal only based on checking the
-			// name of the property and the binding (because this means equality in terms
-			// of expression). However, we need to know _exact_ equality
-			InstructionVariable aprop = a.Instruction as InstructionVariable;
-			InstructionVariable bprop = b.Instruction as InstructionVariable;
-			
-			if (aprop != null && bprop != null)
-			{
-				return aprop.Variable == bprop.Variable;
-			}
-			
+
 			if (a.Children.Count != b.Children.Count)
 			{
 				return false;

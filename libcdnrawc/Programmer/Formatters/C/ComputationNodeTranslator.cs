@@ -109,6 +109,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string Translate(Computation.Assignment node, Context context)
 		{
+			string eq = InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation));
+
 			if ((node.Item.Type & DataTable.DataItem.Flags.Integrated) != 0 &&
 				context.Program.NodeIsInitialization(node))
 			{
@@ -116,13 +118,29 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			                     node.Item.Table.Name,
 			                     node.Item.AliasOrIndex,
 					             node.Item.Index + context.Program.IntegrateTable.Count,
-			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation)));
+			                     eq);
 			}
+			/*else if (node.State is DelayedState)
+			{
+				DelayedState ds = (DelayedState)node.State;
 
-			return String.Format("{0}[{1}] = {2};",
+				uint size = (uint)System.Math.Round(ds.Delay / Cdn.RawC.Options.Instance.DelayTimeStep) + 1;
+				DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
+
+				return String.Format("{0}[{1} + {2}[{3}]] = {4};",
 			                     node.Item.Table.Name,
 			                     node.Item.AliasOrIndex,
-			                     InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation)));
+			                     context.Program.DelayedCounters.Name,
+			                     counter.Index,
+				                 eq);
+			}*/
+			else
+			{
+				return String.Format("{0}[{1}] = {2};",
+				                     node.Item.Table.Name,
+				                     node.Item.AliasOrIndex,
+				                     eq);
+			}
 		}
 		
 		private string Translate(Computation.ZeroTable node, Context context)

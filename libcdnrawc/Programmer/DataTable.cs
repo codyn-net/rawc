@@ -15,6 +15,11 @@ namespace Cdn.RawC.Programmer
 		private bool d_integertype;
 		private ulong d_maxSize;
 		private bool d_locked;
+
+		public interface IKey
+		{
+			object DataKey { get; }
+		}
 		
 		public class DataItem
 		{
@@ -276,53 +281,18 @@ namespace Cdn.RawC.Programmer
 		
 		private object BaseKey(object key)
 		{
-			State state;
-			DelayedState dstate;
-			Tree.Node node;
+			IKey keyed;
 
-			if (As(key, out state) && state.Variable != null)
+			if (As(key, out keyed))
 			{
-				return state.Variable;
-			}
-			else if (As(key, out dstate))
-			{
-				return new DelayedState.Key(dstate.Operator, dstate.Delay);
-			}
-			else if (As(key, out node))
-			{
-				InstructionVariable prop = node.Instruction as InstructionVariable;
-				
-				if (prop != null)
-				{
-					return prop.Variable;
-				}
-				
-				Instructions.State st = node.Instruction as Instructions.State;
-				
-				if (st != null)
-				{
-					return st.Item;
-				}
-				
-				InstructionCustomOperator op = node.Instruction as InstructionCustomOperator;
-				
-				if (op != null && op.Operator is OperatorDelayed)
-				{
-					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
-					double delay = 0;
+				object r = keyed.DataKey;
 
-					Knowledge.Instance.Delays.TryGetValue(opdel, out delay);
-					return new DelayedState.Key(opdel, delay);
-				}
-				
-				InstructionNumber opnum = node.Instruction as InstructionNumber;
-				
-				if (opnum != null)
+				if (r != null)
 				{
-					return opnum.Value;
+					return r;
 				}
 			}
-			
+
 			return key;
 		}
 		
@@ -347,17 +317,6 @@ namespace Cdn.RawC.Programmer
 			
 			d_items.Add(b, ret);
 			d_list.Add(ret);
-			
-			DelayedState dstate;
-			
-			if (As(key, out dstate))
-			{
-				/* Also add memory in the table for all the delayed values */
-				for (uint i = 1; i < dstate.Count; ++i)
-				{
-					d_list.Add(new DataItem(this, b, d_list.Count, DataItem.Flags.Delayed));
-				}
-			}
 
 			return ret;
 		}

@@ -70,12 +70,12 @@ namespace Cdn.RawC
 
 			public override int GetHashCode()
 			{
-				Tree.Expression val = new Tree.Expression(d_delayed.Expression);
+				Tree.Expression val = new Tree.Expression(d_delayed.Expression, true);
 				string s = val.HashString;
 				
 				if (d_delayed.InitialValue != null)
 				{
-					val = new Cdn.RawC.Tree.Expression(d_delayed.InitialValue);
+					val = new Cdn.RawC.Tree.Expression(d_delayed.InitialValue, true);
 	
 					s += ", " + val.HashString;
 				}
@@ -97,24 +97,32 @@ namespace Cdn.RawC
 					return false;
 				}
 				
-				return d_delayed.Equal(other.d_delayed);
+				return d_delayed.Equal(other.d_delayed, false);
 			}
 		}
 
-		private OperatorDelayed d_delayed;
+		private InstructionCustomOperator d_delayed;
 		private Size d_size;
 		private double d_delay;
 		
-		public DelayedState(OperatorDelayed delayed, double delay) : this(delayed, delay, Flags.None)
+		public DelayedState(InstructionCustomOperator delayed, double delay) : this(delayed, delay, Flags.None)
 		{
 		}
 
-		public DelayedState(OperatorDelayed delayed, double delay, Flags type) : base(delayed.Expression, delayed.InitialValue, Flags.Delayed | type)
+		public DelayedState(InstructionCustomOperator delayed, double delay, Flags type) : base(delayed, (type & Flags.Initialization) != 0 ? ((OperatorDelayed)delayed.Operator).InitialValue : (Cdn.Expression)null, type)
 		{
 			d_delayed = delayed;
 			d_delay = delay;
 			
 			d_size = new Size((uint)System.Math.Round(d_delay / Options.Instance.DelayTimeStep) + 1);
+		}
+
+		public override object DataKey
+		{
+			get
+			{
+				return new Key(Operator, Delay);
+			}
 		}
 		
 		public double Delay
@@ -137,7 +145,7 @@ namespace Cdn.RawC
 		{
 			get
 			{
-				return d_delayed;
+				return d_delayed.Operator as OperatorDelayed;
 			}
 		}
 	}
