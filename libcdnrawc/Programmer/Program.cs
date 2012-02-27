@@ -545,10 +545,12 @@ namespace Cdn.RawC.Programmer
 			                                          ObjectSelector selector)
 		{
 			HashSet<State> ret = new HashSet<State>();
+			bool didit = false;
 
 			foreach (State s in states)
 			{
 				bool found = false;
+				didit = true;
 
 				foreach (State dep in depon)
 				{
@@ -585,6 +587,14 @@ namespace Cdn.RawC.Programmer
 				}
 
 				if (!found && ison && rest != null)
+				{
+					rest.Add(s);
+				}
+			}
+
+			if (!didit && rest != null)
+			{
+				foreach (State s in depon)
 				{
 					rest.Add(s);
 				}
