@@ -26,6 +26,8 @@ namespace Cdn.RawC
 
 			if (Options.Instance.Validate)
 			{
+				StaticRandExpressions();
+
 				d_network.Compiled += delegate {
 					StaticRandExpressions();
 				};
@@ -170,21 +172,23 @@ namespace Cdn.RawC
 		private void StaticRandExpression(Cdn.Expression expr)
 		{
 			Instruction[] instructions = expr.Instructions;
-			Cdn.Stack stack = new Cdn.Stack((uint)instructions.Length);
+			Cdn.Stack stack = new Cdn.Stack(expr.StackSize);
 			Stack<List<Instruction >> args = new Stack<List<Instruction>>();
 
 			foreach (Cdn.Instruction inst in instructions)
 			{
 				InstructionRand func = inst as InstructionRand;
-				int popped = InstructionStackMod(inst);
+
+				StackManipulation smanip = inst.GetStackManipulation();
 
 				if (func != null)
 				{
+					func.Next();
 					func.Execute(stack);
 
 					double val = stack.At((int)stack.Count() - 1);
 
-					for (int i = 0; i < popped; ++i)
+					for (int i = 0; i < smanip.NumPop; ++i)
 					{
 						args.Pop();
 					}
@@ -205,7 +209,7 @@ namespace Cdn.RawC
 
 					List<Instruction > ret = new List<Instruction>();
 
-					for (int i = 0; i < popped; ++i)
+					for (int i = 0; i < smanip.NumPop; ++i)
 					{
 						List<Instruction > ir = new List<Instruction>(args.Pop());
 						ir.Reverse();
@@ -241,6 +245,16 @@ namespace Cdn.RawC
 			d_network.ForeachExpression((expr) => {
 				StaticRandExpression(expr);
 			});
+
+			d_network.Taint();
+
+			var err = new CompileError();
+
+			if (!d_network.Compile(null, err))
+			{
+				Console.Error.WriteLine("Failed to compile network after static rand: {0}", err.FormattedString);
+				Environment.Exit(1);
+			}
 		}
 		
 		private void Validate()
