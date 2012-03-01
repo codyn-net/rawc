@@ -31,7 +31,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string Translate(double number)
 		{
-			return NumberTranslator.Translate(number);
+			return NumberTranslator.Translate(number, null);
 		}
 		
 		private string Translate(DelayedState.Size size)

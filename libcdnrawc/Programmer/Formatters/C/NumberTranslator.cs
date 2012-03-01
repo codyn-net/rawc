@@ -14,11 +14,31 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 		}
 
-		public static string Translate(double number, int precision)
+		private static string SpecifierFromContext(Context context)
 		{
-			if (precision == 0)
+			if (context != null && context.Options.ValueType == "float")
 			{
-				return Translate(System.Math.Floor(number));
+				return "f";
+			}
+			else
+			{
+				return "";
+			}
+		}
+
+		public static string Translate(double number, int precision, Context context)
+		{
+			if (Double.IsNaN(number))
+			{
+				return "NAN";
+			}
+			else if (Double.IsInfinity(number))
+			{
+				return "INFINITY";
+			}
+			else if (precision == 0)
+			{
+				return Translate(System.Math.Floor(number), context);
 			}
 			else
 			{
@@ -26,13 +46,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 
-		public static string Translate(double number)
+		public static string Translate(double number, Context context)
 		{
-			string val = Translate(number, 15);
+			if (Double.IsNaN(number))
+			{
+				return "NAN";
+			}
+			else if (Double.IsInfinity(number))
+			{
+				return "INFINITY";
+			}
+
+			string val = Translate(number, 15, context);
 
 			if (val.IndexOf('.') == -1)
 			{
-				return val + ".0";
+				return val + ".0" + SpecifierFromContext(context);
 			}
 			else
 			{
@@ -43,43 +72,40 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					val += "0";
 				}
 
-				return val;
+				return val + SpecifierFromContext(context);
 			}
 		}
 
-		public static string Translate(Cdn.Variable property)
+		public static string Translate(Cdn.Variable property, Context context)
 		{
 			Instruction[] instructions = property.Expression.Instructions;
 			
-			if (instructions.Length == 1)
+			if (instructions.Length == 1 && instructions[0] is InstructionNumber)
 			{
-				if (instructions[0] is InstructionNumber)
+				string val = property.Expression.AsString;
+				int pos = val.IndexOf('.');
+				
+				if (pos == -1)
 				{
-					string val = property.Expression.AsString;
-					int pos = val.IndexOf('.');
-					
-					if (pos == -1)
-					{
-						return Translate(property.Value);
-					}
-					else
-					{
-						return Translate(property.Value, val.Length - pos - 1);
-					}
+					return Translate(property.Value, context);
+				}
+				else
+				{
+					return Translate(property.Value, val.Length - pos - 1, context);
 				}
 			}
 
-			return Translate(property.Value);
+			return Translate(property.Value, context);
 		}
 		
-		private string DoTranslate(double number)
+		private string DoTranslate(double number, Context context)
 		{
-			return Translate(number);
+			return Translate(number, context);
 		}
 		
-		private string DoTranslate(Cdn.Variable property)
+		private string DoTranslate(Cdn.Variable property, Context context)
 		{
-			return Translate(property);
+			return Translate(property, context);
 		}
 	}
 }

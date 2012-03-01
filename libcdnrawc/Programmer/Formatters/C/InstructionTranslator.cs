@@ -152,7 +152,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return "M_E";
 			}
 
-			return NumberTranslator.Translate(instruction.Value);
+			return NumberTranslator.Translate(instruction.Value, context);
 		}
 		
 		private string TranslateOperator(InstructionFunction instruction, Context context)
