@@ -52,9 +52,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return "NAN";
 			}
-			else if (Double.IsInfinity(number))
+			else if (Double.IsPositiveInfinity(number))
 			{
 				return "INFINITY";
+			}
+			else if (Double.IsNegativeInfinity(number))
+			{
+				return "-INFINITY";
 			}
 
 			string val = Translate(number, 15, context);
