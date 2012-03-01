@@ -144,8 +144,7 @@ main (int argc, char *argv[])
 
 	srand (seed);
 
-	${name}_initialize (0);
-	${name}_set (${NAME}_STATE_T, from);
+	${name}_initialize (from);
 
 	to += step / 2;
 

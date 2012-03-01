@@ -170,8 +170,7 @@ mexFunction (int nlhs,
 
 	srand (seed);
 	
-	${name}_initialize ();
-	${name}_set (${NAME}_STATE_T, from);
+	${name}_initialize (from);
 	
 	to += timestep / 2;
 
