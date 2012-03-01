@@ -20,6 +20,35 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return (new ComputationNodeTranslator()).Invoke<string>(node, context);
 		}
+
+		private string Translate(Computation.Rand node, Context context)
+		{
+			if (node.Empty)
+			{
+				return "";
+			}
+
+			StringBuilder ret = new StringBuilder();
+
+			ret.AppendLine("{");
+			ret.AppendLine("\tint i;");
+			ret.AppendLine();
+
+			foreach (KeyValuePair<int, int> pair in node.Ranges(context.Program.StateTable))
+			{
+				ret.AppendFormat("\tfor (i = {0}; i <= {1}; ++i)", pair.Key, pair.Value);
+				ret.AppendLine();
+				ret.AppendLine("\t{");
+				ret.AppendFormat("\t\t{0}[i] = CDN_MATH_RAND ();",
+				                 context.Program.StateTable.Name);
+				ret.AppendLine();
+				ret.AppendLine("\t}");
+			}
+
+			ret.Append("}");
+			
+			return ret.ToString();
+		}
 		
 		private string Translate(Computation.Loop node, Context context)
 		{

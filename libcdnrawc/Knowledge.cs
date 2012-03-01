@@ -292,7 +292,7 @@ namespace Cdn.RawC
 	
 						State rs = new State(r, expr, RawC.State.Flags.None);
 
-						if (AddState(un, rs))
+						if (AddState(un, rs, false))
 						{
 							d_randStates.Add(rs);
 						}

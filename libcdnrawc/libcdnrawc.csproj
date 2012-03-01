@@ -91,6 +91,7 @@
     <Compile Include="DelayedState.cs" />
     <Compile Include="Programmer\Computation\IncrementDelayedCounters.cs" />
     <Compile Include="Programmer\Computation\InitializeDelayHistory.cs" />
+    <Compile Include="Programmer\Computation\Rand.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

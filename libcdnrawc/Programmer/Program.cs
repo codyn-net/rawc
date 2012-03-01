@@ -741,7 +741,7 @@ namespace Cdn.RawC.Programmer
 			if (rands.Count > 0)
 			{
 				d_source.Add(new Computation.Comment("Compute new random values"));
-				d_source.AddRange(AssignmentStates(Knowledge.Instance.RandStates));
+				d_source.Add(new Computation.Rand(Knowledge.Instance.RandStates));
 				d_source.Add(new Computation.Empty());
 
 				modset.AddRange(rands);
@@ -801,6 +801,15 @@ namespace Cdn.RawC.Programmer
 			HashSet<State> ontime = new HashSet<State>();
 			HashSet<DelayedState> dontime = new HashSet<DelayedState>();
 
+			List<State> rands = new List<State>(Knowledge.Instance.RandStates);
+
+			if (rands.Count > 0)
+			{
+				d_source.Add(new Computation.Comment("Compute initial random values"));
+				d_source.Add(new Computation.Rand(Knowledge.Instance.RandStates));
+				d_source.Add(new Computation.Empty());
+			}
+
 			List<State> ddd = new List<State>();
 
 			ddd.AddRange(Array.ConvertAll<DelayedState, State>(d_delayedStates.ToArray(), (a) => { return a; }));
@@ -829,7 +838,7 @@ namespace Cdn.RawC.Programmer
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(not))
 			{
 				d_initialization.Add(new Computation.Empty());
-				d_initialization.AddRange(AssignmentStates(grp, null));
+				d_initialization.AddRange(AssignmentStates(grp, new List<Computation.Loop>()));
 				d_initialization.Add(new Computation.Empty());
 			}
 
@@ -884,7 +893,7 @@ namespace Cdn.RawC.Programmer
 			// Finally, initialize those states that depend on t again
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(ontimeleft))
 			{
-				d_initialization.AddRange(AssignmentStates(grp, d_initLoops));
+				d_initialization.AddRange(AssignmentStates(grp, new List<Computation.Loop>()));
 			}
 		}
 		

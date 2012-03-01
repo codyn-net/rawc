@@ -85,6 +85,7 @@ FILES = \
 	Programmer/Computation/Loop.cs \
 	Programmer/Computation/Assignment.cs \
 	Programmer/Computation/InitializeDelayHistory.cs \
+	Programmer/Computation/Rand.cs \
 	Programmer/Program.cs \
 	Programmer/Instructions/Variable.cs \
 	Programmer/Instructions/Function.cs \
