@@ -115,7 +115,18 @@ namespace Cdn.RawC
 			
 			if (Options.Instance.PrintCompileSource)
 			{
-				Console.WriteLine(Options.Instance.Formatter.CompileSource());
+				if (Options.Instance.Validate)
+				{
+					foreach (string filename in d_writtenFiles)
+					{
+						Console.WriteLine("File: {0}", filename);
+						Console.WriteLine(File.ReadAllText(filename));
+					}
+				}
+				else
+				{
+					Console.WriteLine(Options.Instance.Formatter.CompileSource());
+				}
 			}
 
 			if (Options.Instance.PrintMexSource)
@@ -123,7 +134,7 @@ namespace Cdn.RawC
 				Console.WriteLine(Options.Instance.Formatter.MexSource());
 			}
 
-			if (Options.Instance.Validate)
+			if (Options.Instance.Validate && !Options.Instance.PrintCompileSource)
 			{
 				try
 				{
