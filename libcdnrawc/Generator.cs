@@ -313,7 +313,16 @@ namespace Cdn.RawC
 
 				try
 				{
-					data.Add(new List<double>(Array.ConvertAll<string, double>(line.Split('\t'), a => Double.Parse(a))));
+					data.Add(new List<double>(Array.ConvertAll<string, double>(line.Split('\t'), a => {
+						if (a.Trim().ToLower() == "nan")
+						{
+							return Double.NaN;
+						}
+						else
+						{
+							return Double.Parse(a);
+						}
+					})));
 				}
 				catch
 				{
