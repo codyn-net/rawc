@@ -314,9 +314,23 @@ namespace Cdn.RawC
 				try
 				{
 					data.Add(new List<double>(Array.ConvertAll<string, double>(line.Split('\t'), a => {
-						if (a.Trim().ToLower() == "nan")
+						string trimmed = a.Trim().ToLower();
+
+						if (trimmed == "nan")
 						{
 							return Double.NaN;
+						}
+						else if (trimmed == "-nan")
+						{
+							return -Double.NaN;
+						}
+						else if (trimmed == "inf")
+						{
+							return Double.PositiveInfinity;
+						}
+						else if (trimmed == "-inf")
+						{
+							return Double.NegativeInfinity;
 						}
 						else
 						{
