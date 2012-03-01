@@ -157,29 +157,6 @@ namespace Cdn.RawC
 			}
 		}
 
-		private int InstructionStackMod(Instruction inst)
-		{
-			if (inst is InstructionNumber ||
-				inst is InstructionVariable)
-			{
-				return 0;
-			}
-			else if (inst is InstructionFunction)
-			{
-				return ((InstructionFunction)inst).GetStackManipulation().NumPop;
-			}
-			else if (inst is InstructionCustomFunction)
-			{
-				return ((InstructionCustomFunction)inst).GetStackManipulation().NumPop;
-			}
-			else if (inst is InstructionCustomOperator)
-			{
-				// Don't know yet
-			}
-
-			return 0;
-		}
-
 		private void StaticRandExpression(Cdn.Expression expr)
 		{
 			Instruction[] instructions = expr.Instructions;
