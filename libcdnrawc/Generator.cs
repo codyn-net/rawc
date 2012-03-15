@@ -352,7 +352,8 @@ namespace Cdn.RawC
 				
 				for (int j = 0; j < raw.Count; ++j)
 				{
-					if (System.Math.Abs(d_monitored[j][i] - raw[j]) > opts.ValidatePrecision)
+					if (System.Math.Abs(d_monitored[j][i] - raw[j]) > opts.ValidatePrecision ||
+					    double.IsNaN(d_monitored[j][i]) != double.IsNaN(raw[j]))
 					{
 						failures.Add(String.Format("{0} (got {1} but expected {2})",
 							         d_monitors[j].Variable.FullName,
