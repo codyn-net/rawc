@@ -774,7 +774,7 @@ namespace Cdn.RawC.Programmer
 
 				foreach (List<State> grp in grps)
 				{
-					d_source.AddRange(AssignmentStates(grp));
+					d_source.AddRange(AssignmentStates(grp, null));
 					d_source.Add(new Computation.Empty());
 
 					modset.AddRange(grp);
