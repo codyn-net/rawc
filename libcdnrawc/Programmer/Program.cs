@@ -839,7 +839,7 @@ namespace Cdn.RawC.Programmer
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(not))
 			{
 				d_initialization.Add(new Computation.Empty());
-				d_initialization.AddRange(AssignmentStates(grp, new List<Computation.Loop>()));
+				d_initialization.AddRange(AssignmentStates(grp, null));
 				d_initialization.Add(new Computation.Empty());
 			}
 
@@ -894,7 +894,7 @@ namespace Cdn.RawC.Programmer
 			// Finally, initialize those states that depend on t again
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(ontimeleft))
 			{
-				d_initialization.AddRange(AssignmentStates(grp, new List<Computation.Loop>()));
+				d_initialization.AddRange(AssignmentStates(grp, null));
 			}
 		}
 		
