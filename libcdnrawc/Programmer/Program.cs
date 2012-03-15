@@ -805,14 +805,15 @@ namespace Cdn.RawC.Programmer
 
 			if (rands.Count > 0)
 			{
-				d_source.Add(new Computation.Comment("Compute initial random values"));
-				d_source.Add(new Computation.Rand(Knowledge.Instance.RandStates));
-				d_source.Add(new Computation.Empty());
+				d_initialization.Add(new Computation.Comment("Compute initial random values"));
+				d_initialization.Add(new Computation.Rand(Knowledge.Instance.RandStates));
+				d_initialization.Add(new Computation.Empty());
 			}
 
 			List<State> ddd = new List<State>();
 
-			ddd.AddRange(Array.ConvertAll<DelayedState, State>(d_delayedStates.ToArray(), (a) => { return a; }));
+			ddd.AddRange(Array.ConvertAll<DelayedState, State>(d_delayedStates.ToArray(), (a) => {
+				return a; }));
 			ddd.Add(Knowledge.Instance.Time);
 
 			ontime = FilterDependsOn(Knowledge.Instance.InitializeStates, ddd, not);
