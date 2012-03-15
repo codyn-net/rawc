@@ -418,6 +418,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string GenerateArgsList(string prefix, int num, int numstart, string type)
 		{
+			if (num == 0)
+			{
+				return "void";
+			}
+
 			string[] ret = new string[num];
 			string extra = !String.IsNullOrEmpty(type) ? String.Format("{0} ", type) : "";
 			
