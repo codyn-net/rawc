@@ -8,7 +8,6 @@ namespace Cdn.RawC.Tree
 	{
 		private Cdn.Expression d_expression;
 		private uint[] d_hash;
-
 		private static Dictionary<string, uint> s_hashMapping;
 		private static uint s_nextMap;
 		
@@ -160,6 +159,8 @@ namespace Cdn.RawC.Tree
 			}
 			else if (strict)
 			{
+				InstructionRand irand;
+
 				if (InstructionIs(inst, out ivar))
 				{
 					yield return HashMap(String.Format("var_{0}", ivar.Variable.FullName));
@@ -167,6 +168,10 @@ namespace Cdn.RawC.Tree
 				else if (InstructionIs(inst, out inum))
 				{
 					yield return HashMap(String.Format("num_{0}", inum.Value));
+				}
+				else if (InstructionIs(inst, out irand))
+				{
+					yield return HashMap(String.Format("rand_{0}", irand.Handle));
 				}
 				else
 				{
