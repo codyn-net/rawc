@@ -737,14 +737,15 @@ namespace Cdn.RawC.Programmer
 
 			// Generate new random values
 			List<State> rands = new List<State>(Knowledge.Instance.RandStates);
+			HashSet<State> randsdeps = FilterDependsMe(Knowledge.Instance.States, rands);
 
-			if (rands.Count > 0)
+			if (randsdeps.Count > 0)
 			{
 				d_source.Add(new Computation.Comment("Compute new random values"));
-				d_source.Add(new Computation.Rand(Knowledge.Instance.RandStates));
+				d_source.Add(new Computation.Rand(randsdeps));
 				d_source.Add(new Computation.Empty());
 
-				modset.AddRange(rands);
+				modset.AddRange(randsdeps);
 			}
 
 			// Postcompute aux
@@ -788,7 +789,7 @@ namespace Cdn.RawC.Programmer
 			// Update aux variables that depend on delays
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(later))
 			{
-				d_source.Add(new Computation.Comment("Auxiliary variables that depend on delays"));
+				d_source.Add(new Computation.Comment("Auxiliary variables that depend on delays (or just come last)"));
 				d_source.AddRange(AssignmentStates(grp));
 				d_source.Add(new Computation.Empty());
 			}
