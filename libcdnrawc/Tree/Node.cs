@@ -104,17 +104,7 @@ namespace Cdn.RawC.Tree
 			{
 				d_label = Expression.InstructionCode(instruction);
 				size = instruction.GetStackManipulation().NumPop;
-			}
-
-			InstructionFunction ifunc = instruction as InstructionFunction;
-				
-			if (ifunc != null)
-			{
-				d_isCommutative = Cdn.Math.FunctionIsCommutative((Cdn.MathFunctionType)ifunc.Id);
-			}
-			else
-			{
-				d_isCommutative = false;
+				d_isCommutative = instruction.IsCommutative;
 			}
 
 			d_isLeaf = size == 0;
