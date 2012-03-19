@@ -91,7 +91,7 @@ namespace Cdn.RawC
 			
 			// Filter conflicts and resolve final embeddings
 			Tree.Embedding[] embeddings = Filter(collection);
-			
+
 			// Resolve final equations
 			Dictionary<State, Tree.Node> equations = ResolveEquations(embeddings);
 			
@@ -578,7 +578,18 @@ namespace Cdn.RawC
 				filter = new Tree.Filters.Default();
 			}
 
-			return filter.Filter(collection.Prototypes);
+			// Prefilter remove rands
+			List<Tree.Embedding> ret = new List<Tree.Embedding>();
+
+			foreach (Tree.Embedding embed in collection.Prototypes)
+			{
+				if (!(embed.Expression.Instruction is InstructionRand))
+				{
+					ret.Add(embed);
+				}
+			}
+
+			return filter.Filter(ret);
 		}
 	}
 }
