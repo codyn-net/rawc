@@ -170,6 +170,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				case MathFunctionType.Tanh:
 					val = String.Format("CDN_MATH_{0}", name.ToUpper());
 				break;
+				case MathFunctionType.Power:
+					val = "CDN_MATH_POW";
+				break;
 				default:
 					throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}

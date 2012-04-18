@@ -442,7 +442,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			else
 			{
-				return String.Format("{0}2(x0, {0}{1}({2}))", name, arguments - 1, GenerateArgsList("x", arguments - 1, 1));
+				return String.Format("{0}2 (x0, {0}{1} ({2}))", name, arguments - 1, GenerateArgsList("x", arguments - 1, 1));
 			}
 		}
 		
@@ -477,11 +477,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Round:
 			case MathFunctionType.Tan:
 			case MathFunctionType.Tanh:
-				{
-					return String.Format("{0}{1}({2})", name.ToLower(), IsDouble ? "" : "f", GenerateArgsList("x", arguments));
-				}
+				return String.Format("{0}{1} ({2})", name.ToLower(), IsDouble ? "" : "f", GenerateArgsList("x", arguments));
+			case MathFunctionType.Power:
+				return String.Format("pow{0} ({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
 			case MathFunctionType.Ln:
-				return String.Format("log{0}({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
+				return String.Format("log{0} ({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
 			case MathFunctionType.Lerp:
 				return "(x0 + (x1 - x0) * x2)";
 			case MathFunctionType.Max:
@@ -491,7 +491,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Sqsum:
 				return NestedImplementation("CDN_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
 			case MathFunctionType.Invsqrt:
-				return IsDouble ? "1 / sqrt(x0)" : "1 / sqrtf(x0)";
+				return IsDouble ? "1 / sqrt (x0)" : "1 / sqrtf (x0)";
 			default:
 				break;
 					
@@ -544,18 +544,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("#endif /* {0} */", name);
 			writer.WriteLine();
 		}
-		
+
 		private void WriteCustomMathDefines(TextWriter writer)
 		{
 			// Always define random stuff, it's a bit special...
 			WriteDefine(writer, "CDN_MATH_SCALE", "(val, min, max)", "(({0})((min) + ((val) * ((max) - (min)))))", null, ValueType);
-			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random() / (double)RAND_MAX)");
+			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random () / (double)RAND_MAX)");
 			
 			HashSet<string> generated = new HashSet<string>();
 			
 			foreach (Cdn.InstructionFunction inst in d_program.CollectInstructions<Cdn.InstructionFunction>())
 			{
-				if (inst.Id > (uint)MathFunctionType.NumOperators)
+				if (inst.Id > (uint)MathFunctionType.NumOperators || inst.Id == (uint)MathFunctionType.Power)
 				{
 					WriteCustomMathDefine(writer, (Cdn.MathFunctionType)inst.Id, inst.GetStackManipulation().NumPop, generated);
 				}
