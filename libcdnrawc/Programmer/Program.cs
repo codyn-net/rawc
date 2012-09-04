@@ -700,10 +700,10 @@ namespace Cdn.RawC.Programmer
 			Cdn.Variable tprop = Knowledge.Instance.Network.Integrator.Variable("t");
 			DataTable.DataItem t = d_statetable[tprop];
 
-			Tree.Node eq = new Tree.Node(null, new InstructionFunction((int)Cdn.MathFunctionType.Plus, "+", 2));
-			
-			eq.Add(new Tree.Node(null, new InstructionVariable(tprop, InstructionVariableBinding.None)));
-			eq.Add(new Tree.Node(null, new InstructionVariable(dtprop, InstructionVariableBinding.None)));
+			Cdn.Expression expr = new Cdn.Expression("t + dt");
+			expr.Compile(Knowledge.Instance.Network.GetCompileContext(null), null);
+
+			Tree.Node eq = Tree.Node.Create(null, expr.Instructions);
 
 			d_source.Add(new Computation.Comment("Increase time"));
 			d_source.Add(new Computation.Assignment(null, t, eq));
