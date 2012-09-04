@@ -142,39 +142,39 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			switch (type)
 			{
-				case MathFunctionType.Abs:
-				case MathFunctionType.Acos:
-				case MathFunctionType.Asin:
-				case MathFunctionType.Atan:
-				case MathFunctionType.Atan2:
-				case MathFunctionType.Ceil:
-				case MathFunctionType.Cos:
-				case MathFunctionType.Cosh:
-				case MathFunctionType.Exp:
-				case MathFunctionType.Exp2:
-				case MathFunctionType.Floor:
-				case MathFunctionType.Hypot:
-				case MathFunctionType.Invsqrt:
-				case MathFunctionType.Lerp:
-				case MathFunctionType.Ln:
-				case MathFunctionType.Log10:
-				case MathFunctionType.Max:
-				case MathFunctionType.Min:
-				case MathFunctionType.Pow:
-				case MathFunctionType.Round:
-				case MathFunctionType.Sin:
-				case MathFunctionType.Sinh:
-				case MathFunctionType.Sqrt:
-				case MathFunctionType.Sqsum:
-				case MathFunctionType.Tan:
-				case MathFunctionType.Tanh:
-					val = String.Format("CDN_MATH_{0}", name.ToUpper());
+			case MathFunctionType.Abs:
+			case MathFunctionType.Acos:
+			case MathFunctionType.Asin:
+			case MathFunctionType.Atan:
+			case MathFunctionType.Atan2:
+			case MathFunctionType.Ceil:
+			case MathFunctionType.Cos:
+			case MathFunctionType.Cosh:
+			case MathFunctionType.Exp:
+			case MathFunctionType.Exp2:
+			case MathFunctionType.Floor:
+			case MathFunctionType.Hypot:
+			case MathFunctionType.Invsqrt:
+			case MathFunctionType.Lerp:
+			case MathFunctionType.Ln:
+			case MathFunctionType.Log10:
+			case MathFunctionType.Max:
+			case MathFunctionType.Min:
+			case MathFunctionType.Pow:
+			case MathFunctionType.Round:
+			case MathFunctionType.Sin:
+			case MathFunctionType.Sinh:
+			case MathFunctionType.Sqrt:
+			case MathFunctionType.Sqsum:
+			case MathFunctionType.Tan:
+			case MathFunctionType.Tanh:
+				val = String.Format("CDN_MATH_{0}", name.ToUpper());
 				break;
-				case MathFunctionType.Power:
-					val = "CDN_MATH_POW";
+			case MathFunctionType.Power:
+				val = "CDN_MATH_POW";
 				break;
-				default:
-					throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
+			default:
+				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
 			
 			if (Cdn.Math.FunctionIsVariable(type))
