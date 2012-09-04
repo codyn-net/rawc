@@ -448,7 +448,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string MathFunctionMap(Cdn.InstructionFunction instruction)
 		{
-			return MathFunctionMap((Cdn.MathFunctionType)instruction.Id, instruction.GetStackManipulation().NumPop);
+			return MathFunctionMap((Cdn.MathFunctionType)instruction.Id, (int)instruction.GetStackManipulation().Pop.Num);
 		}
 		
 		private string MathFunctionMap(Cdn.MathFunctionType type, int arguments)
@@ -557,7 +557,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				if (inst.Id > (uint)MathFunctionType.NumOperators || inst.Id == (uint)MathFunctionType.Power)
 				{
-					WriteCustomMathDefine(writer, (Cdn.MathFunctionType)inst.Id, inst.GetStackManipulation().NumPop, generated);
+					WriteCustomMathDefine(writer, (Cdn.MathFunctionType)inst.Id, (int)inst.GetStackManipulation().Pop.Num, generated);
 				}
 			}
 		}

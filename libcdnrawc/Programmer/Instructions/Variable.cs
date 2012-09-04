@@ -10,7 +10,7 @@ namespace Cdn.RawC.Programmer.Instructions
 		{
 			d_name = name;
 		}
-		
+
 		public string Name
 		{
 			get
@@ -18,7 +18,7 @@ namespace Cdn.RawC.Programmer.Instructions
 				return d_name;
 			}
 		}
-		
+
 		public static new GLib.GType GType
 		{
 			get

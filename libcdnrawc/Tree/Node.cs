@@ -35,7 +35,7 @@ namespace Cdn.RawC.Tree
 				int numargs = 0;
 				
 				InstructionCustomOperator icop = inst as InstructionCustomOperator;
-				numargs = inst.GetStackManipulation().NumPop;
+				numargs = (int)inst.GetStackManipulation().Pop.Num;
 
 				for (int j = 0; j < numargs; ++j)
 				{
@@ -92,7 +92,7 @@ namespace Cdn.RawC.Tree
 		
 		public Node(State state, Instruction instruction)
 		{
-			int size = 0;
+			uint size = 0;
 			
 			d_label = 0;
 			
@@ -103,13 +103,18 @@ namespace Cdn.RawC.Tree
 			if (instruction != null)
 			{
 				d_label = Expression.InstructionCode(instruction);
-				size = instruction.GetStackManipulation().NumPop;
+
+				if (instruction.GetStackManipulation() != null)
+				{
+					size = instruction.GetStackManipulation().Pop.Num;
+				}
+
 				d_isCommutative = instruction.IsCommutative;
 			}
 
 			d_isLeaf = size == 0;
 			
-			d_children = new List<Node>(size);
+			d_children = new List<Node>((int)size);
 			d_leafs = new SortedList<Node>();
 		}
 

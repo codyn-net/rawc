@@ -233,7 +233,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				val = "CDN_MATH_RAND ()";
 			}
 
-			int numpop = instruction.GetStackManipulation().NumPop;
+			uint numpop = instruction.GetStackManipulation().Pop.Num;
 
 			if (numpop == 0)
 			{
@@ -262,9 +262,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			string name = Context.MathFunctionDefine(instruction);
-			string[] args = new string[instruction.GetStackManipulation().NumPop];
+			string[] args = new string[instruction.GetStackManipulation().Pop.Num];
 			
-			for (int i = 0; i < instruction.GetStackManipulation().NumPop; ++i)
+			for (int i = 0; i < instruction.GetStackManipulation().Pop.Num; ++i)
 			{
 				args[i] = Translate(context, i);
 			}

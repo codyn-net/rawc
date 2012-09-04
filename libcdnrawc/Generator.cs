@@ -176,7 +176,7 @@ namespace Cdn.RawC
 
 					double val = stack.At((int)stack.Count() - 1);
 
-					for (int i = 0; i < smanip.NumPop; ++i)
+					for (int i = 0; i < smanip.Pop.Num; ++i)
 					{
 						args.Pop();
 					}
@@ -197,7 +197,7 @@ namespace Cdn.RawC
 
 					List<Instruction > ret = new List<Instruction>();
 
-					for (int i = 0; i < smanip.NumPop; ++i)
+					for (int i = 0; i < smanip.Pop.Num; ++i)
 					{
 						List<Instruction > ir = new List<Instruction>(args.Pop());
 						ir.Reverse();

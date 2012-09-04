@@ -132,7 +132,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public static string MathFunctionDefine(Cdn.InstructionFunction instruction)
 		{
-			return MathFunctionDefine((Cdn.MathFunctionType)instruction.Id, instruction.GetStackManipulation().NumPop);
+			return MathFunctionDefine((Cdn.MathFunctionType)instruction.Id, (int)instruction.GetStackManipulation().Pop.Num);
 		}
 		
 		public static string MathFunctionDefine(Cdn.MathFunctionType type, int arguments)
