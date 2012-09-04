@@ -14,8 +14,6 @@ namespace Cdn.RawC.Programmer
 		private Dictionary<string, Function> d_functionMap;
 		private List<State> d_updateStates;
 		private Dictionary<DataTable.DataItem, State> d_integrateTable;
-		private List<Computation.Loop> d_loops;
-		private List<Computation.Loop> d_initLoops;
 		private Dictionary<Tree.Embedding, Function> d_embeddingFunctionMap;
 		private DataTable d_statetable;
 		private DataTable d_delayedCounters;
@@ -40,8 +38,6 @@ namespace Cdn.RawC.Programmer
 			d_functionMap = new Dictionary<string, Function>();
 			d_updateStates = new List<State>();
 			d_integrateTable = new Dictionary<DataTable.DataItem, State>();
-			d_loops = new List<Computation.Loop>();
-			d_initLoops = new List<Computation.Loop>();
 			d_indexTables = new List<DataTable>();
 			d_delayHistoryTables = new List<DataTable>();
 			d_delayedStates = new List<DelayedState>();
@@ -463,38 +459,17 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
-		public int InitLoopsCount
-		{
-			get { return d_initLoops.Count; }
-		}
-		
-		public int LoopsCount
-		{
-			get
-			{
-				return d_loops.Count;
-			}
-		}
-		
-		public IEnumerable<Computation.Loop> Loops
-		{
-			get
-			{
-				return d_loops;
-			}
-		}
-
 		private List<Computation.INode> AssignmentStates(IEnumerable<State> states)
 		{
-			return AssignmentStates(states, d_loops);
+			return AssignmentStates(states, true);
 		}
 
-		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, List<Computation.Loop> loops)
+		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, bool genloops)
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
 			List<State > st = new List<State>(states);
 
-			if (loops != null)
+			if (genloops)
 			{
 				// Extract loops from states. Scan for embeddings and replace them with
 				// looped stuff, creating temporary variables on the fly if needed
@@ -523,7 +498,6 @@ namespace Cdn.RawC.Programmer
 						Computation.Loop l = CreateLoop(st, loop);
 					
 						ret.Add(l);
-						loops.Add(l);
 					}
 				}
 			}
@@ -775,7 +749,7 @@ namespace Cdn.RawC.Programmer
 
 				foreach (List<State> grp in grps)
 				{
-					d_source.AddRange(AssignmentStates(grp, null));
+					d_source.AddRange(AssignmentStates(grp));
 					d_source.Add(new Computation.Empty());
 
 					modset.AddRange(grp);
@@ -840,7 +814,7 @@ namespace Cdn.RawC.Programmer
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(not))
 			{
 				d_initialization.Add(new Computation.Empty());
-				d_initialization.AddRange(AssignmentStates(grp, null));
+				d_initialization.AddRange(AssignmentStates(grp));
 				d_initialization.Add(new Computation.Empty());
 			}
 
@@ -873,7 +847,7 @@ namespace Cdn.RawC.Programmer
 							ontimeleft.Remove(l);
 						}
 
-						deps.AddRange(AssignmentStates(dd, null));
+						deps.AddRange(AssignmentStates(dd));
 					}
 
 					d_initialization.Add(new Computation.InitializeDelayHistory(ids, d_delayHistoryTables[i], d_equations[ids], deps, dontime.Contains(ids)));
@@ -895,7 +869,7 @@ namespace Cdn.RawC.Programmer
 			// Finally, initialize those states that depend on t again
 			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(ontimeleft))
 			{
-				d_initialization.AddRange(AssignmentStates(grp, null));
+				d_initialization.AddRange(AssignmentStates(grp));
 			}
 		}
 		

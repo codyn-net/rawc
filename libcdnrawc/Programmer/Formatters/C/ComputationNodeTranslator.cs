@@ -180,51 +180,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			ret.AppendLine("\t\t}");
 			ret.AppendLine("\t}");
 			ret.Append("}");
-			
-			Dictionary<DataTable, bool > seen = new Dictionary<DataTable, bool>();
-			bool first = true;
-			
-			// Update counter loop indices
-			foreach (Computation.Loop loop in context.Program.Loops)
-			{
-				DataTable table = loop.IndexTable;
-				
-				if (seen.ContainsKey(table))
-				{
-					continue;
-				}
-				
-				for (int i = 0; i < table.Count; ++i)
-				{
-					DataTable.DataItem item = table[i];
-					
-					if (item.HasType(DataTable.DataItem.Flags.Delayed))
-					{
-						int r = i % table.Columns;
-						int c = i / table.Columns;
-						Computation.Loop.Index sidx = (Computation.Loop.Index)item.Key;
 
-						DataTable.DataItem state = context.Program.StateTable[(int)sidx.Value];
-						DelayedState.Key delayed = (DelayedState.Key)state.Key;
-						DataTable.DataItem idx = context.Program.DelayedCounters[delayed.Size];
-						
-						if (first)
-						{
-							ret.AppendLine();
-							first = false;
-						}
-
-						ret.AppendLine();
-						ret.AppendFormat("{0}[{1}][{2}] = {3} + {4}[{5}];",
-						                 table.Name, r, c,
-						                 sidx.Value,
-						                 context.Program.DelayedCounters.Name, idx.Index);
-					}
-				}
-				
-				seen[table] = true;
-			}
-			
 			return ret.ToString();
 		}
 		
@@ -235,10 +191,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			if ((node.Item.Type & DataTable.DataItem.Flags.Integrated) != 0 &&
 				context.Program.NodeIsInitialization(node))
 			{
-				return String.Format("{0}[{1}] = {0}[{2}] = {3};",
+				return String.Format("{0}[{1} + {2}] = {3};",
 			                     node.Item.Table.Name,
-			                     node.Item.AliasOrIndex,
-					             node.Item.Index + context.Program.IntegrateTable.Count,
+					             node.Item.AliasOrIndex,
+				                 context.Program.IntegrateTable.Count,
 			                     eq);
 			}
 			else if (node.State is DelayedState)
