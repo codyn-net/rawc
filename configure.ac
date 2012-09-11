@@ -68,7 +68,7 @@ dnl package checks, per config
 
 
 AC_CONFIG_FILES([
-cdnrawc
+cdn-rawc
 Makefile
 libcdnrawc/Makefile
 libcdnrawc/codyn-rawc-sharp.pc

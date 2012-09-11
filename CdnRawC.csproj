@@ -8,7 +8,7 @@
     <ProjectGuid>{FEB77A56-5271-4E82-B65C-9DB0886759E8}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>Cdn.RawC.Application</RootNamespace>
-    <AssemblyName>cdnrawc</AssemblyName>
+    <AssemblyName>cdn-rawc</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
