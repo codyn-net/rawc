@@ -3,7 +3,7 @@
 # Warning: This is an automatically generated file, do not edit!
 
 if ENABLE_DEBUG
-ASSEMBLY_COMPILER_COMMAND = $(GMCS)
+ASSEMBLY_COMPILER_COMMAND = $(CSC)
 ASSEMBLY_COMPILER_FLAGS =  -noconfig -codepage:utf8 -warn:3 -optimize- -debug "-define:DEBUG"
 ASSEMBLY = bin/Debug/cdnrawc.exe
 ASSEMBLY_MDB = $(ASSEMBLY).mdb
@@ -17,7 +17,7 @@ RAWC_EXE_MDB=$(BUILD_DIR)/cdnrawc.exe.mdb
 endif
 
 if ENABLE_RELEASE
-ASSEMBLY_COMPILER_COMMAND = $(GMCS)
+ASSEMBLY_COMPILER_COMMAND = $(CSC)
 ASSEMBLY_COMPILER_FLAGS =  -noconfig -codepage:utf8 -warn:4 -optimize-
 ASSEMBLY = bin/Release/cdnrawc.exe
 ASSEMBLY_MDB =
