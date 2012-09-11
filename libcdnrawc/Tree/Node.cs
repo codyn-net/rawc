@@ -133,7 +133,7 @@ namespace Cdn.RawC.Tree
 
 				if (st != null)
 				{
-					return st.Item;
+					return st.Item.Key;
 				}
 				
 				InstructionCustomOperator op = Instruction as InstructionCustomOperator;
