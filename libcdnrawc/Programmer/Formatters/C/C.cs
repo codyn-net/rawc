@@ -821,14 +821,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				string val = vals[row, col];
 				string[] parts = val.Split('.');
+
+				int coloff = (col == 0 ? 0 : 1);
 				
 				if (parts.Length == 1)
 				{
-					writer.Write("{0}{1}", val.PadLeft(colsize[col, 0] + 1), "".PadRight(colsize[col, 1]));
+					writer.Write("{0}{1}", val.PadLeft(colsize[col, 0] + coloff), "".PadRight(colsize[col, 1]));
 				}
 				else
 				{
-					writer.Write("{0}.{1}", parts[0].PadLeft(colsize[col, 0] + 1), parts[1].PadRight(colsize[col, 1] - 1));
+					writer.Write("{0}.{1}", parts[0].PadLeft(colsize[col, 0] + coloff), parts[1].PadRight(colsize[col, 1] - 1));
 				}
 				
 				if (table.Columns > 0 && col == table.Columns - 1)
