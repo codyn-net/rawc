@@ -22,8 +22,7 @@ SHAMROCK_EXPAND_DATADIR
 
 AC_PROG_INSTALL
 
-AC_PATH_PROG(CSC, dmcs, no)
-AC_PATH_PROG(CSC, gmcs, no)
+AC_PATH_PROGS(CSC, dmcs gmcs, no)
 
 if test "x$CSC" = "xno"; then
 	AC_MSG_ERROR([gmcs or dmcs not found])
