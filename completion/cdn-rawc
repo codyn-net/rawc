@@ -1,0 +1,13 @@
+_cdnrawc() {
+	cur=`_get_cword`
+
+	if [[ "$cur" != -* ]]; then
+		_filedir '@(cpg|xml)'
+	else
+		COMPREPLY=($(compgen -W "$(cdn-rawc --list-options)" -- "$cur"))
+	fi
+
+	return 0
+}
+
+complete -F _cdnrawc cdn-rawc
