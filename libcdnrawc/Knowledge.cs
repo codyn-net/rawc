@@ -13,7 +13,6 @@ namespace Cdn.RawC
 		private List<State> d_randStates;
 		private List<State> d_delayedStates;
 		private Dictionary<Instruction, Instruction> d_instructionMapping;
-
 		private Dictionary<Instruction, double> d_delays;
 		private Dictionary<object, State> d_stateMap;
 		private Dictionary<object, State> d_initializeMap;
@@ -21,6 +20,7 @@ namespace Cdn.RawC
 		private List<Cdn.Variable> d_variables;
 		private Dictionary<Cdn.Expression, HashSet<Cdn.Variable>> d_dependencyCache;
 		private Dictionary<Cdn.Expression, HashSet<Cdn.Expression>> d_expressionDependencyCache;
+		private HashSet<object> d_randStateSet;
 
 		public static Knowledge Initialize(Cdn.Network network)
 		{
@@ -181,46 +181,22 @@ namespace Cdn.RawC
 			return ret;
 		}
 
-		private bool AddState(HashSet<object> unique, State state)
-		{
-			return AddState(unique, state, true);
-		}
-
 		private void AddInitialize(State state)
 		{
 			d_initializeMap[state.Object] = state;
 			d_initialize.Add(state);
 		}
 
-		private bool AddState(HashSet<object> unique, State state, bool autoinit)
+		private bool AddState(HashSet<object> unique, State state)
 		{
 			if (unique == null || unique.Add(state.Object))
 			{
-				d_states.Add(state);
-
 				if (state.Object != null)
 				{
 					d_stateMap[state.Object] = state;
-
-					var v = state.Object as Variable;
-
-					if (autoinit && (v == null || v.Object != d_network.Integrator || v.Name != "t"))
-					{
-						Instruction[] instrs;
-
-						if (state.Actions.Length == 0)
-						{
-							instrs = state.Instructions;
-						}
-						else
-						{
-							instrs = (state.Object as Variable).Expression.Instructions;
-						}
-
-						AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
-					}
 				}
 
+				d_states.Add(state);
 				return true;
 			}
 
@@ -277,7 +253,7 @@ namespace Cdn.RawC
 
 		private void ExtractRand()
 		{
-			HashSet<object> un = new HashSet<object>();
+			d_randStateSet = new HashSet<object>();
 
 			foreach (var state in new List<State>(AllStates))
 			{
@@ -292,7 +268,7 @@ namespace Cdn.RawC
 	
 						State rs = new State(r, expr, RawC.State.Flags.None);
 
-						if (AddState(un, rs, false))
+						if (AddState(d_randStateSet, rs))
 						{
 							d_randStates.Add(rs);
 						}
@@ -335,6 +311,40 @@ namespace Cdn.RawC
 			ExtractStates();
 			ExtractRand();
 			ExtractDelayedStates();
+
+			ExtractInitialize();
+		}
+
+		private void ExtractInitialize()
+		{
+			foreach (var state in d_states)
+			{
+				if (d_randStateSet.Contains(state) || state is DelayedState)
+				{
+					continue;
+				}
+
+				if (state.Object != null)
+				{
+					var v = state.Object as Variable;
+
+					if (v == null || v.Object != d_network.Integrator || v.Name != "t")
+					{
+						Instruction[] instrs;
+
+						if (state.Actions.Length == 0)
+						{
+							instrs = state.Instructions;
+						}
+						else
+						{
+							instrs = (state.Object as Variable).Expression.Instructions;
+						}
+
+						AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
+					}
+				}
+			}
 		}
 
 		public State Time
@@ -396,7 +406,8 @@ namespace Cdn.RawC
 					continue;
 				}
 
-				double size;;
+				double size;
+				;
 
 				size = delay / Options.Instance.DelayTimeStep;
 
@@ -409,7 +420,7 @@ namespace Cdn.RawC
 				d_delays.Add(op, delay);
 
 				DelayedState s = new DelayedState(op, delay, opdel.Expression, Cdn.RawC.State.Flags.None);
-				AddState(null, s, false);
+				AddState(null, s);
 
 				// Create a new expression for the initial value of this state
 				AddInitialize(new DelayedState(op, delay, opdel.InitialValue, Cdn.RawC.State.Flags.Initialization));
