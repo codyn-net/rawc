@@ -16,10 +16,9 @@ namespace Cdn.RawC
 
 		private object d_object;
 		private EdgeAction[] d_actions;
-
 		private Cdn.Expression d_expression;
+		private Cdn.Expression d_expressionUnexpanded;
 		private Instruction[] d_instructions;
-
 		private Flags d_type;
 		
 		public State(Flags type)
@@ -55,7 +54,7 @@ namespace Cdn.RawC
 
 			if (expr != null)
 			{
-				d_expression = Tree.Expression.Expand(expr);
+				d_expressionUnexpanded = expr;
 			}
 
 			d_type |= type;
@@ -70,6 +69,12 @@ namespace Cdn.RawC
 		{
 			if (d_expression != null)
 			{
+				return;
+			}
+
+			if (d_expressionUnexpanded != null)
+			{
+				d_expression = Tree.Expression.Expand(d_expressionUnexpanded);
 				return;
 			}
 			
