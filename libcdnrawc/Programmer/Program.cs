@@ -25,6 +25,7 @@ namespace Cdn.RawC.Programmer
 		private Dictionary<DelayedState, DataTable> d_delayHistoryMap;
 		private Dictionary<State, Tree.Node> d_equations;
 		private List<DelayedState> d_delayedStates;
+		private DataTable d_randSeedTable;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
@@ -187,6 +188,20 @@ namespace Cdn.RawC.Programmer
 					{
 						dt.Add(new State(i, (Cdn.Expression)null, State.Flags.None)).Type |= DataTable.DataItem.Flags.Delayed;
 					}
+				}
+			}
+
+			if (Cdn.RawC.Options.Instance.Validate)
+			{
+				d_randSeedTable = new DataTable("rand_seeds", true);
+				d_randSeedTable.IsConstant = true;
+				d_randSeedTable.IntegerType = true;
+				d_randSeedTable.MaxSize = UInt32.MaxValue - 1;
+
+				foreach (State r in Knowledge.Instance.RandStates)
+				{
+					InstructionRand rr = r.Instructions[0] as InstructionRand;
+					d_randSeedTable.Add(rr.Seed).Type = DataTable.DataItem.Flags.RandSeed;
 				}
 			}
 		}
@@ -807,7 +822,7 @@ namespace Cdn.RawC.Programmer
 			if (rands.Count > 0)
 			{
 				d_initialization.Add(new Computation.Comment("Compute initial random values"));
-				d_initialization.Add(new Computation.Rand(Knowledge.Instance.RandStates));
+				d_initialization.Add(new Computation.Rand(rands));
 				d_initialization.Add(new Computation.Empty());
 			}
 
@@ -945,6 +960,11 @@ namespace Cdn.RawC.Programmer
 				foreach (DataTable table in d_delayHistoryTables)
 				{
 					yield return table;
+				}
+
+				if (d_randSeedTable != null)
+				{
+					yield return d_randSeedTable;
 				}
 			}
 		}

@@ -40,7 +40,8 @@ namespace Cdn.RawC.Programmer
 				Counter = 1 << 10,
 				Size = 1 << 11,
 				Initialization = 1 << 12,
-				Temporary = 1 << 13
+				Temporary = 1 << 13,
+				RandSeed = 1 << 14
 			}
 
 			private DataTable d_table;

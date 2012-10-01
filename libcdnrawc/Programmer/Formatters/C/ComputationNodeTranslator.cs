@@ -34,11 +34,28 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			ret.AppendLine("\tint i;");
 			ret.AppendLine();
 
-			foreach (KeyValuePair<int, int> pair in node.Ranges(context.Program.StateTable))
+			foreach (Computation.Rand.IndexRange range in node.Ranges(context.Program.StateTable))
 			{
-				ret.AppendFormat("\tfor (i = {0}; i <= {1}; ++i)", pair.Key, pair.Value);
+				ret.AppendFormat("\tfor (i = {0}; i <= {1}; ++i)", range.Start, range.End);
 				ret.AppendLine();
 				ret.AppendLine("\t{");
+
+				if (Cdn.RawC.Options.Instance.Validate)
+				{
+					if (context.Program.NodeIsInitialization(node))
+					{
+						ret.AppendLine();
+						ret.AppendFormat("\t\tinitstate (rand_seeds[i - {0}], rand_states[i - {0}], sizeof(RandState));",
+						                 range.ZeroOffset);
+					}
+					else
+					{
+						ret.AppendFormat("\t\tsetstate (rand_states[i - {0}]);", range.ZeroOffset);
+					}
+
+					ret.AppendLine();
+				}
+
 				ret.AppendFormat("\t\t{0}[i] = CDN_MATH_RAND ();",
 				                 context.Program.StateTable.Name);
 				ret.AppendLine();

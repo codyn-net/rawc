@@ -5,6 +5,13 @@ namespace Cdn.RawC.Programmer.Computation
 {
 	public class Rand : INode
 	{
+		public struct IndexRange
+		{
+			public int Start;
+			public int End;
+			public int ZeroOffset;
+		}
+
 		private List<State> d_states;
 
 		public Rand(IEnumerable<State> states)
@@ -17,7 +24,7 @@ namespace Cdn.RawC.Programmer.Computation
 			get { return d_states.Count == 0; }
 		}
 
-		public IEnumerable<KeyValuePair<int, int>> Ranges(DataTable table)
+		public IEnumerable<IndexRange> Ranges(DataTable table)
 		{
 			if (Empty)
 			{
@@ -30,12 +37,15 @@ namespace Cdn.RawC.Programmer.Computation
 
 			int start = indices[0];
 			int end = indices[0];
+			int offset = start;
 
 			for (int i = 1; i < indices.Length; ++i)
 			{
 				if (indices[i] != end + 1)
 				{
-					yield return new KeyValuePair<int, int>(start, end);
+					yield return new IndexRange {Start = start, End = end, ZeroOffset = offset};
+
+					offset += end - start;
 
 					start = indices[i];
 					end = indices[i];
@@ -46,7 +56,7 @@ namespace Cdn.RawC.Programmer.Computation
 				}
 			}
 
-			yield return new KeyValuePair<int, int>(start, end);
+			yield return new IndexRange { Start = start, End = end, ZeroOffset = offset};
 		}
 	}
 }

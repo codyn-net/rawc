@@ -17,6 +17,68 @@ namespace Cdn.RawC
 		{
 			d_filename = filename;
 		}
+
+		private void RunCodyn()
+		{
+			// Run the network now
+			d_monitors = new List<Cdn.Monitor>();
+			
+			d_monitors.Add(new Cdn.Monitor(d_network, d_network.Integrator.Variable("t")));
+			
+			Knowledge.Initialize(d_network);
+			
+			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
+			{
+				d_monitors.Add(new Cdn.Monitor(d_network, v));
+			}
+			
+			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
+			{
+				d_monitors.Add(new Cdn.Monitor(d_network, v));
+			}
+			
+			double ts;
+			
+			if (Options.Instance.DelayTimeStep <= 0)
+			{
+				ts = Options.Instance.ValidateRange[1];
+			}
+			else
+			{
+				ts = Options.Instance.DelayTimeStep;
+			}
+			
+			d_network.Run(Options.Instance.ValidateRange[0],
+			              ts,
+			              Options.Instance.ValidateRange[2]);
+			
+			// Extract the validation data
+			d_monitored = new List<double[]>();
+			
+			for (int i = 0; i < d_monitors.Count; ++i)
+			{
+				d_monitored.Add(d_monitors[i].GetData());
+			}
+		}
+
+		private void InitRand()
+		{
+			// Set seeds for all the rand instructions in the network
+			var r = new System.Random();
+
+			d_network.ForeachExpression((expr) => {
+				foreach (var instr in expr.Instructions)
+				{
+					Cdn.InstructionRand rand = instr as Cdn.InstructionRand;
+
+					if (rand != null)
+					{
+						var seed = (int)(r.NextDouble() * (uint.MaxValue - 1) + 1);
+						rand.Seed = (uint)seed;
+					}
+				}
+			});
+		}
 		
 		public void Generate()
 		{
@@ -26,51 +88,8 @@ namespace Cdn.RawC
 
 			if (Options.Instance.Validate)
 			{
-				StaticRandExpressions();
-
-				d_network.Compiled += delegate {
-					StaticRandExpressions();
-				};
-
-				// Run the network now, with the static rands
-				d_monitors = new List<Cdn.Monitor>();
-
-				d_monitors.Add(new Cdn.Monitor(d_network, d_network.Integrator.Variable("t")));
-
-				Knowledge.Initialize(d_network);
-
-				foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
-				{
-					d_monitors.Add(new Cdn.Monitor(d_network, v));
-				}
-
-				foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
-				{
-					d_monitors.Add(new Cdn.Monitor(d_network, v));
-				}
-
-				double ts;
-
-				if (Options.Instance.DelayTimeStep <= 0)
-				{
-					ts = Options.Instance.ValidateRange[1];
-				}
-				else
-				{
-					ts = Options.Instance.DelayTimeStep;
-				}
-
-				d_network.Run(Options.Instance.ValidateRange[0],
-					          ts,
-					          Options.Instance.ValidateRange[2]);
-
-				// Extract the validation data
-				d_monitored = new List<double[]>();
-
-				for (int i = 0; i < d_monitors.Count; ++i)
-				{
-					d_monitored.Add(d_monitors[i].GetData());
-				}
+				InitRand();
+				RunCodyn();
 			}
 
 			if (Options.Instance.DelayTimeStep > 0)
@@ -108,7 +127,6 @@ namespace Cdn.RawC
 				Directory.CreateDirectory(path);
 
 				program.Options.Output = path;
-				program.Options.Validate = true;
 			}
 
 			d_writtenFiles = Options.Instance.Formatter.Write(program);
@@ -157,94 +175,6 @@ namespace Cdn.RawC
 			}
 		}
 
-		private void StaticRandExpression(Cdn.Expression expr)
-		{
-			Instruction[] instructions = expr.Instructions;
-			Cdn.Stack stack = new Cdn.Stack(expr.StackSize);
-			Stack<List<Instruction >> args = new Stack<List<Instruction>>();
-
-			foreach (Cdn.Instruction inst in instructions)
-			{
-				InstructionRand func = inst as InstructionRand;
-
-				StackManipulation smanip = inst.GetStackManipulation();
-
-				if (func != null)
-				{
-					func.Next();
-					func.Execute(stack);
-
-					double val = stack.At((int)stack.Count() - 1);
-
-					for (int i = 0; i < smanip.Pop.Num; ++i)
-					{
-						args.Pop();
-					}
-
-					List<Instruction > r = new List<Instruction>();
-					r.Add(new InstructionNumber(val));
-
-					args.Push(r);
-				}
-				else
-				{
-					InstructionCustomFunction ff = inst as InstructionCustomFunction;
-
-					if (ff != null)
-					{
-						StaticRandExpression(ff.Function.Expression);
-					}
-
-					List<Instruction > ret = new List<Instruction>();
-
-					for (int i = 0; i < smanip.Pop.Num; ++i)
-					{
-						List<Instruction > ir = new List<Instruction>(args.Pop());
-						ir.Reverse();
-
-						ret.AddRange(ir);
-					}
-
-					ret.Reverse();
-
-					ret.Add((Instruction)inst.Copy());
-					args.Push(ret);
-
-					inst.Execute(stack);
-				}
-			}
-
-			List<Instruction > newinst = new List<Instruction>();
-
-			foreach (List<Instruction> r in args)
-			{
-				newinst.AddRange(r);
-			}
-
-			expr.Instructions = newinst.ToArray();
-		}
-
-		private void StaticRandExpressions()
-		{
-			d_network.ForeachExpression((expr) => {
-				expr.ResetCache();
-			});
-
-			d_network.ForeachExpression((expr) => {
-				StaticRandExpression(expr);
-			});
-
-			d_network.Taint();
-
-			var err = new CompileError();
-
-			if (!d_network.Compile(null, err))
-			{
-				Console.Error.WriteLine("Failed to compile network after static rand: {0}", err.FormattedString);
-				Environment.Exit(1);
-			}
-		}
-		
 		private void Validate()
 		{
 			Log.WriteLine("Validating generated network...");
@@ -497,6 +427,12 @@ namespace Cdn.RawC
 		
 		private void LoadNetwork()
 		{
+			if (Options.Instance.Validate)
+			{
+				Cdn.InstructionRand.UseStreams = true;
+				Cdn.Function.RandAsArgument = true;
+			}
+
 			try
 			{
 				d_network = new Cdn.Network(d_filename);

@@ -492,6 +492,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return NestedImplementation("CDN_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
 			case MathFunctionType.Invsqrt:
 				return IsDouble ? "1 / sqrt (x0)" : "1 / sqrtf (x0)";
+			case MathFunctionType.Scale:
+				return "(x1 + (x2 - x1) * x0)";
 			default:
 				break;
 					
@@ -859,6 +861,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private void WriteDataTables(TextWriter writer)
 		{
+			if (Cdn.RawC.Options.Instance.Validate)
+			{
+				// Write seed table and state table for rands
+				writer.WriteLine("typedef char RandState[8];");
+				writer.WriteLine("static RandState rand_states[{0}] = {{{{0,}}}};", Knowledge.Instance.CountRandStates);
+				writer.WriteLine();
+			}
+
 			foreach (DataTable table in d_program.DataTables)
 			{
 				WriteDataTable(writer, table);
@@ -891,7 +901,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					string path = header;
 
-					if (d_program.Options.Validate && !Path.IsPathRooted(path))
+					if (Cdn.RawC.Options.Instance.Validate && !Path.IsPathRooted(path))
 					{
 						// For validation, include a absolute path for custom
 						// headers, relative to the original output path

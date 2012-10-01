@@ -17,8 +17,6 @@ namespace Cdn.RawC.Programmer
 		public string Basename;
 		
 		public double DelayTimeStep;
-
-		public bool Validate;
 	}
 }
 

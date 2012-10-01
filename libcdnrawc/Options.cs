@@ -61,7 +61,7 @@ namespace Cdn.RawC
 			d_formatter = new Programmer.Formatters.C.C();
 			AddOptionsForPlugin(d_formatter);
 			
-			d_validateRange = new double[] {0, 0.001, 1};
+			d_validateRange = new double[] {0, 0.001, 5};
 		}
 		
 		public override void Parse(ref string[] args)

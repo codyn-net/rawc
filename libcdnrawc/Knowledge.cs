@@ -265,7 +265,12 @@ namespace Cdn.RawC
 					{
 						Expression expr = new Expression("rand()");
 						expr.Compile(null, null);
-	
+
+						if (Options.Instance.Validate)
+						{
+							((InstructionRand)expr.Instructions[0]).Seed = r.Seed;
+						}
+
 						State rs = new State(r, expr, RawC.State.Flags.None);
 
 						if (AddState(d_randStateSet, rs))
@@ -275,6 +280,11 @@ namespace Cdn.RawC
 					}
 				}
 			}
+		}
+
+		public int CountRandStates
+		{
+			get { return d_randStates.Count; }
 		}
 
 		public IEnumerable<State> States

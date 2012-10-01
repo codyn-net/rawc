@@ -168,6 +168,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Sqsum:
 			case MathFunctionType.Tan:
 			case MathFunctionType.Tanh:
+			case MathFunctionType.Scale:
 				val = String.Format("CDN_MATH_{0}", name.ToUpper());
 				break;
 			case MathFunctionType.Power:
