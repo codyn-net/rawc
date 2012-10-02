@@ -319,17 +319,17 @@ namespace Cdn.RawC
 			ScanVariables(d_network);
 
 			ExtractStates();
-			ExtractRand();
 			ExtractDelayedStates();
 
 			ExtractInitialize();
+			ExtractRand();
 		}
 
 		private void ExtractInitialize()
 		{
 			foreach (var state in d_states)
 			{
-				if (d_randStateSet.Contains(state) || state is DelayedState)
+				if ((d_randStateSet != null && d_randStateSet.Contains(state.Object)) || state is DelayedState)
 				{
 					continue;
 				}
