@@ -417,7 +417,6 @@ namespace Cdn.RawC
 				}
 
 				double size;
-				;
 
 				size = delay / Options.Instance.DelayTimeStep;
 
