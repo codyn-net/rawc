@@ -89,7 +89,11 @@ namespace Cdn.RawC
 			if (Options.Instance.Validate)
 			{
 				InitRand();
-				RunCodyn();
+
+				if (!Options.Instance.PrintCompileSource)
+				{
+					RunCodyn();
+				}
 			}
 
 			if (Options.Instance.DelayTimeStep > 0)
