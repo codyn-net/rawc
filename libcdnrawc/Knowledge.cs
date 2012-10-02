@@ -342,13 +342,13 @@ namespace Cdn.RawC
 					{
 						Instruction[] instrs;
 
-						if (state.Actions.Length == 0)
+						if (v == null || state.Actions.Length == 0)
 						{
 							instrs = state.Instructions;
 						}
 						else
 						{
-							instrs = (state.Object as Variable).Expression.Instructions;
+							instrs = v.Expression.Instructions;
 						}
 
 						AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
