@@ -8,7 +8,7 @@ CFLAGS =
 LDFLAGS =
 
 ${NAME}_CFLAGS = -I.
-${NAME}_LDFLAGS =
+${NAME}_LDFLAGS = -lm
 
 # Enable debug symbols if defined
 DEBUG =
