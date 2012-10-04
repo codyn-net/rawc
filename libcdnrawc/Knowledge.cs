@@ -16,6 +16,9 @@ namespace Cdn.RawC
 		private Dictionary<Instruction, double> d_delays;
 		private Dictionary<object, State> d_stateMap;
 		private Dictionary<object, State> d_initializeMap;
+		private Dictionary<object, State> d_derivativeMap;
+		private List<State> d_integrated;
+		private List<State> d_derivativeStates;
 		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedVariables;
 		private List<Cdn.Variable> d_variables;
 		private Dictionary<Cdn.Expression, HashSet<Cdn.Variable>> d_dependencyCache;
@@ -46,6 +49,7 @@ namespace Cdn.RawC
 			d_initializeMap = new Dictionary<object, State>();
 
 			d_variables = new List<Variable>();
+			d_integrated = new List<State>();
 			d_flaggedVariables = new Dictionary<VariableFlags, List<Variable>>();
 			d_dependencyCache = new Dictionary<Expression, HashSet<Variable>>();
 			d_expressionDependencyCache = new Dictionary<Cdn.Expression, HashSet<Cdn.Expression>>();
@@ -54,6 +58,9 @@ namespace Cdn.RawC
 			d_initialize = new List<State>();
 			d_randStates = new List<State>();
 			d_delayedStates = new List<State>();
+			d_derivativeStates = new List<State>();
+			d_derivativeMap = new Dictionary<object, State>();
+			
 			d_instructionMapping = new Dictionary<Instruction, Instruction>();
 
 			Scan();
@@ -110,7 +117,16 @@ namespace Cdn.RawC
 			}
 		}
 
+		private delegate State StateCreator(Variable v, EdgeAction[] actions);
+
 		private State ExpandedState(Variable prop)
+		{
+			return ExpandedState(prop, (v, actions) => {
+				return new State(v, actions);
+			});
+		}
+
+		private State ExpandedState(Variable prop, StateCreator creator)
 		{
 			List<EdgeAction> actions = new List<EdgeAction>();
 
@@ -125,7 +141,7 @@ namespace Cdn.RawC
 				}
 			}
 			
-			return new State(prop, actions.ToArray());
+			return creator(prop, actions.ToArray());
 		}
 
 		public void UpdateInstructionMap(Dictionary<Instruction, Instruction> mapping)
@@ -208,15 +224,35 @@ namespace Cdn.RawC
 			HashSet<object> unique = new HashSet<object>();
 
 			// Add integrated state variables
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
+			var integrated = Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated);
+
+			foreach (var v in integrated)
 			{
-				AddState(unique, ExpandedState(v));
+				var st = new State(v, null);
+				AddState(unique, st);
+				d_integrated.Add(st);
+			}
+
+			// Add states for the derivatives
+			foreach (var v in integrated)
+			{
+				var st = ExpandedState(v, (vv, actions) => {
+					return new DerivativeState(vv, actions);
+				});
+
+				// Add directly to the state map
+				d_states.Add(st);
+				d_derivativeStates.Add(st);
+				d_derivativeMap[v] = st;
 			}
 
 			// Add in variables
 			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.In))
 			{
-				AddState(unique, ExpandedState(v));
+				if ((v.Flags & VariableFlags.FunctionArgument) == 0)
+				{
+					AddState(unique, ExpandedState(v));
+				}
 			}
 
 			// Add out variables
@@ -334,25 +370,32 @@ namespace Cdn.RawC
 					continue;
 				}
 
+				if ((state.Type & Cdn.RawC.State.Flags.Derivative) != 0)
+				{
+					continue;
+				}
+
+				if (state == Time || state == TimeStep)
+				{
+					continue;
+				}
+
 				if (state.Object != null)
 				{
 					var v = state.Object as Variable;
 
-					if (v == null || v.Object != d_network.Integrator || v.Name != "t")
+					Instruction[] instrs;
+
+					if (v == null || state.Actions.Length == 0)
 					{
-						Instruction[] instrs;
-
-						if (v == null || state.Actions.Length == 0)
-						{
-							instrs = state.Instructions;
-						}
-						else
-						{
-							instrs = v.Expression.Instructions;
-						}
-
-						AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
+						instrs = state.Instructions;
 					}
+					else
+					{
+						instrs = v.Expression.Instructions;
+					}
+
+					AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
 				}
 			}
 		}
@@ -799,6 +842,40 @@ namespace Cdn.RawC
 					yield return s;
 				}
 			}
+		}
+
+		public IEnumerable<State> DerivativeStates
+		{
+			get { return d_derivativeStates; }
+		}
+
+		public int DerivativeStatesCount
+		{
+			get { return d_derivativeStates.Count; }
+		}
+
+		public State DerivativeState(object o)
+		{
+			State ret;
+
+			if (d_derivativeMap.TryGetValue(o, out ret))
+			{
+				return ret;
+			}
+			else
+			{
+				return null;
+			}
+		}
+
+		public IEnumerable<State> Integrated
+		{
+			get { return d_integrated; }
+		}
+
+		public int IntegratedCount
+		{
+			get { return d_integrated.Count; }
 		}
 
 		public Cdn.Network Network

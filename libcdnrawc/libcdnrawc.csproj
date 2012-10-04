@@ -30,11 +30,14 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
+      <Package>glib-sharp-2.0</Package>
+    </Reference>
     <Reference Include="Codyn">
       <HintPath>..\..\..\..\..\..\home\jvanden\.packeteer\install-cpg\lib\codyn-sharp-3.0\Codyn.dll</HintPath>
       <Package>codyn-sharp-3.0</Package>
     </Reference>
+    <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
@@ -92,6 +95,11 @@
     <Compile Include="Programmer\Computation\IncrementDelayedCounters.cs" />
     <Compile Include="Programmer\Computation\InitializeDelayHistory.cs" />
     <Compile Include="Programmer\Computation\Rand.cs" />
+    <Compile Include="Programmer\APIFunction.cs" />
+    <Compile Include="Programmer\DependencyFilter.cs" />
+    <Compile Include="Programmer\Computation\CallAPI.cs" />
+    <Compile Include="DerivativeState.cs" />
+    <Compile Include="Config.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
@@ -104,10 +112,15 @@
     <Folder Include="Programmer\Instructions\" />
     <Folder Include="Programmer\Computation\" />
     <Folder Include="Programmer\Formatters\C\" />
+    <Folder Include="Programmer\Formatters\C\Resources\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <EmbeddedResource Include="Programmer\Formatters\C\TestProgram.resources" />
-    <EmbeddedResource Include="Programmer\Formatters\C\MexProgram.resources" />
+    <EmbeddedResource Include="Programmer\Formatters\C\Resources\MexProgram.c" />
+    <EmbeddedResource Include="Programmer\Formatters\C\Resources\Library.make" />
+    <EmbeddedResource Include="Programmer\Formatters\C\Resources\Standalone.make" />
+    <EmbeddedResource Include="Programmer\Formatters\C\Resources\Include.make" />
+    <EmbeddedResource Include="Programmer\Formatters\C\Resources\RunSource.c" />
+    <EmbeddedResource Include="Programmer\Formatters\C\Resources\RunHeader.h" />
   </ItemGroup>
 </Project>

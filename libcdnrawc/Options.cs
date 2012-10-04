@@ -18,7 +18,7 @@ namespace Cdn.RawC
 		private string d_filter;
 		[CommandLine.Option("basename", 'b', ArgumentName="NAME", Description="The basename of the generated files")]
 		private string d_basename;
-		[CommandLine.Option("compile", ArgumentName="PROGRAM", Description="Compile a test program integrating the network")]
+		[CommandLine.Option("compile", ArgumentName="PROGRAM", OptionalArgument=true, DefaultArgument=".", Description="Compile a test program integrating the network")]
 		private string d_compile;
 		[CommandLine.Option("print-compile-source", Description="Print source code of test program")]
 		private bool d_printCompileSource;
@@ -42,6 +42,9 @@ namespace Cdn.RawC
 		public uint MinimumLoopSize = 3;
 		[CommandLine.Option("delay-time-step", Description="Fixed time step that will be used for delays")]
 		public double DelayTimeStep = -1;
+		[CommandLine.Option("no-metadata", Description="Disable generation of metadata")]
+		public bool NoMetadata = false;
+
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;
 		private List<string> d_files;

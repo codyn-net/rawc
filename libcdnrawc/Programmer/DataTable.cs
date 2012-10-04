@@ -36,7 +36,7 @@ namespace Cdn.RawC.Programmer
 				In = 1 << 6,
 				Out = 1 << 7,
 				Once = 1 << 8,
-				Update = 1 << 9,
+				Derivative = 1 << 9,
 				Counter = 1 << 10,
 				Size = 1 << 11,
 				Initialization = 1 << 12,
@@ -47,18 +47,20 @@ namespace Cdn.RawC.Programmer
 			private DataTable d_table;
 			private int d_index;
 			private object d_key;
+			private object d_object;
 			private string d_alias;
 			private Flags d_type;
 			
-			public DataItem(DataTable table, object key, int index) : this(table, key, index, Flags.None)
+			public DataItem(DataTable table, object key, object obj, int index) : this(table, key, obj, index, Flags.None)
 			{
 			}
 
-			public DataItem(DataTable table, object key, int index, Flags type)
+			public DataItem(DataTable table, object key, object obj, int index, Flags type)
 			{
 				d_table = table;
 				d_index = index;
 				d_key = key;
+				d_object = obj;
 				d_type = type;
 			}
 			
@@ -104,54 +106,35 @@ namespace Cdn.RawC.Programmer
 			
 			public Flags Type
 			{
-				get
-				{
-					return d_type;
-				}
-				set
-				{
-					d_type = value;
-				}
+				get { return d_type; }
+				set { d_type = value; }
 			}
 			
 			public DataTable Table
 			{
-				get
-				{
-					return d_table;
-				}
+				get { return d_table; }
 			}
 			
 			public int Index
 			{
-				get
-				{
-					return d_index;
-				}
-				set
-				{
-					d_index = value;
-				}
+				get { return d_index; }
+				set { d_index = value; }
 			}
 			
 			public object Key
 			{
-				get
-				{
-					return d_key;
-				}
+				get { return d_key; }
 			}
 			
 			public string Alias
 			{
-				get
-				{
-					return d_alias;
-				}
-				set
-				{
-					d_alias = value;
-				}
+				get { return d_alias; }
+				set { d_alias = value; }
+			}
+
+			public object Object
+			{
+				get { return d_object; }
 			}
 			
 			public string AliasOrIndex
@@ -314,7 +297,7 @@ namespace Cdn.RawC.Programmer
 				return d_items[b];
 			}
 			
-			DataItem ret = new DataItem(this, b, d_list.Count);
+			DataItem ret = new DataItem(this, b, key, d_list.Count);
 			
 			d_items.Add(b, ret);
 			d_list.Add(ret);

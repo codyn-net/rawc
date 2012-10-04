@@ -2,7 +2,9 @@ dnl Warning: This is an automatically generated file, do not edit!
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
 AC_INIT(cdnrawc, 2.0)
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
+
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
 AM_MAINTAINER_MODE
@@ -15,6 +17,8 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 if test "x$PKG_CONFIG" = "xno"; then
         AC_MSG_ERROR([You need to install pkg-config])
 fi
+
+LT_INIT
 
 SHAMROCK_EXPAND_LIBDIR
 SHAMROCK_EXPAND_BINDIR
@@ -70,7 +74,10 @@ AC_CONFIG_FILES([
 cdn-rawc
 Makefile
 libcdnrawc/Makefile
+libcdnrawc/Config.cs
 libcdnrawc/codyn-rawc-sharp.pc
+libcdnrawc/Programmer/Formatters/C/cdn-rawc/Makefile
+libcdnrawc/Programmer/Formatters/C/cdn-rawc/cdn-rawc.pc
 completion/Makefile
 m4/Makefile
 ])

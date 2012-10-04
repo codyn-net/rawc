@@ -302,6 +302,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			string name = instruction.FunctionCall.Name.ToUpper();
 			List<string > args = new List<string>();
 
+			args.Add(context.Program.StateTable.Name);
+
 			if (!instruction.FunctionCall.IsCustom)
 			{
 				foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)

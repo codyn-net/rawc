@@ -20,7 +20,7 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
     <Externalconsole>true</Externalconsole>
-    <Commandlineparameters>test.cdn --generate-cpp-wrapper</Commandlineparameters>
+    <Commandlineparameters>../../test.cdn</Commandlineparameters>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>none</DebugType>
@@ -38,7 +38,9 @@
     </Reference>
     <Reference Include="Codyn">
       <HintPath>..\..\..\..\..\home\jvanden\.packeteer\install-cpg\lib\codyn-sharp-3.0\Codyn.dll</HintPath>
+      <Package>codyn-sharp-3.0</Package>
     </Reference>
+    <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />

@@ -82,7 +82,10 @@ namespace Cdn.RawC
 		
 		public void Generate()
 		{
-			Log.WriteLine("Generating code for network...");
+			if (Options.Instance.Compile == null || Options.Instance.Verbose)
+			{
+				Log.WriteLine("Generating code for network...");
+			}
 			
 			LoadNetwork();
 
@@ -120,34 +123,33 @@ namespace Cdn.RawC
 			
 			// Create program
 			Programmer.Program program = new Programmer.Program(ProgrammerOptions(), embeddings, equations);
+			bool outistemp = false;
 			
 			// Write program
-			if (Options.Instance.Validate)
+			if (Options.Instance.Validate || (Options.Instance.Compile != null))
 			{
 				// Create a new temporary directory for the output files
 				string path = Path.GetTempFileName();
 				File.Delete(path);
 
 				Directory.CreateDirectory(path);
-
 				program.Options.Output = path;
+
+				outistemp = true;
+			}
+			else
+			{
+				Directory.CreateDirectory(program.Options.Output);
 			}
 
 			d_writtenFiles = Options.Instance.Formatter.Write(program);
 			
 			if (Options.Instance.PrintCompileSource)
 			{
-				if (Options.Instance.Validate)
+				foreach (string filename in d_writtenFiles)
 				{
-					foreach (string filename in d_writtenFiles)
-					{
-						Console.WriteLine("File: {0}", filename);
-						Console.WriteLine(File.ReadAllText(filename));
-					}
-				}
-				else
-				{
-					Console.WriteLine(Options.Instance.Formatter.CompileSource());
+					Console.WriteLine("File: {0}", filename);
+					Console.WriteLine(File.ReadAllText(filename));
 				}
 			}
 
@@ -174,8 +176,29 @@ namespace Cdn.RawC
 			}
 			else if (Options.Instance.Compile != null)
 			{
-				Log.WriteLine("Compiling code...");
-				Options.Instance.Formatter.Compile(Options.Instance.Compile, Options.Instance.Verbose);
+				var files = Options.Instance.Formatter.Compile(Options.Instance.Verbose);
+
+				if (Options.Instance.Verbose)
+				{
+					Log.WriteLine("Compiled {0}...", String.Join(", ", Array.ConvertAll<string, string>(files, a => Path.GetFileName(a))));
+				}
+
+				foreach (var f in files)
+				{
+					var dest = Path.Combine(Options.Instance.Compile, Path.GetFileName(f));
+
+					try
+					{
+						File.Delete(dest);
+					} catch {}
+
+					File.Move(f, dest);
+				}
+			}
+
+			if (outistemp)
+			{
+				Directory.Delete(program.Options.Output, true);
 			}
 		}
 
@@ -184,9 +207,10 @@ namespace Cdn.RawC
 			Log.WriteLine("Validating generated network...");
 
 			string tmpprog = Path.GetTempFileName();
-			
+
 			Options opts = Options.Instance;
-			opts.Formatter.Compile(tmpprog, opts.Verbose);
+			// TODO
+			//opts.Formatter.Compile(tmpprog, opts.Verbose);
 
 			double ts;
 
@@ -332,7 +356,8 @@ namespace Cdn.RawC
 			
 			if (String.IsNullOrEmpty(ret.Output))
 			{
-				ret.Output = Path.GetDirectoryName(ret.Network.Filename);
+				var dirname = Path.GetDirectoryName(ret.Network.Filename);
+				ret.Output = Path.Combine(dirname, "rawc_" + Path.GetFileNameWithoutExtension(ret.Network.Filename));
 			}
 
 			ret.OriginalOutput = ret.Output;

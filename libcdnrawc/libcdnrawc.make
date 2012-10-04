@@ -3,7 +3,7 @@
 # Warning: This is an automatically generated file, do not edit!
 
 if ENABLE_DEBUG
-ASSEMBLY_COMPILER_COMMAND = gmcs
+ASSEMBLY_COMPILER_COMMAND = $(CSC)
 ASSEMBLY_COMPILER_FLAGS =  -noconfig -codepage:utf8 -warn:4 -optimize- -debug "-define:DEBUG"
 ASSEMBLY = bin/Debug/Cdn.RawC.dll
 ASSEMBLY_MDB = $(ASSEMBLY).mdb
@@ -45,6 +45,7 @@ all: $(ASSEMBLY) $(PROGRAMFILES) $(LINUX_PKGCONFIG)
 
 FILES = \
 	State.cs \
+	DerivativeState.cs \
 	DelayedState.cs \
 	Knowledge.cs \
 	Exception.cs \
@@ -65,6 +66,8 @@ FILES = \
 	Tree/Filters/IFilter.cs \
 	Tree/Filters/Optimal.cs \
 	Tree/Filters/Default.cs \
+	Programmer/APIFunction.cs \
+	Programmer/DependencyFilter.cs \
 	Programmer/Function.cs \
 	Programmer/Formatters/C/InitialValueTranslator.cs \
 	Programmer/Formatters/C/C.cs \
@@ -83,6 +86,7 @@ FILES = \
 	Programmer/Computation/ZeroTable.cs \
 	Programmer/Computation/Empty.cs \
 	Programmer/Computation/Loop.cs \
+	Programmer/Computation/CallAPI.cs \
 	Programmer/Computation/Assignment.cs \
 	Programmer/Computation/InitializeDelayHistory.cs \
 	Programmer/Computation/Rand.cs \
@@ -98,13 +102,18 @@ FILES = \
 	Options.cs \
 	Generator.cs \
 	Sort.cs \
-	Log.cs
+	Log.cs \
+	Config.cs
 
 DATA_FILES =
 
 RESOURCES = \
-	Programmer/Formatters/C/TestProgram.resources,Cdn.RawC.Programmer.Formatters.C.TestProgram.resources \
-	Programmer/Formatters/C/MexProgram.resources,Cdn.RawC.Programmer.Formatters.C.MexProgram.resources
+	Programmer/Formatters/C/Resources/MexProgram.c,Cdn.RawC.Programmer.Formatters.C.Resources.MexProgram.c \
+	Programmer/Formatters/C/Resources/Library.make,Cdn.RawC.Programmer.Formatters.C.Resources.Library.make \
+	Programmer/Formatters/C/Resources/Standalone.make,Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make \
+	Programmer/Formatters/C/Resources/Include.make,Cdn.RawC.Programmer.Formatters.C.Resources.Include.make \
+	Programmer/Formatters/C/Resources/RunSource.c,Cdn.RawC.Programmer.Formatters.C.Resources.RunSource.c \
+	Programmer/Formatters/C/Resources/RunHeader.h,Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h
 
 EXTRAS = \
 	codyn-rawc-sharp.pc.in

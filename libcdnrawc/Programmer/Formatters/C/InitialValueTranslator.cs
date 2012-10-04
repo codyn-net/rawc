@@ -33,6 +33,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return NumberTranslator.Translate(number, null);
 		}
+
+		private string Translate(DerivativeState.Key key)
+		{
+			return NotInitialized;
+		}
 		
 		private string Translate(DelayedState.Size size)
 		{

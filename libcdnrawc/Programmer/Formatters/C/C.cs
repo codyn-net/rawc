@@ -16,10 +16,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private Programmer.Program d_program;
 		private string d_cprefix;
 		private string d_cprefixup;
+
 		private string d_sourceFilename;
 		private string d_headerFilename;
-		private string d_cppFilename;
-		
+
+		private string d_runSourceFilename;
+		private string d_runHeaderFilename;
+
 		private class EnumItem
 		{
 			public Cdn.Variable Variable;
@@ -50,33 +53,139 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			WriteHeader();
 			WriteSource();
+
+			WriteRunHeader();
+			WriteRunSource();
 			
 			written.Add(d_headerFilename);
 			written.Add(d_sourceFilename);
-			
-			if (d_options.GenerateCppWrapper)
+
+			written.Add(d_runHeaderFilename);
+			written.Add(d_runSourceFilename);
+
+			if (d_options.Standalone != null)
 			{
-				WriteCppWrapper();
-				written.Add(d_cppFilename);
+				// Copy rawc sources also
+				var sources = Path.Combine(Config.Data, "cdn-rawc-1.0/src/cdn-rawc");
+				var destdir = Path.Combine(d_program.Options.Output, "cdn-rawc");
+
+				Directory.CreateDirectory(destdir);
+
+				foreach (var f in Directory.EnumerateFiles(sources))
+				{
+					var dest = Path.Combine(destdir, Path.GetFileName(f));
+					File.Copy(f, dest, true);
+					written.Add(dest);
+				}
+
+				var intdir = Path.Combine(destdir, "integrators");
+
+				if (d_options.Standalone == "full")
+				{
+					Directory.CreateDirectory(intdir);
+
+					foreach (var integrator in Directory.EnumerateFiles(Path.Combine(sources, "integrators")))
+					{
+						var dest = Path.Combine(intdir, Path.GetFileName(integrator));
+						File.Copy(integrator, dest, true);
+						written.Add(dest);
+					}
+				}
+				else
+				{
+					Directory.CreateDirectory(intdir);
+
+					var name = Knowledge.Instance.Network.Integrator.ClassId.Replace("_", "-");
+					var dest = Path.Combine(intdir, "cdn-rawc-integrator-" + name);
+					var source = Path.Combine(sources, "integrators", "cdn-rawc-integrator-" + name);
+
+					File.Copy(source + ".c", dest + ".c", true);
+					File.Copy(source + ".h", dest + ".h", true);
+
+					written.Add(dest + ".c");
+					written.Add(dest + ".h");
+				}
 			}
 			
+			if (!d_options.NoMakefile)
+			{
+				var filename = WriteMakefile();
+				written.Add(filename);
+			}
+
 			return written.ToArray();
+		}
+
+		private string WriteMakefile()
+		{
+			var filename = Path.Combine(d_program.Options.Output, "Makefile");
+			TextWriter writer = new StreamWriter(filename);
+
+			if (d_options.Standalone != null)
+			{
+				writer.Write(Template("Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make"));
+			}
+			else
+			{
+				writer.Write(Template("Cdn.RawC.Programmer.Formatters.C.Resources.Library.make"));
+			}
+
+			writer.Close();
+			return filename;
+		}
+
+		public string Template(string resource)
+		{
+			Stream res = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource);
+			StreamReader reader = new StreamReader(res);
+			string ret = reader.ReadToEnd();
+
+			var sources = Path.GetFileName(d_sourceFilename);
+			var headers = Path.GetFileName(d_headerFilename);
+
+			if (d_options.Standalone != null)
+			{
+				sources += " $(wildcard cdn-rawc/*.c) $(wildcard cdn-rawc/integrators/*.c)";
+				headers += " $(wildcard cdn-rawc/*.h) $(wildcard cdn-rawc/integrators/*.h)";
+			}
+
+			var srep = new Dictionary<string, string> {
+				{"name", CPrefixDown},
+				{"NAME", CPrefixUp},
+				{"Name", CPrefix},
+				{"SOURCES", sources},
+				{"HEADERS", headers},
+				{"integrator", Knowledge.Instance.Network.Integrator.ClassId},
+				{"INTEGRATOR", Knowledge.Instance.Network.Integrator.ClassId.ToUpper()},
+				{"basename", d_program.Options.Basename},
+				{"BASENAME", d_program.Options.Basename.ToUpper()}
+			};
+
+			var ors = String.Join("|", (new List<string>(srep.Keys)).ToArray());
+			var r = new System.Text.RegularExpressions.Regex("[$][{](" + ors + ")[}]");
+
+			ret = r.Replace(ret, (m) => {
+				return srep[m.Groups[1].Value];
+			});
+
+			r = new System.Text.RegularExpressions.Regex(@"[$][{]include:([^}]*)[}]");
+
+			ret = r.Replace(ret, (m) => {
+				return Template(m.Groups[1].Value);
+			});
+
+			return ret;
 		}
 		
 		public string Source(string resource)
 		{
-			Stream program = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource);
-			StreamReader reader = new StreamReader(program);
-			
 			StringWriter writer = new StringWriter();
 			
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine();
-			
-			string prog = reader.ReadToEnd();
-			prog = prog.Replace("${name}", CPrefixDown);
-			prog = prog.Replace("${NAME}", CPrefixUp);
 
+			var prog = Template(resource);
+			
 			// Generate state map
 			StringBuilder statemap = new StringBuilder();
 			
@@ -108,17 +217,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return writer.ToString();
 		}
 
-		public string CompileSource()
-		{
-			return Source("Cdn.RawC.Programmer.Formatters.C.TestProgram.resources");
-		}
-
 		public string MexSource()
 		{
-			return Source("Cdn.RawC.Programmer.Formatters.C.MexProgram.resources");
+			return Source("Cdn.RawC.Programmer.Formatters.C.Resources.MexProgram.c");
 		}
 
-		public void Compile(string filename, bool verbose)
+		public string[] Compile(bool verbose)
 		{
 			if (String.IsNullOrEmpty(d_sourceFilename))
 			{
@@ -129,38 +233,36 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			// Compile source file
 			Process process = new Process();
-			process.StartInfo.FileName = "gcc";
+
+			process.StartInfo.FileName = "make";
 			process.StartInfo.UseShellExecute = true;
 			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-			process.StartInfo.Arguments = String.Format("{0} -Wall -I{3} -c -o {1}.o {2}", d_options.CFlags, CPrefixDown, d_sourceFilename, ddir);
+
+			StringBuilder args = new StringBuilder();
+			args.AppendFormat("CFLAGS='{0}'", d_options.CFlags);
+
+			List<string> ret = new List<string>();
+
+			bool all = !(d_options.CompileShared || d_options.CompileStatic);
+
+			if (all || d_options.CompileShared)
+			{
+				args.Append(" shared");
+				ret.Add(Path.Combine(ddir, "lib" + CPrefixDown + ".so"));
+			}
+
+			if (all || d_options.CompileStatic)
+			{
+				args.Append(" static");
+				ret.Add(Path.Combine(ddir, "lib" + CPrefixDown + ".a"));
+			}
+
+			process.StartInfo.Arguments = args.ToString();
+			process.StartInfo.WorkingDirectory = ddir;
 			
 			if (verbose)
 			{
-				Log.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
-			}
-			
-			process.Start();
-			process.WaitForExit();
-			
-			if (process.ExitCode != 0)
-			{
-				Environment.Exit(process.ExitCode);
-			}
-			
-			// Then compile test program
-			string source = CompileSource();
-			
-			string tempfile = Path.GetTempFileName();
-			StreamWriter writer = new StreamWriter(tempfile + ".c");
-			
-			writer.WriteLine(source);
-			writer.Close();
-			
-			process.StartInfo.Arguments = String.Format("{0} -I{3} -Wall -c -o {1}.o {2}.c", d_options.CFlags, tempfile, tempfile, ddir);
-			
-			if (verbose)
-			{
-				Console.Error.WriteLine("Compiling: gcc {0}", process.StartInfo.Arguments);
+				Log.WriteLine("Compiling: {0}", process.StartInfo.Arguments);
 			}
 
 			process.Start();
@@ -170,25 +272,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				Environment.Exit(process.ExitCode);
 			}
-			
-			process.StartInfo.Arguments = String.Format("-Wall {0} -o {1} {2}.o {3}.o -lm", d_options.Libs, filename, tempfile, CPrefixDown);
-			
-			if (verbose)
-			{
-				Console.Error.WriteLine("Edgeing: gcc {0}", process.StartInfo.Arguments);
-			}
 
-			process.Start();
-			process.WaitForExit();
-			
-			if (process.ExitCode != 0)
-			{
-				Environment.Exit(process.ExitCode);
-			}
-			
-			File.Delete(tempfile + ".c");
-			File.Delete(tempfile + ".o");
-			File.Delete(CPrefixDown + ".o");
+			return ret.ToArray();
 		}
 		
 		public CommandLine.OptionGroup Options
@@ -286,8 +371,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			foreach (DataTable.DataItem item in d_program.StateTable)
 			{
-				Cdn.Variable prop = item.Key as Cdn.Variable;
-				
+				Cdn.Variable prop = null;
+				bool isdiff = false;
+
+				if ((item.Type & DataTable.DataItem.Flags.Derivative) != 0)
+				{
+					var state = item.Object as DerivativeState;
+
+					if (state != null)
+					{
+						prop = state.Object as Cdn.Variable;
+						isdiff = true;
+					}
+				}
+				else
+				{
+					prop = item.Key as Cdn.Variable;
+				}
+
 				if (prop == null)
 				{
 					continue;
@@ -305,15 +406,25 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 				
 				string orig = ToAsciiOnly(fullname).ToUpper();
+				string prefix;
 
-				string enumname = String.Format("{0}_STATE_{1}", CPrefixUp, orig);
+				if (isdiff)
+				{
+					prefix = String.Format("{0}_DERIV", CPrefixUp);
+				}
+				else
+				{
+					prefix = String.Format("{0}_STATE", CPrefixUp);
+				}
+
+				string enumname = String.Format("{0}_{1}", prefix, orig);
 				string shortname = orig;
 
 				int id = 0;
 				
 				while (unique.ContainsKey(enumname))
 				{
-					enumname = String.Format("{0}_STATE_{1}__{2}", CPrefixUp, orig, ++id);
+					enumname = String.Format("_{1}__{2}", prefix, orig, ++id);
 					shortname = String.Format("{0}__{1}", orig, id);
 				}
 				
@@ -348,10 +459,34 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					writer.WriteLine("  /* {0} */", comments[i]);
 				}
 			}
-			
+
+			if (names.Count == 0)
+			{
+				writer.WriteLine();
+			}
+
+			writer.WriteLine("}} CdnRawc{0}State;", CPrefix);
 			writer.WriteLine();
-			writer.WriteLine("}} {0}State;", CPrefix);
-			writer.WriteLine();
+		}
+
+		private void WriteRunSource()
+		{
+			d_runSourceFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + "_run.c");
+			TextWriter writer = new StreamWriter(d_runSourceFilename);
+
+			writer.Write(Template("Cdn.RawC.Programmer.Formatters.C.Resources.RunSource.c"));
+
+			writer.Close();
+		}
+
+		private void WriteRunHeader()
+		{
+			d_runHeaderFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + "_run.h");
+			TextWriter writer = new StreamWriter(d_runHeaderFilename);
+
+			writer.Write(Template("Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h"));
+
+			writer.Close();
 		}
 		
 		private void WriteHeader()
@@ -360,40 +495,35 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			TextWriter writer = new StreamWriter(d_headerFilename);
 			
 			// Include guard
-			writer.WriteLine("#ifndef __{0}_H__", CPrefixUp);
-			writer.WriteLine("#define __{0}_H__", CPrefixUp);
+			writer.WriteLine("#ifndef __CDN_RAWC_{0}_H__", CPrefixUp);
+			writer.WriteLine("#define __CDN_RAWC_{0}_H__", CPrefixUp);
+
+			writer.WriteLine();
+			writer.WriteLine("#define ValueType {0}", ValueType);
+
+			writer.WriteLine();
+			writer.WriteLine("#include <cdn-rawc/cdn-rawc.h>");
 			writer.WriteLine();
 			
 			// Protect for including this from C++
-			writer.WriteLine("#ifdef __cplusplus");
-			writer.WriteLine("extern \"C\" {");
-			writer.WriteLine("#endif");
+			writer.WriteLine("CDN_RAWC_BEGIN_DECLS");
  			
+			writer.WriteLine();
+			writer.WriteLine("#define CDN_RAWC_{0}_DATA_SIZE {1}", CPrefixUp, d_program.StateTable.Count);
 			writer.WriteLine();
  			
 			// Write interface
 			WriteAccessorEnum(writer);
- 			
-			writer.WriteLine("{0} {1}_get (int idx);", ValueType, CPrefixDown);
-			writer.WriteLine("void {0}_set (int idx, {1} val);", CPrefixDown, ValueType);
- 			
+
+			writer.WriteLine("CdnRawcNetwork *cdn_rawc_{0}_network ();", CPrefixDown);
 			writer.WriteLine();
  			
-			writer.WriteLine("void {0}_initialize ({1} t);", CPrefixDown, ValueType);
- 			
-			writer.WriteLine("void {0}_step ({1} timestep);", CPrefixDown, ValueType);
-
-			writer.WriteLine();
-
 			// End protect for including this from C++
-			writer.WriteLine("#ifdef __cplusplus");
-			writer.WriteLine("}");
-			writer.WriteLine("#endif");
- 			
+			writer.WriteLine("CDN_RAWC_END_DECLS"); 			
 			writer.WriteLine();
 			
 			// End include guard
-			writer.WriteLine("#endif /* __{0}_H__ */", CPrefixUp);
+			writer.WriteLine("#endif /* __CDN_RAWC_{0}_H__ */", CPrefixUp);
 
 			writer.Close();
 		}
@@ -418,20 +548,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string GenerateArgsList(string prefix, int num, int numstart, string type)
 		{
-			if (num == 0)
+			if (num == 0 && type == null)
 			{
 				return "void";
 			}
 
-			string[] ret = new string[num];
+			List<string> ret = new List<string>(num);
+
+			if (type != null)
+			{
+				ret.Add(String.Format("ValueType *{0}", d_program.StateTable.Name));
+			}
+
 			string extra = !String.IsNullOrEmpty(type) ? String.Format("{0} ", type) : "";
 			
 			for (int i = 0; i < num; ++i)
 			{
-				ret[i] = String.Format("{0}{1}{2}", extra, prefix, numstart + i);
+				ret.Add(String.Format("{0}{1}{2}", extra, prefix, numstart + i));
 			}
 			
-			return String.Join(", ", ret);
+			return String.Join(", ", ret.ToArray());
 		}
 		
 		private string NestedImplementation(string name, int arguments, string implementation)
@@ -492,8 +628,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return NestedImplementation("CDN_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
 			case MathFunctionType.Invsqrt:
 				return IsDouble ? "1 / sqrt (x0)" : "1 / sqrtf (x0)";
-			case MathFunctionType.Scale:
-				return "(x1 + (x2 - x1) * x0)";
 			default:
 				break;
 					
@@ -551,7 +685,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			// Always define random stuff, it's a bit special...
 			WriteDefine(writer, "CDN_MATH_SCALE", "(val, min, max)", "(({0})((min) + ((val) * ((max) - (min)))))", null, ValueType);
-			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random () / (double)RAND_MAX)");
+			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random () / (ValueType)RAND_MAX)");
 			
 			HashSet<string> generated = new HashSet<string>();
 			
@@ -600,7 +734,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			foreach (Programmer.Function function in d_program.Functions)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-				writer.WriteLine("static {0} {1} ({2}) GNUC_PURE;", ValueType, function.Name, GenerateArgsList("x", function.NumArguments, 0, ValueType));
+				writer.WriteLine("static ValueType {0} ({1}) GNUC_PURE;",
+				                 function.Name,
+				                 GenerateArgsList("x", function.NumArguments, 0, "ValueType"));
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
 				writer.WriteLine();
 			}
@@ -608,7 +744,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			foreach (Programmer.Function function in d_program.Functions)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-				writer.WriteLine("static {0} {1} ({2})", ValueType, function.Name, GenerateArgsList("x", function.NumArguments, 0, ValueType));
+				writer.WriteLine("static ValueType {0} ({1})",
+				                 function.Name,
+				                 GenerateArgsList("x", function.NumArguments, 0, "ValueType"));
 				writer.WriteLine("{");
 				writer.WriteLine("\treturn {0};", FunctionToC(function));
 				writer.WriteLine("}");
@@ -657,51 +795,52 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		private void WriteInitialization(TextWriter writer)
+		private void WriteAPISource(TextWriter writer, APIFunction api)
 		{
-			writer.WriteLine("void");
-			writer.WriteLine("{0}_initialize ({1} t)", CPrefixDown, ValueType);
-			writer.WriteLine("{");
+			if (api.Private && api.SourceCount == 0)
+			{
+				return;
+			}
 
-			WriteComputationNodes(writer, d_program.InitializationNodes);
-			
-			writer.WriteLine("}");
-			writer.WriteLine();
-		}
-		
-		private void WriteAccessors(TextWriter writer)
-		{
-			writer.WriteLine("{0}", ValueType);
-			writer.WriteLine("{0}_get (int idx)", CPrefixDown);
-			writer.WriteLine("{");
-			
-			writer.WriteLine("\treturn {0}[idx];", d_program.StateTable.Name);
-			
-			writer.WriteLine("}");
-			writer.WriteLine();
-			
-			writer.WriteLine("void");
-			writer.WriteLine("{0}_set (int idx, {1} val)", CPrefixDown, ValueType);
-			writer.WriteLine("{");
-			
-			writer.WriteLine("\t{0}[idx] = val;", d_program.StateTable.Name);
-			
-			writer.WriteLine("}");
-			writer.WriteLine();
-		}
-		
-		private void WriteStep(TextWriter writer)
-		{
-			writer.WriteLine("void");
-			
-			writer.WriteLine("{0}_step ({1} timestep)", CPrefixDown, ValueType);
+			writer.Write("static ");
+			writer.WriteLine(api.ReturnType);
+			writer.Write("{0}_{1} (", CPrefixDown, api.Name);
+
+			for (int i = 0; i < api.Arguments.Length; i += 2)
+			{
+				if (i != 0)
+				{
+					writer.Write(", ");
+				}
+
+				var type = api.Arguments[i];
+				var name = api.Arguments[i + 1];
+
+				if (type.EndsWith("*"))
+				{
+					writer.Write("{0} *{1}", type.Substring(0, type.Length - 1), name);
+				}
+				else
+				{
+					writer.Write("{0} {1}", type, name);
+				}
+			}
+
+			writer.WriteLine(") GNUC_PURE");
 
 			writer.WriteLine("{");
-			
-			WriteComputationNodes(writer, d_program.SourceNodes);
-			
+			WriteComputationNodes(writer, api.Source);
 			writer.WriteLine("}");
+
 			writer.WriteLine();
+		}
+
+		private void WriteAPISource(TextWriter writer)
+		{
+			foreach (var api in d_program.APIFunctions)
+			{
+				WriteAPISource(writer, api);
+			}
 		}
 		
 		private string MinimumTableType(DataTable table)
@@ -874,9 +1013,293 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				WriteDataTable(writer, table);
 			}
 		}
+
+		private class ChildMeta
+		{
+			public uint Parent;
+			public bool IsNode;
+
+			public uint Index;
+			public uint Next;
+		}
+
+		private class NodeMeta
+		{
+			public string Name;
+			public uint Parent;
+			public uint FirstChild;
+		}
+
+		private class StateMeta
+		{
+			public string Name;
+			public uint Parent;
+		}
+
+		private class Meta
+		{
+			public List<NodeMeta> Nodes;
+			public List<StateMeta> States;
+			public List<ChildMeta> Children;
+
+			public Dictionary<Cdn.Object, uint> NodeMap;
+		}
+
+		private ChildMeta AddChild(Meta meta, NodeMeta parent, ChildMeta child, ChildMeta prev)
+		{
+			if (prev != null)
+			{
+				prev.Next = (uint)meta.Children.Count;
+			}
+			else
+			{
+				parent.FirstChild = (uint)meta.Children.Count;
+			}
+
+			meta.Children.Add(child);
+			return child;
+		}
+
+		private uint ExtractMeta(Meta meta, Cdn.Object obj, uint parent)
+		{
+			NodeMeta nm = new NodeMeta {
+				Name = obj.Id,
+				Parent = parent,
+				FirstChild = 0
+			};
+
+			parent = (uint)meta.Nodes.Count;
+			meta.Nodes.Add(nm);
+
+			meta.NodeMap[obj] = parent;
+
+			ChildMeta prev = null;
+
+			foreach (var v in obj.Variables)
+			{
+				DataTable.DataItem item;
+
+				try
+				{
+					item = d_program.StateTable[v];
+				}
+				catch
+				{
+					continue;
+				}
+
+				ChildMeta cm = new ChildMeta {
+					Parent = parent,
+					IsNode = false,
+					Index = (uint)item.Index + 1,
+					Next = 0
+				};
+
+				prev = AddChild(meta, nm, cm, prev);
+			}
+
+			Cdn.Node node = obj as Cdn.Node;
+
+			if (node != null)
+			{
+				foreach (var child in node.Children)
+				{
+					uint cid = ExtractMeta(meta, child, parent);
+
+					ChildMeta cm = new ChildMeta {
+						Parent = parent,
+						IsNode = true,
+						Index = cid,
+						Next = 0
+					};
+
+					prev = AddChild(meta, nm, cm, prev);
+				}
+			}
+
+			return parent;
+		}
+
+		private Meta ExtractMeta()
+		{
+			Meta meta = new Meta {
+				Nodes = new List<NodeMeta>(),
+				States = new List<StateMeta>(d_program.StateTable.Count + 1),
+				Children = new List<ChildMeta>(),
+				NodeMap = new Dictionary<Cdn.Object, uint>()
+			};
+
+			// Empty root nodes
+			meta.Nodes.Add(new NodeMeta {
+				Name = null,
+				Parent = 0,
+				FirstChild = 0
+			});
+
+			meta.Children.Add(new ChildMeta {
+				Parent = 0,
+				IsNode = false,
+				Index = 0,
+				Next = 0
+			});
+
+			meta.States.Add(new StateMeta {
+				Name = null,
+				Parent = 0
+			});
+
+			ExtractMeta(meta, Knowledge.Instance.Network, 0);
+
+			foreach (var item in d_program.StateTable)
+			{
+				Cdn.Variable v = item.Key as Cdn.Variable;
+
+				StateMeta sm = new StateMeta {
+					Name = null,
+					Parent = 0
+				};
+				
+				if (v != null)
+				{
+					uint nid = 0;
+
+					meta.NodeMap.TryGetValue(v.Object, out nid);
+					
+					sm.Name = v.Name;
+					sm.Parent = nid;
+				}
+
+				meta.States.Add(sm);
+			}
+			
+			return meta;
+		}
+		
+		private void WriteNetworkMeta(TextWriter writer)
+		{
+			var meta = ExtractMeta();
+			
+			writer.WriteLine("\tstatic CdnRawcStateMeta meta_states[] = {");
+			
+			foreach (var state in meta.States)
+			{
+		 		writer.WriteLine("\t\t{{ {0}, {1} }},",
+		 		                 state.Name == null ? "NULL" : "\"" + state.Name + "\"",
+		 		                 state.Parent);
+			}
+			
+			writer.WriteLine("\t};");
+			writer.WriteLine();			
+			writer.WriteLine("\tstatic CdnRawcNodeMeta meta_nodes[] = {");
+			
+			foreach (var node in meta.Nodes)
+			{
+				writer.WriteLine("\t\t{{ {0}, {1}, {2} }},",
+				                  node.Name == null ? "NULL" : "\"" + node.Name + "\"",
+				                  node.Parent,
+				                  node.FirstChild);
+			}
+			
+			writer.WriteLine("\t};");
+			writer.WriteLine();			
+			writer.WriteLine("\tstatic CdnRawcChildMeta meta_children[] = {");
+			
+			foreach (var child in meta.Children)
+			{
+				writer.WriteLine("\t\t{{ {0}, {1}, {2}, {3} }},",
+				                 child.Parent,
+				                 child.IsNode ? 1 : 0,
+				                 child.Index,
+				                 child.Next);
+			}
+			
+			writer.WriteLine("\t};");
+			writer.WriteLine();			
+		}
+
+		private void WriteNetwork(TextWriter writer)
+		{
+			var pref = CPrefixDown;
+
+			writer.WriteLine("CdnRawcNetwork *");
+			writer.WriteLine("cdn_rawc_{0}_network ()", pref);
+			writer.WriteLine("{");
+			
+			if (!Cdn.RawC.Options.Instance.NoMetadata)
+			{
+				WriteNetworkMeta(writer);
+			}			
+
+			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
+
+			foreach (string name in new string[] {"clear", "init", "pre", "diff", "post"})
+			{
+				writer.WriteLine("\t\t.{0} = {1}_{0},", name, pref);
+			}
+
+			writer.WriteLine();
+
+			var enu = Knowledge.Instance.Integrated.GetEnumerator();
+			if (enu.MoveNext())
+			{
+				var integrated = d_program.StateTable[enu.Current];
+
+				writer.WriteLine("\t\t.states = {{.start = {0}, .end = {1}}},",
+				                 integrated.AliasOrIndex,
+				                 integrated.Index + Knowledge.Instance.IntegratedCount);
+			}
+			else
+			{
+				writer.WriteLine("\t\t.states = {.start = 0, .end = 0},");
+			}
+
+			enu = Knowledge.Instance.DerivativeStates.GetEnumerator();
+
+			if (enu.MoveNext())
+			{
+				var derivatives = d_program.StateTable[enu.Current];
+
+				writer.WriteLine("\t\t.derivatives = {{.start = {0}, .end = {1}}},",
+				                 derivatives.AliasOrIndex,
+				                 derivatives.Index + Knowledge.Instance.DerivativeStatesCount);
+			}
+			else
+			{
+				writer.WriteLine("\t\t.derivatives = {.start = 0, .end = 0},");
+			}
+
+			writer.WriteLine();
+			writer.WriteLine("\t\t.data_size = CDN_RAWC_{0}_DATA_SIZE,", CPrefixUp);
+
+			if (!Cdn.RawC.Options.Instance.NoMetadata)
+			{
+				writer.WriteLine();
+				writer.WriteLine("\t\t.meta = {");
+				writer.WriteLine("\t\t\t.states = meta_states,");
+				writer.WriteLine("\t\t\t.states_size = sizeof (meta_states) / sizeof (CdnRawcStateMeta),");
+				writer.WriteLine();
+				writer.WriteLine("\t\t\t.nodes = meta_nodes,");
+				writer.WriteLine("\t\t\t.nodes_size = sizeof (meta_nodes) / sizeof (CdnRawcNodeMeta),");
+				writer.WriteLine();
+				writer.WriteLine("\t\t\t.children = meta_children,");
+				writer.WriteLine("\t\t\t.children_size = sizeof (meta_children) / sizeof (CdnRawcChildMeta),");
+				writer.WriteLine();
+				writer.WriteLine("\t\t},");
+			}
+
+			writer.WriteLine("\t};");
+
+			writer.WriteLine();
+			writer.WriteLine("\treturn &network;");
+
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
 		
 		private void WriteSource()
 		{
+			d_options.CPrefixDown = CPrefixDown;
+
 			d_sourceFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".c");
 			TextWriter writer = new StreamWriter(d_sourceFilename);
 			
@@ -912,12 +1335,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 			}
 
-			writer.WriteLine("#ifndef NINIT");
-			writer.WriteLine("#define NINIT NAN");
-			writer.WriteLine("#endif");
-
-			writer.WriteLine();
-
 			TextWriter math;
 			string guard = null;
 			
@@ -952,95 +1369,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			WriteDataTables(writer);
 			WriteFunctions(writer);
-			WriteInitialization(writer);
-			WriteAccessors(writer);
-			WriteStep(writer);
+			WriteAPISource(writer);
+
+			WriteNetwork(writer);
 
 			writer.Close();
-		}
-		
-		private void WriteCppWrapper()
-		{
-			d_cppFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".hh");
-			TextWriter writer = new StreamWriter(d_cppFilename);
-			
-			writer.WriteLine("#ifndef __{0}_HH__", CPrefixUp);
-			writer.WriteLine("#define __{0}_HH__", CPrefixUp);
-			
-			writer.WriteLine();
-			writer.WriteLine("#include \"{0}.h\"", CPrefixDown);
-			writer.WriteLine();
-			
-			writer.WriteLine("namespace cpg");
-			writer.WriteLine("{");
-			writer.WriteLine("namespace {0}", CPrefixDown);
-			writer.WriteLine("{");
-			
-			if (d_enumMap.Count > 0)
-			{
-				writer.WriteLine("\tstruct State");
-				writer.WriteLine("\t{");
-				writer.WriteLine("\t\tenum Values");
-				writer.WriteLine("\t\t{");
-				
-				for (int i = 0; i < d_enumMap.Count; ++i)
-				{
-					if (i != 0)
-					{
-						writer.WriteLine(",");
-					}
-
-					writer.Write("\t\t\t{0} = {1}", d_enumMap[i].ShortName, d_enumMap[i].CName);
-				}
-				
-				writer.WriteLine();
-
-				writer.WriteLine("\t\t};");
-				writer.WriteLine("\t};");
-				writer.WriteLine();
-			}
-			
-			writer.WriteLine("\tclass Network");
-			writer.WriteLine("\t{");
-			writer.WriteLine("\t\tpublic:");
-			writer.WriteLine("\t\t\tstatic void initialize({0} t)", ValueType);
-			writer.WriteLine("\t\t\t{");
-			writer.WriteLine("\t\t\t\t{0}_initialize ({1} t);", CPrefixDown, ValueType);
-			writer.WriteLine("\t\t\t}");
-			writer.WriteLine();
-
-			writer.WriteLine("\t\t\tstatic void step({0} timestep)", ValueType);
-
-			writer.WriteLine("\t\t\t{");
-			
-			writer.WriteLine("\t\t\t\t{0}_step (timestep);", CPrefixDown);
-
-			writer.WriteLine("\t\t\t}");
-			writer.WriteLine();
-
-			writer.WriteLine("\t\t\tstatic void set(State::Values idx, {0} val);", ValueType);
-			writer.WriteLine("\t\t\t{");
-			writer.WriteLine("\t\t\t\t{0}_set (static_cast<int>(idx), val);", CPrefixDown);
-			writer.WriteLine("\t\t\t}");
-			writer.WriteLine();
-
-			writer.WriteLine("\t\t\tstatic {0} get(State::Values idx);", ValueType);
-			writer.WriteLine("\t\t\t{");
-			writer.WriteLine("\t\t\t\treturn {0}_get (static_cast<int>(idx));", CPrefixDown);
-			writer.WriteLine("\t\t\t}");
-			writer.WriteLine();
-			
-			writer.WriteLine("\t};");
-			
-			writer.WriteLine("}");
-			writer.WriteLine("}");
-
-			writer.WriteLine();
-			
-			writer.WriteLine("#endif /* __{0}_HH__ */", CPrefixUp);
-			
-			writer.Close();
-		}
+		}	
 	}
 }
 

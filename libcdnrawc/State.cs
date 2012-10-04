@@ -11,7 +11,7 @@ namespace Cdn.RawC
 			None = 0,
 			Integrated = 1 << 0,
 			Initialization = 1 << 1,
-			Update = 1 << 2
+			Derivative = 1 << 2
 		}
 
 		private object d_object;
@@ -20,7 +20,7 @@ namespace Cdn.RawC
 		private Cdn.Expression d_expressionUnexpanded;
 		private Instruction[] d_instructions;
 		private Flags d_type;
-		
+
 		public State(Flags type)
 		{
 			d_type = type;
@@ -108,25 +108,6 @@ namespace Cdn.RawC
 			Dictionary<Instruction, Instruction> instmap = new Dictionary<Instruction, Instruction>();
 
 			d_expression = RawC.Tree.Expression.Expand(instmap, exprs.ToArray());
-
-			if (d_actions.Length != 0 && v != null)
-			{
-				List<Cdn.Instruction> instructions = new List<Cdn.Instruction>(d_expression.Instructions);
-				
-				if ((d_type & Flags.Integrated) != 0)
-				{
-					// Multiply by timestep
-					instructions.Add(new InstructionVariable(Knowledge.Instance.Network.Integrator.Variable("dt"), Cdn.InstructionVariableBinding.None));
-					instructions.Add(new InstructionFunction((int)Cdn.MathFunctionType.Multiply, "*", 2));
-
-					// Add to original state variable as well
-					instructions.Add(new InstructionVariable(v, Cdn.InstructionVariableBinding.None));
-					instructions.Add(new InstructionFunction((int)Cdn.MathFunctionType.Plus, "+", 2));
-
-					d_expression.SetInstructionsTake(instructions.ToArray());
-				}
-			}
-
 			Knowledge.Instance.UpdateInstructionMap(instmap);
 		}
 		

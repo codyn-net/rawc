@@ -66,6 +66,29 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			return ret.ToString();
 		}
+
+		private string Translate(Computation.CallAPI node, Context context)
+		{
+			StringBuilder ret = new StringBuilder();
+
+			ret.AppendFormat("{0}_{1} (", context.Options.CPrefixDown, node.Function.Name);
+
+			for (int i = 0; i < node.Arguments.Length; ++i)
+			{
+				if (i != 0)
+				{
+					ret.Append(", ");
+				}
+
+				var arg = node.Arguments[i];
+
+				string eq = InstructionTranslator.QuickTranslate(context.Base().Push(arg));
+				ret.Append(eq);
+			}
+
+			ret.AppendFormat(");");
+			return ret.ToString();
+		}
 		
 		private string Translate(Computation.Loop node, Context context)
 		{
@@ -249,16 +272,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			string eq = InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation));
 
-			if ((node.Item.Type & DataTable.DataItem.Flags.Integrated) != 0 &&
-				context.Program.NodeIsInitialization(node))
-			{
-				return String.Format("{0}[{1}] = {0}[{2}] = {3};",
-			                     node.Item.Table.Name,
-			                     node.Item.AliasOrIndex,
-					             node.Item.Index + context.Program.IntegrateTable.Count,
-			                     eq);
-			}
-			else if (node.State is DelayedState)
+			if (node.State is DelayedState)
 			{
 				DelayedState ds = (DelayedState)node.State;
 				StringBuilder ret = new StringBuilder();
@@ -294,7 +308,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string Translate(Computation.ZeroTable node, Context context)
 		{
-			return String.Format("memset ({0}, 0, sizeof ({0}));", node.DataTable.Name);
+			if (node.DataTable.IntegerType)
+			{
+				return String.Format("memset ({0}, 0, sizeof ({0}));",
+				                     node.DataTable.Name);
+			}
+			else
+			{
+				return String.Format("memset ({0}, 0, sizeof (ValueType) * {1});",
+				                     node.DataTable.Name,
+				                     node.DataTable.Count);
+			}
 		}
 		
 		private string Translate(Computation.Empty node, Context context)

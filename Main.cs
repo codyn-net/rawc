@@ -8,7 +8,19 @@ namespace Cdn.RawC.Application
 		{
 			GLib.GType.Init();
 
-			Options options = Options.Initialize(args);
+			Options options;
+
+			try
+			{
+				options = Options.Initialize(args);
+			}
+			catch (CommandLine.OptionException ex)
+			{
+				Console.Error.WriteLine("Failed to parse options: {0}", ex.Message);
+				Environment.Exit(1);
+				return;
+			}
+
 			bool doexit = false;
 			
 			if (options.Collector == "")
@@ -47,9 +59,18 @@ namespace Cdn.RawC.Application
 				{
 					generator.Generate();
 					
-					if (!options.Validate)
+					if (!options.Validate && options.Compile == null)
 					{
-						string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, a => String.Format("`{0}'", System.IO.Path.GetFileName(a)));
+						string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, (a) => {
+							if (a.StartsWith(Environment.CurrentDirectory + "/"))
+							{
+								return String.Format("`{0}'", a.Substring(Environment.CurrentDirectory.Length + 1));
+							}
+							else
+							{
+								return String.Format("`{0}'", System.IO.Path.GetFileName(a));
+							}
+						});
 	
 						string s;
 						

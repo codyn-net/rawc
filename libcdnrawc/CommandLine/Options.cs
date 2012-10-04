@@ -196,7 +196,7 @@ namespace Cdn.RawC.CommandLine
 			{
 				info.Set(opt, true);
 			}
-			else if (canarg && (argument != null || idx < args.Length))
+			else if (canarg && (argument != null || idx < args.Length && !args[idx].StartsWith("-")))
 			{
 				if (argument == null)
 				{
