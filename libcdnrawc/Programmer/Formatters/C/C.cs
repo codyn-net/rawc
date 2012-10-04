@@ -140,8 +140,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			StreamReader reader = new StreamReader(res);
 			string ret = reader.ReadToEnd();
 
-			var sources = Path.GetFileName(d_sourceFilename);
-			var headers = Path.GetFileName(d_headerFilename);
+			var sources = Path.GetFileName(d_sourceFilename) + " " + Path.GetFileName(d_runSourceFilename);
+			var headers = Path.GetFileName(d_headerFilename) + " " + Path.GetFileName(d_runHeaderFilename);
 
 			if (d_options.Standalone != null)
 			{
