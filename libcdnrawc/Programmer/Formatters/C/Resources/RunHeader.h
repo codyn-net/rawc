@@ -12,8 +12,8 @@ ValueType          cdn_rawc_${name}_get        (CdnRawc${Name}State index);
 void               cdn_rawc_${name}_set        (CdnRawc${Name}State index,
                                                 ValueType       value);
 
-ValueType         *cdn_rawc_${name}_data       ();
-CdnRawcIntegrator *cdn_rawc_${name}_integrator ();
+ValueType         *cdn_rawc_${name}_data       (void);
+CdnRawcIntegrator *cdn_rawc_${name}_integrator (void);
 
 CDN_RAWC_END_DECLS
 

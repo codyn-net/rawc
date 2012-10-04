@@ -27,8 +27,8 @@ cdn_rawc_${name}_step (ValueType t, ValueType dt)
 	                  dt);
 }
 
-CdnRawcNetwork *
-cdn_rawc_${name}_integrator ()
+CdnRawcIntegrator *
+cdn_rawc_${name}_integrator (void)
 {
 	return integrator;
 }
@@ -47,7 +47,7 @@ cdn_rawc_${name}_set (CdnRawc${Name}State index,
 }
 
 ValueType *
-cdn_rawc_${name}_data ()
+cdn_rawc_${name}_data (void)
 {
 	return data;
 }
