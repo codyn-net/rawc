@@ -1268,8 +1268,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			if (!Cdn.RawC.Options.Instance.NoMetadata)
 			{
+				var t = d_program.StateTable[Knowledge.Instance.Time];
+				var dt = d_program.StateTable[Knowledge.Instance.TimeStep];
+
 				writer.WriteLine();
 				writer.WriteLine("\t\t.meta = {");
+				writer.WriteLine("\t\t\t.t = {0},", t.AliasOrIndex);
+				writer.WriteLine("\t\t\t.dt = {0},", dt.AliasOrIndex);
+				writer.WriteLine();
 				writer.WriteLine("\t\t\t.states = meta_states,");
 				writer.WriteLine("\t\t\t.states_size = sizeof (meta_states) / sizeof (CdnRawcStateMeta),");
 				writer.WriteLine();

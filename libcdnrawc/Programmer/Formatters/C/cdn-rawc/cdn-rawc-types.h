@@ -74,6 +74,9 @@ typedef struct
 
 	struct
 	{
+		uint32_t t;
+		uint32_t dt;
+
 		// List of metadata per state
 		CdnRawcStateMeta const *states;
 		uint32_t states_size;
