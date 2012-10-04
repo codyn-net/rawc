@@ -1091,7 +1091,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ChildMeta cm = new ChildMeta {
 					Parent = parent,
 					IsNode = false,
-					Index = (uint)item.Index + 1,
+					Index = (uint)item.Index,
 					Next = 0
 				};
 
@@ -1141,11 +1141,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				IsNode = false,
 				Index = 0,
 				Next = 0
-			});
-
-			meta.States.Add(new StateMeta {
-				Name = null,
-				Parent = 0
 			});
 
 			ExtractMeta(meta, Knowledge.Instance.Network, 0);
