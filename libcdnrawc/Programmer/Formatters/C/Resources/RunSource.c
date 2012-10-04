@@ -20,11 +20,11 @@ cdn_rawc_${name}_init (ValueType t, ValueType dt)
 void
 cdn_rawc_${name}_step (ValueType t, ValueType dt)
 {
-	integrator->step (integrator,
-	                  network,
-	                  data,
-	                  t,
-	                  dt);
+	cdn_rawc_integrator_step (integrator,
+	                          network,
+	                          data,
+	                          t,
+	                          dt);
 }
 
 CdnRawcIntegrator *
