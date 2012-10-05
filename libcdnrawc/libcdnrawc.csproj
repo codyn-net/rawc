@@ -100,6 +100,7 @@
     <Compile Include="Programmer\Computation\CallAPI.cs" />
     <Compile Include="DerivativeState.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="Validator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

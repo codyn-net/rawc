@@ -47,7 +47,7 @@ namespace Cdn.RawC.Programmer
 			d_apiPre = new APIFunction("pre", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
 			d_apiDiff = new APIFunction("diff", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
 			d_apiPost = new APIFunction("post", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
-			d_apiInit = new APIFunction("init", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
+			d_apiInit = new APIFunction("init", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
 			d_apiClear = new APIFunction("clear", "void", "ValueType*", d_statetable.Name);
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
@@ -565,14 +565,28 @@ namespace Cdn.RawC.Programmer
 
 		private void ProgramSetTDT(APIFunction func)
 		{
+			ProgramSetTDT(func, false);
+		}
+
+		private void ProgramSetTDT(APIFunction func, bool dtzero)
+		{
 			Cdn.Variable tvar = Knowledge.Instance.Network.Integrator.Variable("t");
 			DataTable.DataItem t = d_statetable[tvar];
 
 			Cdn.Variable dtvar = Knowledge.Instance.Network.Integrator.Variable("dt");
 			DataTable.DataItem dt = d_statetable[dtvar];
 
-			var teq = new Tree.Node(null, new Instructions.Variable("t"));
-			var dteq = new Tree.Node(null, new Instructions.Variable("dt"));
+			Tree.Node teq = new Tree.Node(null, new Instructions.Variable("t"));
+			Tree.Node dteq;
+
+			if (dtzero)
+			{
+				dteq = new Tree.Node(null, new InstructionNumber("0"));
+			}
+			else
+			{
+				dteq = new Tree.Node(null, new Instructions.Variable("dt"));
+			}
 
 			func.Add(new Computation.Comment("Set t and dt"));
 			func.Add(new Computation.Assignment(null, t, teq));
@@ -815,7 +829,7 @@ namespace Cdn.RawC.Programmer
 			else
 			{
 				// Ok, now we are ready to set t
-				ProgramSetTDT(d_apiInit);
+				ProgramSetTDT(d_apiInit, true);
 			}
 
 			// Finally, initialize those states that depend on t again

@@ -5,7 +5,7 @@
 
 CDN_RAWC_BEGIN_DECLS
 
-void               cdn_rawc_${name}_init       (ValueType t, ValueType dt);
+void               cdn_rawc_${name}_init       (ValueType t);
 void               cdn_rawc_${name}_step       (ValueType t, ValueType dt);
 
 ValueType          cdn_rawc_${name}_get        (CdnRawc${Name}State index);

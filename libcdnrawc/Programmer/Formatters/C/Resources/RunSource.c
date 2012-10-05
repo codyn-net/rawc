@@ -8,13 +8,13 @@ static CdnRawcNetwork *network = 0;
 static ValueType data[CDN_RAWC_${NAME}_DATA_SIZE * CDN_RAWC_INTEGRATOR_${INTEGRATOR}_DATA_SIZE];
 
 void
-cdn_rawc_${name}_init (ValueType t, ValueType dt)
+cdn_rawc_${name}_init (ValueType t)
 {
 	network = cdn_rawc_${name}_network ();
 	integrator = cdn_rawc_integrator_${integrator} ();
 	
 	network->clear (data);
-	network->init (data, t, dt);
+	network->init (data, t);
 }
 
 void

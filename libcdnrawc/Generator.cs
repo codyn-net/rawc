@@ -10,79 +10,16 @@ namespace Cdn.RawC
 		private string d_filename;
 		private Cdn.Network d_network;
 		private string[] d_writtenFiles;
-		private List<Cdn.Monitor> d_monitors;
-		private List<double[] > d_monitored;
+		private Validator d_validator;
 
 		public Generator(string filename)
 		{
 			d_filename = filename;
 		}
 
-		private void RunCodyn()
-		{
-			// Run the network now
-			d_monitors = new List<Cdn.Monitor>();
-			
-			d_monitors.Add(new Cdn.Monitor(d_network, d_network.Integrator.Variable("t")));
-			
-			Knowledge.Initialize(d_network);
-			
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
-			{
-				d_monitors.Add(new Cdn.Monitor(d_network, v));
-			}
-			
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
-			{
-				d_monitors.Add(new Cdn.Monitor(d_network, v));
-			}
-			
-			double ts;
-			
-			if (Options.Instance.DelayTimeStep <= 0)
-			{
-				ts = Options.Instance.ValidateRange[1];
-			}
-			else
-			{
-				ts = Options.Instance.DelayTimeStep;
-			}
-			
-			d_network.Run(Options.Instance.ValidateRange[0],
-			              ts,
-			              Options.Instance.ValidateRange[2]);
-			
-			// Extract the validation data
-			d_monitored = new List<double[]>();
-			
-			for (int i = 0; i < d_monitors.Count; ++i)
-			{
-				d_monitored.Add(d_monitors[i].GetData());
-			}
-		}
-
-		private void InitRand()
-		{
-			// Set seeds for all the rand instructions in the network
-			var r = new System.Random();
-
-			d_network.ForeachExpression((expr) => {
-				foreach (var instr in expr.Instructions)
-				{
-					Cdn.InstructionRand rand = instr as Cdn.InstructionRand;
-
-					if (rand != null)
-					{
-						var seed = (int)(r.NextDouble() * (uint.MaxValue - 1) + 1);
-						rand.Seed = (uint)seed;
-					}
-				}
-			});
-		}
-		
 		public void Generate()
 		{
-			if (Options.Instance.Compile == null || Options.Instance.Verbose)
+			if ((Options.Instance.Compile == null && !Options.Instance.Validate) || Options.Instance.Verbose)
 			{
 				Log.WriteLine("Generating code for network...");
 			}
@@ -91,12 +28,7 @@ namespace Cdn.RawC
 
 			if (Options.Instance.Validate)
 			{
-				InitRand();
-
-				if (!Options.Instance.PrintCompileSource)
-				{
-					RunCodyn();
-				}
+				d_validator = new Validator(d_network);
 			}
 
 			if (Options.Instance.DelayTimeStep > 0)
@@ -126,7 +58,7 @@ namespace Cdn.RawC
 			bool outistemp = false;
 			
 			// Write program
-			if (Options.Instance.Validate || (Options.Instance.Compile != null))
+			if (Options.Instance.Validate || Options.Instance.Compile != null)
 			{
 				// Create a new temporary directory for the output files
 				string path = Path.GetTempFileName();
@@ -162,7 +94,7 @@ namespace Cdn.RawC
 			{
 				try
 				{
-					Validate();
+					d_validator.Validate(program);
 				}
 				catch (Exception e)
 				{
@@ -171,8 +103,6 @@ namespace Cdn.RawC
 					Directory.Delete(program.Options.Output, true);
 					Environment.Exit(1);
 				}
-
-				Directory.Delete(program.Options.Output, true);
 			}
 			else if (Options.Instance.Compile != null)
 			{
@@ -198,140 +128,13 @@ namespace Cdn.RawC
 
 			if (outistemp)
 			{
-				Directory.Delete(program.Options.Output, true);
-			}
-		}
-
-		private void Validate()
-		{
-			Log.WriteLine("Validating generated network...");
-
-			string tmpprog = Path.GetTempFileName();
-
-			Options opts = Options.Instance;
-			// TODO
-			//opts.Formatter.Compile(tmpprog, opts.Verbose);
-
-			double ts;
-
-			if (opts.DelayTimeStep <= 0)
-			{
-				ts = opts.ValidateRange[1];
-			}
-			else
-			{
-				ts = opts.DelayTimeStep;
-			}
-			
-			Process process = new Process();
-			process.StartInfo.FileName = tmpprog;
-			process.StartInfo.Arguments = String.Format("{0} {1} {2}", opts.ValidateRange[0], ts, opts.ValidateRange[2]);
-			process.StartInfo.RedirectStandardOutput = true;
-			process.StartInfo.RedirectStandardInput = true;
-			process.StartInfo.UseShellExecute = false;
-
-			process.Start();
-
-			process.StandardInput.WriteLine("t");
-
-			for (int i = 1; i < d_monitors.Count; ++i)
-			{
-				Cdn.Variable prop;
-				string name;
-
-				prop = d_monitors[i].Variable;
-
-				if (prop.Object is Cdn.Integrator || prop.Object is Cdn.Network)
-				{
-					name = prop.Name;
-				}
-				else
-				{
-					name = prop.FullName;
-				}
-
-				process.StandardInput.WriteLine(name);
-			}
-			
-			process.StandardInput.Close();
-
-			string output = process.StandardOutput.ReadToEnd();
-			process.WaitForExit();
-			
-			List<List<double >> data = new List<List<double>>();
-
-			string[] lines = output.Split('\n');
-			
-			foreach (string line in lines)
-			{
-				if (String.IsNullOrEmpty(line))
-				{
-					continue;
-				}
-
 				try
 				{
-					data.Add(new List<double>(Array.ConvertAll<string, double>(line.Split('\t'), a => {
-						string trimmed = a.Trim().ToLower();
-
-						if (trimmed == "nan")
-						{
-							return Double.NaN;
-						}
-						else if (trimmed == "-nan")
-						{
-							return -Double.NaN;
-						}
-						else if (trimmed == "inf")
-						{
-							return Double.PositiveInfinity;
-						}
-						else if (trimmed == "-inf")
-						{
-							return Double.NegativeInfinity;
-						}
-						else
-						{
-							return Double.Parse(a);
-						}
-					})));
-				}
-				catch
-				{
-					throw new Exception(String.Format("Could not parse number:\n{0}", line));
-				}
+					Directory.Delete(program.Options.Output, true);
+				} catch {};
 			}
-
-			List<string > failures = new List<string>();
-
-			for (int i = 0; i < data.Count; ++i)
-			{
-				List<double > raw = data[i];
-				
-				for (int j = 0; j < raw.Count; ++j)
-				{
-					if (System.Math.Abs(d_monitored[j][i] - raw[j]) > opts.ValidatePrecision ||
-					    double.IsNaN(d_monitored[j][i]) != double.IsNaN(raw[j]))
-					{
-						failures.Add(String.Format("{0} (got {1} but expected {2})",
-							         d_monitors[j].Variable.FullName,
-							         raw[j],
-							         d_monitored[j][i]));
-					}
-				}
-
-				if (failures.Count > 0)
-				{
-					throw new Exception(String.Format("Discrepancy detected at t = {0}:\n  {1}",
-						                              opts.ValidateRange[0] + (i * ts),
-						                              String.Join("\n  ", failures.ToArray())));
-
-				}
-			}
-			
-			Log.WriteLine("Network {0} successfully validated...", d_network.Filename);
 		}
-		
+
 		public string[] WrittenFiles
 		{
 			get
@@ -357,7 +160,7 @@ namespace Cdn.RawC
 			if (String.IsNullOrEmpty(ret.Output))
 			{
 				var dirname = Path.GetDirectoryName(ret.Network.Filename);
-				ret.Output = Path.Combine(dirname, "rawc_" + Path.GetFileNameWithoutExtension(ret.Network.Filename));
+				ret.Output = Path.Combine(dirname, "rawc_" + ret.Basename);
 			}
 
 			ret.OriginalOutput = ret.Output;

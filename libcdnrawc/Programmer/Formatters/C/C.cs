@@ -222,11 +222,21 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return Source("Cdn.RawC.Programmer.Formatters.C.Resources.MexProgram.c");
 		}
 
+		public string CompileForValidation(bool verbose)
+		{
+			return Compile(verbose, true)[0];
+		}
+
 		public string[] Compile(bool verbose)
+		{
+			return Compile(verbose, false);
+		}
+
+		private string[] Compile(bool verbose, bool validating)
 		{
 			if (String.IsNullOrEmpty(d_sourceFilename))
 			{
-				throw new Exception("The program is not compiled yet!");
+				throw new Exception("The program is not generated yet!");
 			}
 
 			string ddir = Path.GetDirectoryName(d_sourceFilename);
@@ -235,23 +245,28 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			Process process = new Process();
 
 			process.StartInfo.FileName = "make";
-			process.StartInfo.UseShellExecute = true;
+			process.StartInfo.UseShellExecute = false;
 			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 
 			StringBuilder args = new StringBuilder();
 			args.AppendFormat("CFLAGS='{0}'", d_options.CFlags);
 
+			if (verbose)
+			{
+				args.Append(" V=1");
+			}
+
 			List<string> ret = new List<string>();
 
 			bool all = !(d_options.CompileShared || d_options.CompileStatic);
 
-			if (all || d_options.CompileShared)
+			if (all || d_options.CompileShared || validating)
 			{
 				args.Append(" shared");
 				ret.Add(Path.Combine(ddir, "lib" + CPrefixDown + ".so"));
 			}
 
-			if (all || d_options.CompileStatic)
+			if ((all || d_options.CompileStatic) && !validating)
 			{
 				args.Append(" static");
 				ret.Add(Path.Combine(ddir, "lib" + CPrefixDown + ".a"));
@@ -259,10 +274,15 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			process.StartInfo.Arguments = args.ToString();
 			process.StartInfo.WorkingDirectory = ddir;
+
+			if (!verbose && validating)
+			{
+				process.StartInfo.RedirectStandardOutput = true;
+			}
 			
 			if (verbose)
 			{
-				Log.WriteLine("Compiling: {0}", process.StartInfo.Arguments);
+				Log.WriteLine("Compiling in {0}: make {1}", ddir, process.StartInfo.Arguments);
 			}
 
 			process.Start();

@@ -103,7 +103,8 @@ FILES = \
 	Generator.cs \
 	Sort.cs \
 	Log.cs \
-	Config.cs
+	Config.cs \
+	Validator.cs
 
 DATA_FILES =
 

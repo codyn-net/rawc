@@ -62,7 +62,7 @@ typedef struct
 typedef struct
 {
 	void (*clear) (ValueType *data);
-	void (*init) (ValueType *data, ValueType t, ValueType dt);
+	void (*init) (ValueType *data, ValueType t);
 	void (*pre)  (ValueType *data, ValueType t, ValueType dt);
 	void (*diff) (ValueType *data, ValueType t, ValueType dt);
 	void (*post) (ValueType *data, ValueType t, ValueType dt);
