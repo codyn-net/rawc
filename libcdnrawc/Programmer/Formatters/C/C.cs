@@ -1020,7 +1020,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private void WriteDataTables(TextWriter writer)
 		{
-			if (Cdn.RawC.Options.Instance.Validate)
+			if (Cdn.RawC.Options.Instance.Validate && Knowledge.Instance.CountRandStates > 0)
 			{
 				// Write seed table and state table for rands
 				writer.WriteLine("typedef char RandState[8];");
