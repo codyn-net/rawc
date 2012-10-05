@@ -734,6 +734,24 @@ namespace Cdn.RawC.Programmer
 			d_apiClear.Add(new Computation.Comment("Clear data"));
 			d_apiClear.Add(new Computation.ZeroTable(d_statetable));
 			d_apiClear.Add(new Computation.Empty());
+
+			List<State> constants = new List<State>();
+
+			// Also initialize constants here
+			foreach (var item in d_statetable)
+			{
+				if ((item.Type & DataTable.DataItem.Flags.Constant) != 0)
+				{
+					constants.Add(item.Object as State);
+				}
+			}
+
+			if (constants.Count != 0)
+			{
+				d_apiClear.Add(new Computation.Comment("Initialize constants"));
+				d_apiClear.AddRange(AssignmentStates(constants, null));
+				d_apiClear.Add(new Computation.Empty());
+			}
 		}
 		
 		private void ProgramInitialization()
