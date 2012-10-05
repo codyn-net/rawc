@@ -832,11 +832,7 @@ namespace Cdn.RawC.Programmer
 				ProgramSetTDT(d_apiInit, true);
 			}
 
-			// Finally, initialize those states that depend on t again
-			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(depontimeLeft))
-			{
-				d_apiInit.AddRange(AssignmentStates(grp, null));
-			}
+			ProgramDependencies(d_apiInit, depontimeLeft, "Finally, compute values that depended on t/dt or delays");
 		}
 		
 		public IEnumerable<Cdn.Function> UsedCustomFunctions
