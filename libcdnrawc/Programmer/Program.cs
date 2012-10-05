@@ -18,7 +18,6 @@ namespace Cdn.RawC.Programmer
 		private List<Tree.Embedding> d_embeddings;
 		private List<Cdn.Function> d_usedCustomFunctions;
 		private Dictionary<string, Function> d_functionMap;
-		private Dictionary<DataTable.DataItem, State> d_integrateTable;
 		private List<Computation.Loop> d_loops;
 		private List<Computation.Loop> d_initLoops;
 		private Dictionary<Tree.Embedding, Function> d_embeddingFunctionMap;
@@ -52,7 +51,6 @@ namespace Cdn.RawC.Programmer
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
 			d_functionMap = new Dictionary<string, Function>();
-			d_integrateTable = new Dictionary<DataTable.DataItem, State>();
 			d_loops = new List<Computation.Loop>();
 			d_initLoops = new List<Computation.Loop>();
 			d_indexTables = new List<DataTable>();
@@ -118,20 +116,11 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 		
-		public Dictionary<DataTable.DataItem, State> IntegrateTable
-		{
-			get
-			{
-				return d_integrateTable;
-			}
-		}
-
 		private void ProgramDataTables()
 		{
 			foreach (var state in Knowledge.Instance.States)
 			{
 				Variable v = state.Object as Variable;
-
 				DataTable.DataItem item = d_statetable.Add(state);
 
 				if (v != null)

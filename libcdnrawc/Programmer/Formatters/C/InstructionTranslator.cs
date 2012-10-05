@@ -209,13 +209,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
-			
-			if (context.Program.IntegrateTable.ContainsKey(item))
-			{
-				// Instead use the conserved state
-				item = context.Program.StateTable[context.Program.IntegrateTable[item]];
-			}
-
 			return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
 		}
 

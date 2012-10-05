@@ -129,11 +129,6 @@ namespace Cdn.RawC.Programmer.Computation
 				
 				DataTable.DataItem it = d_program.StateTable[subnode];
 				
-				if (d_isintegrated && d_program.IntegrateTable.ContainsKey(it))
-				{
-					it = d_program.StateTable[d_program.IntegrateTable[it]];
-				}
-				
 				d_indextable.Add(new Index((ulong)it.Index, it)).Type = (it.Type | DataTable.DataItem.Flags.Index);
 				d_indextable.MaxSize = (ulong)it.Index;
 			}
