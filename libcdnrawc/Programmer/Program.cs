@@ -787,7 +787,7 @@ namespace Cdn.RawC.Programmer
 				return s is DelayedState;
 			});
 
-			ProgramDependencies(d_apiInit, beforetime, "Compute initial values not depending on t/dt or delays");
+			ProgramDependencies(d_apiInit, beforetime, "Compute initial values _not_ depending on t/dt or delays");
 
 			var depontimeLeft = new DependencyFilter(depontime);
 
