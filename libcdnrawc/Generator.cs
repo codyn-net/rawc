@@ -310,15 +310,24 @@ namespace Cdn.RawC
 			}
 			
 			List<Tree.Node> forest = new List<Tree.Node>();
+			var added = new HashSet<State>();
 			
 			foreach (State state in Knowledge.Instance.States)
 			{
-				forest.Add(Tree.Node.Create(state));
+				added.Add(state);
+
+				if (state != Knowledge.Instance.Time && state != Knowledge.Instance.TimeStep)
+				{
+					forest.Add(Tree.Node.Create(state));
+				}
 			}
 
 			foreach (State state in Knowledge.Instance.InitializeStates)
 			{
-				forest.Add(Tree.Node.Create(state));
+				if (added.Add(state))
+				{
+					forest.Add(Tree.Node.Create(state));
+				}
 			}
 			
 			return collector.Collect(forest.ToArray());
