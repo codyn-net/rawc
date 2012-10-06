@@ -427,7 +427,10 @@ namespace Cdn.RawC.Programmer
 					if (num != null)
 					{
 						// Promote to data table
-						DataTable.DataItem ditem = d_statetable.Add(num.Value);
+						var st = new State(num.Value, new Instruction[] {num}, State.Flags.Constant);
+
+						DataTable.DataItem ditem = d_statetable.Add(st);
+						d_equations[st] = Tree.Node.Create(st);
 						
 						ditem.Type = DataTable.DataItem.Flags.Constant;
 						subnode.Instruction = new Instructions.State(ditem);
