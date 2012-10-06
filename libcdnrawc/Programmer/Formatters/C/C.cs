@@ -754,9 +754,29 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			foreach (Programmer.Function function in d_program.Functions)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-				writer.WriteLine("static ValueType {0} ({1}) GNUC_PURE;",
+
+				writer.Write("static ");
+
+				if (function.Inline)
+				{
+					writer.Write("inline ");
+				}
+
+				writer.Write("ValueType {0} ({1})",
 				                 function.Name,
 				                 GenerateArgsList("x", function.NumArguments, 0, "ValueType"));
+
+				if (function.Inline)
+				{
+					writer.Write(" GNUC_INLINE");
+				}
+
+				if (function.Pure)
+				{
+					writer.Write(" GNUC_PURE");
+				}
+
+				writer.WriteLine(";");
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
 				writer.WriteLine();
 			}
@@ -846,7 +866,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 			}
 
-			writer.WriteLine(") GNUC_PURE");
+			writer.WriteLine(")");
 
 			writer.WriteLine("{");
 			WriteComputationNodes(writer, api.Source);
