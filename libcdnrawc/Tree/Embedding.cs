@@ -42,6 +42,8 @@ namespace Cdn.RawC.Tree
 		private List<NodePath> d_potentialArguments;
 		private Node d_expression;
 		private uint d_argumentIdx;
+		private bool d_inline;
+		private bool d_pure;
 		
 		public struct InstanceArgs
 		{
@@ -140,7 +142,7 @@ namespace Cdn.RawC.Tree
 		public Embedding(Node node, IEnumerable<Argument> arguments) : this(node, new NodePath[] {})
 		{
 			d_arguments = new List<Argument>(arguments);
-			
+
 			Sort.Insertion(d_arguments, (a, b) => a.Index.CompareTo(b.Index));
 		}
 		
@@ -153,6 +155,9 @@ namespace Cdn.RawC.Tree
 			d_expression = node;
 			
 			d_argumentIdx = 0;
+
+			d_pure = true;
+			d_inline = false;
 		}
 		
 		public bool Conflicts(Embedding other)
@@ -343,6 +348,18 @@ namespace Cdn.RawC.Tree
 			{
 				return d_instances.Count;
 			}
+		}
+
+		public bool Inline
+		{
+			get { return d_inline; }
+			set { d_inline = value; }
+		}
+
+		public bool Pure
+		{
+			get { return d_pure; }
+			set { d_pure = value; }
 		}
 	}
 }

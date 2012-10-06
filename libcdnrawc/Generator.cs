@@ -330,7 +330,55 @@ namespace Cdn.RawC
 				}
 			}
 			
-			return collector.Collect(forest.ToArray());
+			var ret = collector.Collect(forest.ToArray());
+			CollectSpecialSingles(ret, forest);
+
+			return ret;
+		}
+
+		private void CollectSpecialSingles(Tree.Collectors.Result ret, IEnumerable<Tree.Node> forest)
+		{
+			// Special case for single instructions. Generate embeddings for
+			// those, but separate them strictly.
+			Dictionary<uint, List<Tree.Node>> constnodes = new Dictionary<uint, List<Tree.Node>>();
+			List<uint> morethanoneconst = new List<uint>();
+
+			foreach (Tree.Node node in forest)
+			{
+				if (node.ChildCount == 0)
+				{
+					uint code = Tree.Expression.InstructionCode(node.Instruction, true);
+					List<Tree.Node> clst;
+
+					if (!constnodes.TryGetValue(code, out clst))
+					{
+						clst = new List<Tree.Node>();
+						constnodes[code] = clst;
+					}
+
+					if (clst.Count == 1)
+					{
+						morethanoneconst.Add(code);
+					}
+
+					clst.Add(node);
+				}
+			}
+
+			foreach (uint code in morethanoneconst)
+			{
+				var lst = constnodes[code];
+				var proto = (Tree.Node)lst[0].Clone();
+			
+				// Create embedding
+				var embedding = ret.Prototype(proto, new Tree.NodePath[] {});
+				embedding.Inline = true;
+			
+				foreach (Tree.Node node in lst)
+				{
+					embedding.Embed(node);
+				}
+			}
 		}
 		
 		private Tree.Embedding[] Filter(Tree.Collectors.Result collection)
