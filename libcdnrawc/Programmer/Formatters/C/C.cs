@@ -889,19 +889,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			if (maxnum < (ulong)byte.MaxValue)
 			{
-				return "unsigned char";
+				return "uint8_t";
 			}
 			else if (maxnum < (ulong)UInt16.MaxValue)
 			{
-				return "unsigned short";
+				return "uint16_t";
 			}
 			else if (maxnum < (ulong)UInt32.MaxValue)
 			{
-				return "unsigned int";
+				return "uint32_t";
 			}
 			else
 			{
-				return "unsigned long int";
+				return "uint64_t";
 			}
 		}
 		
@@ -1347,6 +1347,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine("#include <math.h>");
 			writer.WriteLine("#include <stdlib.h>");
+			writer.WriteLine("#include <stdint.h>");
 			writer.WriteLine("#include <string.h>");
 			
 			writer.WriteLine();
