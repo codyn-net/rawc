@@ -159,6 +159,11 @@ namespace Cdn.RawC.Tree
 					return opnum.Value;
 				}
 
+				if (d_state != null)
+				{
+					return d_state.DataKey;
+				}
+
 				return null;
 			}
 		}
