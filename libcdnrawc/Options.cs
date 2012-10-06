@@ -334,7 +334,7 @@ namespace Cdn.RawC
 		{
 			get
 			{
-				return d_minimumEmbeddingSize;
+				return d_minimumEmbeddingSize >= 2 ? d_minimumEmbeddingSize : 2;
 			}
 		}
 		
