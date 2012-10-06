@@ -1183,6 +1183,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				Next = 0
 			});
 
+			if (Cdn.RawC.Options.Instance.NoMetadata)
+			{
+				return meta;
+			}
+
 			ExtractMeta(meta, Knowledge.Instance.Network, 0);
 
 			foreach (var item in d_program.StateTable)
@@ -1213,7 +1218,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteNetworkMeta(TextWriter writer)
 		{
 			var meta = ExtractMeta();
-			
+
 			writer.WriteLine("\tstatic CdnRawcStateMeta meta_states[] = {");
 			
 			foreach (var state in meta.States)
@@ -1260,10 +1265,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("cdn_rawc_{0}_network ()", pref);
 			writer.WriteLine("{");
 			
-			if (!Cdn.RawC.Options.Instance.NoMetadata)
-			{
-				WriteNetworkMeta(writer);
-			}			
+			WriteNetworkMeta(writer);
 
 			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
 
@@ -1306,27 +1308,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 			writer.WriteLine("\t\t.data_size = CDN_RAWC_{0}_DATA_SIZE,", CPrefixUp);
 
-			if (!Cdn.RawC.Options.Instance.NoMetadata)
-			{
-				var t = d_program.StateTable[Knowledge.Instance.Time];
-				var dt = d_program.StateTable[Knowledge.Instance.TimeStep];
+			var t = d_program.StateTable[Knowledge.Instance.Time];
+			var dt = d_program.StateTable[Knowledge.Instance.TimeStep];
 
-				writer.WriteLine();
-				writer.WriteLine("\t\t.meta = {");
-				writer.WriteLine("\t\t\t.t = {0},", t.AliasOrIndex);
-				writer.WriteLine("\t\t\t.dt = {0},", dt.AliasOrIndex);
-				writer.WriteLine();
-				writer.WriteLine("\t\t\t.states = meta_states,");
-				writer.WriteLine("\t\t\t.states_size = sizeof (meta_states) / sizeof (CdnRawcStateMeta),");
-				writer.WriteLine();
-				writer.WriteLine("\t\t\t.nodes = meta_nodes,");
-				writer.WriteLine("\t\t\t.nodes_size = sizeof (meta_nodes) / sizeof (CdnRawcNodeMeta),");
-				writer.WriteLine();
-				writer.WriteLine("\t\t\t.children = meta_children,");
-				writer.WriteLine("\t\t\t.children_size = sizeof (meta_children) / sizeof (CdnRawcChildMeta),");
-				writer.WriteLine();
-				writer.WriteLine("\t\t},");
-			}
+			writer.WriteLine();
+			writer.WriteLine("\t\t.meta = {");
+			writer.WriteLine("\t\t\t.t = {0},", t.AliasOrIndex);
+			writer.WriteLine("\t\t\t.dt = {0},", dt.AliasOrIndex);
+			writer.WriteLine();
+			writer.WriteLine("\t\t\t.states = meta_states,");
+			writer.WriteLine("\t\t\t.states_size = sizeof (meta_states) / sizeof (CdnRawcStateMeta),");
+			writer.WriteLine();
+			writer.WriteLine("\t\t\t.nodes = meta_nodes,");
+			writer.WriteLine("\t\t\t.nodes_size = sizeof (meta_nodes) / sizeof (CdnRawcNodeMeta),");
+			writer.WriteLine();
+			writer.WriteLine("\t\t\t.children = meta_children,");
+			writer.WriteLine("\t\t\t.children_size = sizeof (meta_children) / sizeof (CdnRawcChildMeta),");
+			writer.WriteLine();
+			writer.WriteLine("\t\t},");
 
 			writer.WriteLine("\t};");
 
