@@ -498,7 +498,7 @@ namespace Cdn.RawC.Programmer
 		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, List<Computation.Loop> loops)
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
-			List<State > st = new List<State>(states);
+			List<State> st = new List<State>(states);
 
 			if (loops != null)
 			{
