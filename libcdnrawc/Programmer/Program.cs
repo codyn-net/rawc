@@ -515,6 +515,10 @@ namespace Cdn.RawC.Programmer
 
 					LoopData loop = new LoopData(embedding, function);
 
+					// loop over all the instantiations of this embedding and
+					// see if the node representing the instance is part of the
+					// states that are going to be assigned. If so, then the
+					// instance will be used
 					foreach (Tree.Node node in embedding.Instances)
 					{
 						if (st.Contains(node.State))
@@ -525,7 +529,8 @@ namespace Cdn.RawC.Programmer
 				
 					if (loop.Instances.Count >= Cdn.RawC.Options.Instance.MinimumLoopSize)
 					{
-						// Create loop for this thing
+						// Create loop for this thing. Note that CreateLoop
+						// removes the states relevant for the loop from 'st'
 						Computation.Loop l = CreateLoop(st, loop);
 					
 						ret.Add(l);
