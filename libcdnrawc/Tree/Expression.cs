@@ -88,6 +88,7 @@ namespace Cdn.RawC.Tree
 			InstructionCustomFunction icusf;
 			InstructionVariable ivar;
 			InstructionNumber inum;
+			InstructionRand irand;
 
 			if (InstructionIs(inst, out icusf))
 			{
@@ -159,8 +160,6 @@ namespace Cdn.RawC.Tree
 			}
 			else if (strict)
 			{
-				InstructionRand irand;
-
 				if (InstructionIs(inst, out ivar))
 				{
 					yield return HashMap(String.Format("var_{0}", ivar.Variable.FullName));
@@ -175,7 +174,20 @@ namespace Cdn.RawC.Tree
 				}
 				else
 				{
+					throw new NotImplementedException(String.Format("Unhandled strict instruction code: {0}", inst.GetType()));
+				}
+			}
+			else if (InstructionIs(inst, out irand))
+			{
+				var smanip = irand.GetStackManipulation();
+
+				if (smanip != null && smanip.Pop.Num == 0)
+				{
 					yield return PlaceholderCode;
+				}
+				else
+				{
+					yield return HashMap(String.Format("rand_{0}", irand.Handle));
 				}
 			}
 			else
