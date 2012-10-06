@@ -122,6 +122,11 @@ namespace Cdn.RawC.Tree
 		{
 			get
 			{
+				if (Instruction is InstructionRand)
+				{
+					return Instruction;
+				}
+
 				InstructionVariable prop = Instruction as InstructionVariable;
 				
 				if (prop != null)
