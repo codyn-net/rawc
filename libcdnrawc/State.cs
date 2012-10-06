@@ -11,7 +11,8 @@ namespace Cdn.RawC
 			None = 0,
 			Integrated = 1 << 0,
 			Initialization = 1 << 1,
-			Derivative = 1 << 2
+			Derivative = 1 << 2,
+			Constant = 1 << 3,
 		}
 
 		private object d_object;
