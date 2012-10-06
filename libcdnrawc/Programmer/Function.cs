@@ -11,6 +11,7 @@ namespace Cdn.RawC.Programmer
 		private Tree.Node d_expression;
 		private List<Tree.Embedding.Argument> d_arguments;
 		private List<Tree.Embedding.Argument> d_orderedArguments;
+		private Tree.Embedding d_embedding;
 		
 		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments) : this(name, expression, arguments, false)
 		{
@@ -49,10 +50,12 @@ namespace Cdn.RawC.Programmer
 		
 		public Function(string name, Tree.Embedding embedding, bool iscustom) : this(name, embedding.Expression, embedding.Arguments, iscustom)
 		{
+			d_embedding = embedding;
 		}
 		
 		public Function(string name, Tree.Embedding embedding) : this(name, embedding, false)
 		{
+			d_embedding = embedding;
 		}
 		
 		public string Name
@@ -93,6 +96,16 @@ namespace Cdn.RawC.Programmer
 			{
 				return d_orderedArguments.Count;
 			}
+		}
+
+		public bool Inline
+		{
+			get { return d_embedding != null ? d_embedding.Inline : false; }
+		}
+
+		public bool Pure
+		{
+			get { return d_embedding != null ? d_embedding.Pure : true; }
 		}
 	}
 }
