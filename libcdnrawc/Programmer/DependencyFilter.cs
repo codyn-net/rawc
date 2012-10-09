@@ -5,34 +5,34 @@ namespace Cdn.RawC.Programmer
 {
 	public class DependencyFilter : HashSet<State>
 	{
+		private DependencyGraph d_graph;
 		private DependencyFilter d_not;
 		private bool d_filter;
 
-		public DependencyFilter()
+		public DependencyFilter(DependencyGraph graph)
 		{
+			d_graph = graph;
 			d_filter = false;
 		}
 
-		public DependencyFilter(IEnumerable<State> other) : base(other)
+		public DependencyFilter(DependencyGraph graph, IEnumerable<State> other) : base(other)
 		{
+			d_graph = graph;
 			d_filter = false;
 		}
 
-		public delegate object ObjectSelector(State state);
-
-		public DependencyFilter DependencyOf(IEnumerable<State> states,
-		                                     ObjectSelector selector)
+		public DependencyFilter DependencyOf(IEnumerable<State> states)
 		{
-			DependencyFilter ret = (d_filter ? this : new DependencyFilter(this));
+			DependencyFilter ret = (d_filter ? this : new DependencyFilter(d_graph, this));
 			ret.d_not = null;
 
 			ret.RemoveWhere((s) => {
 				bool doesdepend = false;
-				object obj = (selector == null ? s.Object : selector(s));
+				object obj = s.Object;
 
 				foreach (State other in states)
 				{
-					if (Knowledge.Instance.DependsOn(other, obj))
+					if (d_graph.DependsOn(other, obj))
 					{
 						doesdepend = true;
 						break;
@@ -43,7 +43,7 @@ namespace Cdn.RawC.Programmer
 				{
 					if (ret.d_not == null)
 					{
-						ret.d_not = new DependencyFilter();
+						ret.d_not = new DependencyFilter(d_graph);
 					}
 
 					ret.d_not.Add(s);
@@ -55,18 +55,12 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
-		public DependencyFilter DependencyOf(IEnumerable<State> states)
-		{
-			return DependencyOf(states, null);
-		}
-
 		// Returns a set of @this which depends on any state in @states.
 		// In addition, @rest will contain the inverse set (i.e. everyting in
 		// @this which did _not_ depend on any state in @states).
-		public DependencyFilter DependsOn(IEnumerable<State> states,
-		                                  ObjectSelector selector)
+		public DependencyFilter DependsOn(IEnumerable<State> states)
 		{
-			DependencyFilter ret = (d_filter ? this : new DependencyFilter(this));
+			DependencyFilter ret = (d_filter ? this : new DependencyFilter(d_graph, this));
 			ret.d_not = null;
 
 			// Check for each state if it depends on a state in states. If so, it should
@@ -76,9 +70,9 @@ namespace Cdn.RawC.Programmer
 
 				foreach (State other in states)
 				{
-					object obj = (selector == null ? other.Object : selector(other));
+					object obj = other.Object;
 
-					if (Knowledge.Instance.DependsOn(s, obj))
+					if (d_graph.DependsOn(s, obj))
 					{
 						doesdepend = true;
 						break;
@@ -89,7 +83,7 @@ namespace Cdn.RawC.Programmer
 				{
 					if (ret.d_not == null)
 					{
-						ret.d_not = new DependencyFilter();
+						ret.d_not = new DependencyFilter(d_graph);
 					}
 
 					ret.d_not.Add(s);
@@ -99,12 +93,6 @@ namespace Cdn.RawC.Programmer
 			});
 
 			return ret;
-		}
-
-		// Returns a set of @this which depends on any state in @states.
-		public DependencyFilter DependsOn(IEnumerable<State> states)
-		{
-			return DependsOn(states, null);
 		}
 
 		public DependencyFilter Not()
@@ -119,7 +107,7 @@ namespace Cdn.RawC.Programmer
 				}
 				else
 				{
-					d_not = new DependencyFilter(this);
+					d_not = new DependencyFilter(d_graph, this);
 				}
 
 				Clear();
@@ -139,7 +127,7 @@ namespace Cdn.RawC.Programmer
 				}
 				else
 				{
-					return new DependencyFilter();
+					return new DependencyFilter(d_graph);
 				}
 			}
 		}

@@ -312,6 +312,12 @@ namespace Cdn.RawC.Programmer
 				return d_list[idx];
 			}
 		}
+
+		public bool TryGetValue(object key, out DataItem item)
+		{
+			object basekey = BaseKey(key);
+			return d_items.TryGetValue(basekey, out item);
+		}
 		
 		public DataItem this[object key]
 		{

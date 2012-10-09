@@ -30,6 +30,7 @@ namespace Cdn.RawC.Programmer
 		private Dictionary<State, Tree.Node> d_equations;
 		private List<DelayedState> d_delayedStates;
 		private DataTable d_randSeedTable;
+		private DependencyGraph d_dependencyGraph;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
@@ -72,6 +73,9 @@ namespace Cdn.RawC.Programmer
 
 			ProgramFunctions();
 			ProgramCustomFunctions();
+
+			d_dependencyGraph = new DependencyGraph(d_statetable, d_embeddings);
+
 			ProgramInitialization();
 			ProgramClear();
 			ProgramSource();
@@ -398,7 +402,7 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 		
-		private Computation.Loop CreateLoop(List<State> states, LoopData loop)
+		private Computation.Loop CreateLoop(LoopData loop)
 		{
 			DataTable dt = new DataTable(String.Format("ssi_{0}", d_indexTables.Count), true, loop.Function.NumArguments + 1);
 			
@@ -408,8 +412,6 @@ namespace Cdn.RawC.Programmer
 			d_indexTables.Add(dt);
 
 			Computation.Loop ret = new Computation.Loop(this, dt, loop.Embedding, loop.Function);
-			ret.IsIntegrated = (states[0].Type & State.Flags.Integrated) != 0;
-
 			List<Tree.Node> nodes = new List<Tree.Node>();
 			
 			// Promote any argument of the embedding that is not in the table and not the same value
@@ -446,7 +448,6 @@ namespace Cdn.RawC.Programmer
 				if (loop.AllRoots)
 				{
 					ret.Add(d_statetable[node.State], cloned);
-					states.Remove(node.State);
 				}
 				else
 				{
@@ -490,56 +491,41 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		private List<Computation.INode> AssignmentStates(IEnumerable<State> states)
+		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, Tree.Embedding embedding)
 		{
-			return AssignmentStates(states, d_loops);
+			return AssignmentStates(states, embedding, d_loops);
 		}
 
-		private List<Computation.INode> AssignmentStates(IEnumerable<State> states, List<Computation.Loop> loops)
+		private List<Computation.INode> AssignmentStates(IEnumerable<State> states,
+		                                                 Tree.Embedding embedding,
+		                                                 List<Computation.Loop> loops)
 		{
 			List<Computation.INode> ret = new List<Computation.INode>();
-			List<State> st = new List<State>(states);
 
-			if (loops != null)
+			if (loops != null && embedding != null)
 			{
-				// Extract loops from states. Scan for embeddings and replace them with
-				// looped stuff, creating temporary variables on the fly if needed
-				foreach (Tree.Embedding embedding in d_embeddings)
+				LoopData loop = new LoopData(embedding, d_embeddingFunctionMap[embedding]);
+
+				foreach (State st in states)
 				{
-					Function function = d_embeddingFunctionMap[embedding];
-				
-					if (function.IsCustom)
-					{
-						continue;
-					}
+					// TODO: partial?
+					loop.Add(d_equations[st]);
+				}
 
-					LoopData loop = new LoopData(embedding, function);
-
-					// loop over all the instantiations of this embedding and
-					// see if the node representing the instance is part of the
-					// states that are going to be assigned. If so, then the
-					// instance will be used
-					foreach (Tree.Node node in embedding.Instances)
-					{
-						if (st.Contains(node.State))
-						{
-							loop.Add(node);
-						}
-					}
+				if (loop.Instances.Count >= Cdn.RawC.Options.Instance.MinimumLoopSize)
+				{
+					// Create loop for this thing. Note that CreateLoop
+					// removes the states relevant for the loop from 'st'
+					Computation.Loop l = CreateLoop(loop);
 				
-					if (loop.Instances.Count >= Cdn.RawC.Options.Instance.MinimumLoopSize)
-					{
-						// Create loop for this thing. Note that CreateLoop
-						// removes the states relevant for the loop from 'st'
-						Computation.Loop l = CreateLoop(st, loop);
-					
-						ret.Add(l);
-						loops.Add(l);
-					}
+					ret.Add(l);
+					loops.Add(l);
+
+					return ret;
 				}
 			}
 
-			foreach (State state in st)
+			foreach (State state in states)
 			{
 				ret.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
 			}
@@ -551,7 +537,7 @@ namespace Cdn.RawC.Programmer
 		{
 			get
 			{
-				var ret = new DependencyFilter();
+				var ret = new DependencyFilter(d_dependencyGraph);
 				
 				ret.Add(Knowledge.Instance.Time);
 				ret.Add(Knowledge.Instance.TimeStep);
@@ -595,25 +581,31 @@ namespace Cdn.RawC.Programmer
 		{
 			deps = deps.DependsOn(TDTModSet);
 
-			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(deps))
+			foreach (DependencyGraph.Group grp in d_dependencyGraph.Sort(deps))
 			{
-				d_apiTDT.Add(new Computation.Comment("Dependencies of integrated variables that depend on t or dt"));
-				d_apiTDT.AddRange(AssignmentStates(grp));
-				d_apiTDT.Add(new Computation.Empty());
+				if (grp.StatesCount > 0)
+				{
+					d_apiTDT.Add(new Computation.Comment("Dependencies of integrated variables that depend on t or dt"));
+					d_apiTDT.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					d_apiTDT.Add(new Computation.Empty());
+				}
 			}
 		}
 
 		private void ProgramDependencies(APIFunction api, DependencyFilter deps, string comment)
 		{
-			foreach (List<State> grp in Knowledge.Instance.SortOnDependencies(deps))
+			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
-				if (!string.IsNullOrEmpty(comment))
+				if (grp.StatesCount > 0)
 				{
-					api.Add(new Computation.Comment(comment));
-				}
+					if (!string.IsNullOrEmpty(comment))
+					{
+						api.Add(new Computation.Comment(comment));
+					}
 
-				api.AddRange(AssignmentStates(grp));
-				api.Add(new Computation.Empty());
+					api.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					api.Add(new Computation.Empty());
+				}
 			}
 		}
 
@@ -623,7 +615,7 @@ namespace Cdn.RawC.Programmer
 			ProgramSetTDT(d_apiPre);
 			
 			// All the instates
-			var instates = new DependencyFilter(Knowledge.Instance.FlaggedStates(VariableFlags.In));
+			var instates = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.FlaggedStates(VariableFlags.In));
 
 			// The instates filtered by those that are dependencies of integrated
 			// states
@@ -651,16 +643,14 @@ namespace Cdn.RawC.Programmer
 
 			// Compute set of nodes which depend on real states and
 			// which in turn are dependencies for the derivatives
-			var states = new DependencyFilter(Knowledge.Instance.Integrated);
+			var states = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.Integrated);
 			deps = deps.DependsOn(states).Filter().DependencyOf(derivatives);
 
 			ProgramDependencies(d_apiDiff, deps, "Dependencies of derivatives that depend on states");
 
 			if (derivatives.Count > 0)
 			{
-				d_apiDiff.Add(new Computation.Comment("Calculate derivatives"));
-				d_apiDiff.AddRange(AssignmentStates(derivatives));
-				d_apiDiff.Add(new Computation.Empty());
+				ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
 			}
 		}
 
@@ -669,7 +659,7 @@ namespace Cdn.RawC.Programmer
 			ProgramSetTDT(d_apiPost);
 
 			// Generate new random values
-			var rands  = new DependencyFilter(Knowledge.Instance.RandStates);
+			var rands  = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
 
 			if (rands.Count > 0)
 			{
@@ -680,13 +670,13 @@ namespace Cdn.RawC.Programmer
 
 			// Compute set of things that have changed
 			var modset = rands;
-			var delays = new DependencyFilter(Knowledge.Instance.DelayedStates);
+			var delays = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DelayedStates);
 
 			modset.UnionWith(TDTModSet);
 			modset.UnionWith(delays);
 			modset.UnionWith(Knowledge.Instance.Integrated);
 
-			var aux = new DependencyFilter(Knowledge.Instance.AuxiliaryStates);
+			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
 
 			// Split postcompute in states that need to be computed before the delays (because delays depend on them)
 			// and those states that can be computed after the delays
@@ -698,16 +688,17 @@ namespace Cdn.RawC.Programmer
 			ProgramDependencies(d_apiPost, now, "Auxiliary variables that depend on t, dt, states or rand and on which delays depend");
 
 			// Update delayed states
-			List<List<State>> grps = Knowledge.Instance.SortOnDependencies(delays);
+			var grps = d_dependencyGraph.Sort(delays);
 
-			if (grps.Count > 0)
+			if (grps.StatesCount > 0)
 			{
 				d_apiPost.Add(new Computation.Empty());
 				d_apiPost.Add(new Computation.Comment("Write values of delayed expressions"));
 
-				foreach (List<State> grp in grps)
+				foreach (var grp in grps)
 				{
-					d_apiPost.AddRange(AssignmentStates(grp, null));
+					// TODO: check with loops
+					d_apiPost.AddRange(AssignmentStates(grp.States, grp.Embedding));
 					d_apiPost.Add(new Computation.Empty());
 				}
 
@@ -723,11 +714,11 @@ namespace Cdn.RawC.Programmer
 		private void ProgramSource()
 		{
 			// Get the list of integrated states
-			var derivatives = new DependencyFilter(Knowledge.Instance.DerivativeStates);
+			var derivatives = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DerivativeStates);
 			
 			// Auxiliary states are outs and temporaries (i.e. things that
 			// were promoted to the state table and are not recomputed on the fly)
-			var aux = new DependencyFilter(Knowledge.Instance.AuxiliaryStates);
+			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
 
 			// Compute subset of aux on which integrated depends
 			var deps = aux.DependencyOf(derivatives);
@@ -766,7 +757,7 @@ namespace Cdn.RawC.Programmer
 		{
 			// Due to the way that delays are implemented, we are going to first
 			// initialize everything without a dependency on either t or dt
-			var rands = new DependencyFilter(Knowledge.Instance.RandStates);
+			var rands = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
 
 			if (rands.Count > 0)
 			{
@@ -775,14 +766,14 @@ namespace Cdn.RawC.Programmer
 				d_apiInit.Add(new Computation.Empty());
 			}
 
-			var delaymodset = new DependencyFilter(d_delayedStates);
+			var delaymodset = new DependencyFilter(d_dependencyGraph, d_delayedStates);
 			delaymodset.UnionWith(TDTModSet);
 
-			var initstates = new DependencyFilter(Knowledge.Instance.InitializeStates);
+			var initstates = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.InitializeStates);
 			var depontime = initstates.DependsOn(delaymodset);
 			var beforetime = depontime.Not();
 
-			var delays = new DependencyFilter();
+			var delays = new DependencyFilter(d_dependencyGraph);
 
 			depontime.RemoveWhere((s) => {
 				var ds = s as DelayedState;
@@ -804,7 +795,7 @@ namespace Cdn.RawC.Programmer
 
 			ProgramDependencies(d_apiInit, beforetime, "Compute initial values _not_ depending on t/dt or delays");
 
-			var depontimeLeft = new DependencyFilter(depontime);
+			var depontimeLeft = new DependencyFilter(d_dependencyGraph, depontime);
 
 			if (d_delayedStates.Count > 0)
 			{
@@ -822,7 +813,7 @@ namespace Cdn.RawC.Programmer
 					if (ds.Operator.InitialValue != null)
 					{
 						// Find vars on which the initial value depends and which depend on t
-						DependencyFilter dd = new DependencyFilter(new State[] {ids});
+						DependencyFilter dd = new DependencyFilter(d_dependencyGraph, new State[] {ids});
 						dd.Filter().DependencyOf(depontime);
 
 						dd.RemoveWhere((s) => {

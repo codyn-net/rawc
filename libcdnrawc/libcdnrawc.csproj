@@ -101,6 +101,7 @@
     <Compile Include="DerivativeState.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Validator.cs" />
+    <Compile Include="Programmer\DependencyGraph.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

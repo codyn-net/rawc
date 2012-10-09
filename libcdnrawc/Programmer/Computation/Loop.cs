@@ -41,7 +41,6 @@ namespace Cdn.RawC.Programmer.Computation
 		private Tree.Embedding d_embedding;
 		private Dictionary<Tree.NodePath, string> d_mapping;
 		private Program d_program;
-		private bool d_isintegrated;
 
 		public Loop(Program program, DataTable indextable, Tree.Embedding embedding, Function function)
 		{
@@ -58,19 +57,7 @@ namespace Cdn.RawC.Programmer.Computation
 			// Generate mapping
 			d_mapping = new Dictionary<Tree.NodePath, string>();
 		}
-		
-		public bool IsIntegrated
-		{
-			get
-			{
-				return d_isintegrated;
-			}
-			set
-			{
-				d_isintegrated = value;
-			}
-		}
-		
+
 		public DataTable IndexTable
 		{
 			get
