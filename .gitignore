@@ -16,3 +16,13 @@ Makefile
 Makefile.in
 missing
 cpgrawc
+m4
+cdnrawc.userprefs
+config.guess
+config.sub
+depcomp
+libcdnrawc/Config.cs
+libcdnrawc/Programmer/Formatters/C/cdn-rawc/integrators/.dirstamp
+libtool
+ltmain.sh
+cdn-rawc
