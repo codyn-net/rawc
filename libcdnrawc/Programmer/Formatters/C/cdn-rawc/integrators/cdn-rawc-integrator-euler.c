@@ -15,7 +15,8 @@ static void step (CdnRawcIntegrator *integrator,
 static CdnRawcIntegratorEuler integrator = {
 	{
 		0,
-		diff
+		diff,
+		CDN_RAWC_INTEGRATOR_EULER_DATA_SIZE
 	}
 };
 

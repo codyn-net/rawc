@@ -15,7 +15,8 @@ static void step (CdnRawcIntegrator *integrator,
 static CdnRawcIntegratorRungeKutta integrator = {
 	{
 		step,
-		diff
+		diff,
+		CDN_RAWC_INTEGRATOR_RUNGE_KUTTA_DATA_SIZE
 	}
 };
 

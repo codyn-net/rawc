@@ -107,6 +107,8 @@ struct _CdnRawcIntegrator
 	              ValueType         *data,
 	              ValueType          t,
 	              ValueType          dt);
+
+	uint32_t data_size;
 };
 
 CDN_RAWC_END_DECLS
