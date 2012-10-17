@@ -177,22 +177,9 @@ namespace Cdn.RawC.Tree
 					throw new NotImplementedException(String.Format("Unhandled strict instruction code: {0}", inst.GetType()));
 				}
 			}
-			else if (InstructionIs(inst, out irand))
-			{
-				var smanip = irand.GetStackManipulation();
-
-				if (smanip != null && smanip.Pop.Num == 0)
-				{
-					yield return PlaceholderCode;
-				}
-				else
-				{
-					yield return HashMap(String.Format("rand_{0}", irand.Handle));
-				}
-			}
 			else
 			{
-				// Placeholder for numbers and properties
+				// Placeholder for numbers, properties and rands
 				yield return PlaceholderCode;
 			}
 		}

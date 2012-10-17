@@ -44,6 +44,8 @@ namespace Cdn.RawC
 		public double DelayTimeStep = -1;
 		[CommandLine.Option("no-metadata", Description="Disable generation of metadata")]
 		public bool NoMetadata = false;
+		[CommandLine.Option("dependency-graph", ArgumentName="FILE", Description="Output dependency graph in DOT format to specified file")]
+		public string DependencyGraph;
 
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;

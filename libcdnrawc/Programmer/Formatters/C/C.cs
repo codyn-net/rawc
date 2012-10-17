@@ -388,6 +388,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			int maxname = 0;
 			int maxval = 0;
+
+			int firstrand = -1;
 			
 			foreach (DataTable.DataItem item in d_program.StateTable)
 			{
@@ -411,6 +413,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				if (prop == null)
 				{
+					if (!(Cdn.RawC.Options.Instance.Verbose && d_options.SymbolicNames))
+					{
+						continue;
+					}
+
+					var rinstr = item.Key as InstructionRand;
+
+					if (rinstr != null)
+					{
+						if (firstrand == -1)
+						{
+							firstrand = item.Index;
+						}
+
+						item.Alias = string.Format("{0} /* RAND_{1} */", item.Index, item.Index - firstrand);
+					}
+					else if ((item.Type & DataTable.DataItem.Flags.Constant) != 0)
+					{
+						item.Alias = string.Format("{0} /* {1} */", item.Index, item.Key);
+					}
+
 					continue;
 				}
 				
@@ -704,7 +727,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteCustomMathDefines(TextWriter writer)
 		{
 			// Always define random stuff, it's a bit special...
-			WriteDefine(writer, "CDN_MATH_SCALE", "(val, min, max)", "(({0})((min) + ((val) * ((max) - (min)))))", null, ValueType);
 			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random () / (ValueType)RAND_MAX)");
 			
 			HashSet<string> generated = new HashSet<string>();
@@ -1269,7 +1291,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
 
-			foreach (string name in new string[] {"clear", "init", "pre", "diff", "post"})
+			foreach (string name in new string[] {"prepare", "init", "reset", "pre", "diff", "post"})
 			{
 				writer.WriteLine("\t\t.{0} = {1}_{0},", name, pref);
 			}

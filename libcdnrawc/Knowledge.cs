@@ -10,6 +10,7 @@ namespace Cdn.RawC
 		private List<State> d_states;
 		private List<State> d_initialize;
 		private List<State> d_auxStates;
+		private List<State> d_prepareStates;
 		private List<State> d_randStates;
 		private List<State> d_delayedStates;
 		private Dictionary<Instruction, Instruction> d_instructionMapping;
@@ -51,6 +52,7 @@ namespace Cdn.RawC
 			d_flaggedVariables = new Dictionary<VariableFlags, List<Variable>>();
 			d_states = new List<State>();
 			d_auxStates = new List<State>();
+			d_prepareStates = new List<State>();
 			d_initialize = new List<State>();
 			d_randStates = new List<State>();
 			d_delayedStates = new List<State>();
@@ -150,6 +152,13 @@ namespace Cdn.RawC
 
 		private void AddInitialize(State state)
 		{
+			var v = state.Object as Variable;
+
+			if ((v.Flags & Cdn.VariableFlags.In) != 0)
+			{
+				d_prepareStates.Add(state);
+			}
+
 			d_initializeMap[state.Object] = state;
 			d_initialize.Add(state);
 		}
@@ -202,7 +211,9 @@ namespace Cdn.RawC
 			{
 				if ((v.Flags & VariableFlags.FunctionArgument) == 0)
 				{
-					AddState(unique, ExpandedState(v));
+					var s = ExpandedState(v);
+
+					AddState(unique, s);
 				}
 			}
 
@@ -212,13 +223,18 @@ namespace Cdn.RawC
 				State s = ExpandedState(v);
 
 				AddState(unique, s);
-				d_auxStates.Add(s);
+
+				if ((v.Flags & (VariableFlags.In | VariableFlags.Once)) == 0)
+				{
+					d_auxStates.Add(s);
+				}
 			}
 
 			// Add once variables
 			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Once))
 			{
-				AddState(unique, ExpandedState(v));
+				var s = ExpandedState(v);
+				AddState(unique, s);
 			}
 		}
 
@@ -284,6 +300,11 @@ namespace Cdn.RawC
 			get { return d_auxStates; }
 		}
 
+		public IEnumerable<State> PrepareStates
+		{
+			get { return d_prepareStates; }
+		}
+
 		public IEnumerable<State> RandStates
 		{
 			get { return d_randStates; }
@@ -334,7 +355,6 @@ namespace Cdn.RawC
 				if (state.Object != null)
 				{
 					var v = state.Object as Variable;
-
 					Instruction[] instrs;
 
 					if (v == null || state.Actions.Length == 0)

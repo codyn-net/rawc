@@ -89,7 +89,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			ret.AppendFormat(");");
 			return ret.ToString();
 		}
-		
+
 		private string Translate(Computation.Loop node, Context context)
 		{
 			StringBuilder ret = new StringBuilder();
@@ -102,6 +102,32 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			ret.AppendFormat("\tfor (i = 0; i < {0}; ++i)", node.Items.Count);
 			ret.AppendLine();
 			ret.AppendLine("\t{");
+
+			if (Cdn.RawC.Options.Instance.Verbose)
+			{
+				var dt = (node.IndexTable[0].Object as Computation.Loop.Index).DataItem;
+
+				ret.AppendFormat("\t\t/* {0}[{1}] = {2} ({3}",
+				                 context.Program.StateTable.Name,
+				                 dt.AliasOrIndex.Replace("/*", "//").Replace("*/", "//"),
+				                 node.Function.Name,
+				                 context.Program.StateTable.Name);
+
+				var eq = node.Items[0].Equation;
+
+				foreach (Tree.Embedding.Argument arg in node.Function.OrderedArguments)
+				{
+					Tree.Node subnode = eq.FromPath(arg.Path);
+					DataTable.DataItem it = context.Program.StateTable[subnode];
+				
+					ret.AppendFormat(", {0}[{1}]",
+					                 context.Program.StateTable.Name,
+					                 it.AliasOrIndex.Replace("/*", "//").Replace("*/", "//"));
+				}
+
+				ret.AppendLine("); */");
+			}
+
 			ret.AppendFormat("\t\t{0}[{1}[i][0]] = {2};",
 			               context.Program.StateTable.Name,
 			               node.IndexTable.Name,
@@ -346,7 +372,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				source = String.Format("{0} + {1}", source, node.SourceIndex);
 			}
 
-			return String.Format("memcpy ({0}, {1}, sizeof ({2}) * {3});", target, source, context.Options.ValueType, node.Size);
+			if (node.Size > 0)
+			{
+				return String.Format("memcpy ({0}, {1}, sizeof ({2}) * {3});",
+				                     target,
+				                     source,
+				                     context.Options.ValueType,
+				                     node.Size);
+			}
+			else if (node.Size < 0 && node.Source.Count > 0)
+			{
+				return string.Format("memcpy ({0}, {1}, sizeof ({1}));", target, source);
+			}
+			else
+			{
+				return "/* No constants to copy */";
+			}
 		}
 
 		private string Reindent(string ret, string indent)

@@ -68,6 +68,8 @@ FILES = \
 	Tree/Filters/Default.cs \
 	Programmer/APIFunction.cs \
 	Programmer/DependencyFilter.cs \
+	Programmer/DependencyGraph.cs \
+	Programmer/DependencyGroup.cs \
 	Programmer/Function.cs \
 	Programmer/Formatters/C/InitialValueTranslator.cs \
 	Programmer/Formatters/C/C.cs \

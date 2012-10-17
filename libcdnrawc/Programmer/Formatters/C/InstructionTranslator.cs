@@ -226,25 +226,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				val = "CDN_MATH_RAND ()";
 			}
 
-			uint numpop = instruction.GetStackManipulation().Pop.Num;
-
-			if (numpop == 0)
-			{
-				return val;
-			}
-			else if (numpop == 1)
-			{
-				return String.Format("CDN_MATH_SCALE ({0}, 0, {1})",
-				                     val,
-				                     Translate(context, 0));
-			}
-			else
-			{
-				return String.Format("CDN_MATH_SCALE ({0}, {1}, {2})",
-				                     val,
-				                     Translate(context, 0),
-				                     Translate(context, 1));
-			}
+			return val;
 		}
 		
 		private string Translate(InstructionFunction instruction, Context context)

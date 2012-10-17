@@ -37,9 +37,87 @@ namespace Cdn.RawC.Programmer
 			d_embeddingsMap = new Dictionary<State, Tree.Embedding>();
 		}
 
+		public void WriteDot(string filename)
+		{
+			var wr = new System.IO.StreamWriter(filename);
+			wr.WriteLine("strict digraph g {");
+			wr.WriteLine("\toverlap=scale;");
+			wr.WriteLine("\tsplines=true;");
+
+			Queue<Node> q = new Queue<Node>();
+			HashSet<Node> processed = new HashSet<Node>();
+			q.Enqueue(d_root);
+
+			Dictionary<Tree.Embedding, int> embeddingId = new Dictionary<Tree.Embedding, int>();
+
+			while (q.Count > 0)
+			{
+				var node = q.Dequeue();
+				int eid;
+
+				if (node.Embedding == null)
+				{
+					eid = 0;
+				}
+				else if (!embeddingId.TryGetValue(node.Embedding, out eid))
+				{
+					eid = embeddingId.Count + 1;
+					embeddingId[node.Embedding] = eid;
+				}
+
+				if (node != d_root)
+				{
+					wr.Write("\t{0} [label=\"{1} ({2})\"", node.GetHashCode(), node.State.ToString(), eid);
+
+					if ((node.State.Type & State.Flags.Derivative) != 0)
+					{
+						wr.Write(",shape=box,fillcolor=\"#ffeeff\",style=filled");
+					}
+					else if ((node.State.Type & State.Flags.Integrated) != 0)
+					{
+						wr.Write(",shape=diamond,fillcolor=\"#ffffee\",style=filled");
+					}
+
+					wr.WriteLine("];");
+				}
+
+				foreach (var dep in node.Dependencies)
+				{
+					if (!processed.Contains(dep))
+					{
+						processed.Add(dep);
+						q.Enqueue(dep);
+					}
+				}
+			}
+
+			foreach (var node in processed)
+			{
+				foreach (var dep in node.Dependencies)
+				{
+					wr.WriteLine("\t{0} -> {1};", node.GetHashCode(), dep.GetHashCode());
+				}
+			}
+
+			wr.WriteLine("}");
+			wr.Flush();
+			wr.Close();
+		}
+
 		public bool DependsOn(State state, object obj)
 		{
-			Node node = d_stateMap[state];
+			Node node;
+
+			if (state.Object == obj)
+			{
+				return false;
+			}
+
+			if (!d_stateMap.TryGetValue(state, out node))
+			{
+				return false;
+			}
+
 			Queue<Node> deps = new Queue<Node>();
 
 			deps.Enqueue(node);
@@ -83,7 +161,7 @@ namespace Cdn.RawC.Programmer
 
 				if (st != null)
 				{
-					Add(st);
+					Add(st, null);
 				}
 			}
 		}
@@ -95,12 +173,6 @@ namespace Cdn.RawC.Programmer
 		                          HashSet<Node> seen,
 		                          HashSet<Node> leafs)
 		{
-			if (seen.Contains(node))
-			{
-				return;
-			}
-
-			seen.Add(node);
 			bool checkleaf = false;
 
 			if (node.State != null && states.Contains(node.State))
@@ -110,6 +182,8 @@ namespace Cdn.RawC.Programmer
 				if (!ret.d_stateMap.TryGetValue(node.State, out newnode))
 				{
 					newnode = new Node(node.State);
+
+					newnode.Embedding = node.Embedding;
 					ret.d_stateMap[node.State] = newnode;
 				}
 
@@ -119,9 +193,16 @@ namespace Cdn.RawC.Programmer
 
 				// The newnode now becomes the new parent
 				parent = newnode;
-
 				checkleaf = true;
 			}
+
+			// Don't go deep if node was already seen
+			if (seen.Contains(node))
+			{
+				return;
+			}
+
+			seen.Add(node);
 
 			foreach (var dependency in node.Dependencies)
 			{
@@ -134,7 +215,7 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		private HashSet<Node> Collapse(HashSet<State> states)
+		private DependencyGraph Collapse(HashSet<State> states, out HashSet<Node> leafs)
 		{
 			DependencyGraph ret = new DependencyGraph();
 
@@ -143,150 +224,28 @@ namespace Cdn.RawC.Programmer
 
 			// Create a new dependency graph in which only nodes in 'states'
 			// appear
-			HashSet<Node> leafs = new HashSet<Node>();
+			leafs = new HashSet<Node>();
 
 			CollapseNode(ret,
 			             d_root,
 			             states,
-			             d_root,
+			             ret.d_root,
 			             new HashSet<Node>(),
 			             leafs);
 
-			return leafs;
+			return ret;
 		}
 
-		public class Group : IEnumerable<Group>
-		{
-			private Tree.Embedding d_embedding;
-			private List<State> d_states;
-			private Group d_previous;
-			private Group d_next;
-			private uint d_id;
-
-			public Group(Tree.Embedding embedding)
-			{
-				d_embedding = embedding;
-				d_states = new List<State>();
-				d_id = 0;
-			}
-
-			public IEnumerator<Group> GetEnumerator()
-			{
-				for (var next = this; next != null; next = next.d_next)
-				{
-					yield return next;
-				}
-			}
-
-			System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-
-			protected void UpdateIdBackwards()
-			{
-				d_id = d_next.d_id - 1;
-
-				if (d_previous != null)
-				{
-					d_previous.UpdateIdBackwards();
-				}
-			}
-
-			protected void UpdateIdForwards()
-			{
-				d_id = d_previous.d_id + 1;
-
-				if (d_next != null)
-				{
-					d_next.UpdateIdBackwards();
-				}
-			}
-
-			public Tree.Embedding Embedding
-			{
-				get { return d_embedding; }
-			}
-
-			public IEnumerable<State> States
-			{
-				get { return d_states; }
-			}
-
-			public int StatesCount
-			{
-				get { return d_states.Count; }
-			}
-
-			public Group Previous
-			{
-				get
-				{
-					return d_previous;
-				}
-				set
-				{
-					if (d_previous != null)
-					{
-						value.d_previous = d_previous;
-
-						d_previous.d_next = value;
-						d_previous = value;
-					}
-					else
-					{
-						d_previous = value;
-					}
-
-					d_previous.d_next = this;
-					d_previous.UpdateIdForwards();
-				}
-			}
-
-			public Group Next
-			{
-				get
-				{
-					return d_next;
-				}
-				set
-				{
-					if (d_next != null)
-					{
-						value.d_next = d_next;
-
-						d_next.d_previous = value;
-						d_next = value;
-					}
-					else
-					{
-						d_next = value;
-					}
-
-					d_next.d_previous = this;
-					d_next.UpdateIdForwards();
-				}
-			}
-
-			public uint Id
-			{
-				get { return d_id; }
-			}
-
-			public void Add(State state)
-			{
-				d_states.Add(state);
-			}
-		}
-
-		public Group Sort(HashSet<State> states)
+		public DependencyGroup Sort(HashSet<State> states)
 		{
 			HashSet<Node> leafs;
 
-			leafs = Collapse(states);
+			var collapsed = Collapse(states, out leafs);
 
-			Group ret = new Group(null);
-			Dictionary<Node, Group> seen = new Dictionary<Node, Group>();
+			var ret = new DependencyGroup(null);
+			var seen = new Dictionary<Node, DependencyGroup>();
+
+			seen[collapsed.d_root] = null;
 
 			// Go from all the leafs upwards
 			foreach (Node leaf in leafs)
@@ -294,24 +253,47 @@ namespace Cdn.RawC.Programmer
 				ComputeNodeInGroups(leaf, ret, seen);
 			}
 
+			foreach (var grp in ret)
+			{
+				grp.Sort((a, b) => {
+					if (a == b)
+					{
+						return 0;
+					}
+
+					if (DependsOn(a, b.DataKey))
+					{
+						return 1;
+					}
+					else if (DependsOn(b, a.DataKey))
+					{
+						return -1;
+					}
+					else
+					{
+						return 0;
+					}
+				});
+			}
+
 			return ret;
 		}
 
 		private void ComputeNodeInGroups(Node node,
-		                                 Group grp,
-		                                 Dictionary<Node, Group> seen)
+		                                 DependencyGroup grp,
+		                                 Dictionary<Node, DependencyGroup> seen)
 		{
 			if (seen.ContainsKey(node))
 			{
 				return;
 			}
 
-			Group root = grp;
+			var root = grp;
 
 			// Find right-most dependency
 			foreach (Node dep in node.Dependencies)
 			{
-				Group depgrp;
+				DependencyGroup depgrp;
 
 				if (!seen.TryGetValue(dep, out depgrp))
 				{
@@ -324,17 +306,45 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 
-			// Add in root, or on the right side of root (i.e. compute after root)
+			DependencyGroup before = null;
+
+			// Find left-most dependency if needed
+			foreach (Node dep in node.DependencyFor)
+			{
+				DependencyGroup depgrp;
+
+				if (!seen.TryGetValue(dep, out depgrp))
+				{
+					continue;
+				}
+
+				if (before == null || depgrp.Id < before.Id)
+				{
+					before = depgrp;
+				}
+			}
+
+			// Need to add between 'root' and 'before'
 			while (root.Embedding != node.Embedding && root.StatesCount > 0)
 			{
 				var next = root.Next;
 
-				if (next == null)
+				if (next == before)
 				{
-					root.Next = new Group(node.Embedding);
+					// Insert new empty group for the node
+					root.Next = new DependencyGroup(node.Embedding);
 					root = root.Next;
 					break;
 				}
+				else
+				{
+					root = next;
+				}
+			}
+
+			if (root.StatesCount == 0)
+			{
+				root.Embedding = node.Embedding;
 			}
 
 			root.Add(node.State);
@@ -347,10 +357,12 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 		
-		public void Add(State state)
+		public void Add(State state, Dictionary<object, State> mapping)
 		{
 			Node node = new Node(state);
+
 			d_stateMap[state] = node;
+			d_nodeMap[state.DataKey] = node;
 
 			Tree.Embedding embedding;
 
@@ -362,7 +374,7 @@ namespace Cdn.RawC.Programmer
 			// Resolve currently unresolved dependencies first
 			List<Node> lst;
 			
-			if (d_unresolved.TryGetValue(state.Object, out lst))
+			if (d_unresolved.TryGetValue(state.DataKey, out lst))
 			{
 				foreach (var n in lst)
 				{
@@ -370,86 +382,107 @@ namespace Cdn.RawC.Programmer
 					node.DependencyFor.Add(n);
 				}
 
-				d_unresolved.Remove(state.Object);
+				d_unresolved.Remove(state.DataKey);
 			}
 			else
 			{
 				// Nothing depends on us yet, add to the root for now
 				d_root.Dependencies.Add(node);
 			}
-			
-			var variable = state.Object as Cdn.Variable;
-			HashSet<Cdn.Expression> seen = new HashSet<Expression>();
-			
-			if (variable != null)
+
+			// Compute dependencies only when either:
+			//
+			// 1) State does not represent an integrated state variable
+			// 2) State represents an initialization
+			// 3) State represents a derivative calculation
+			//
+			// We do this because some states in the table have a double State
+			// associated with it (e.g. one representing initial value and
+			// another representing simply the state).
+			if ((state.Type & State.Flags.Integrated) == 0 ||
+			    (state.Type & State.Flags.Initialization) != 0 ||
+			    (state.Type & State.Flags.Derivative) != 0)
 			{
-				Resolve(node, variable.Expression, seen);
-			}
-			
-			var instruction = state.Object as Cdn.Instruction;
-			
-			if (instruction != null)
-			{
-				Resolve(node, instruction, seen);
+				var v = state.Object as Cdn.Variable;
+
+				// Additionally check if the variable which the state represents
+				// is not an IN or ONCE variable, unless this state is actually
+				// representing the intial value computation of that variable
+				if (v == null || ((v.Flags & (Cdn.VariableFlags.In | Cdn.VariableFlags.Once)) == 0 || (state.Type & State.Flags.Initialization) != 0))
+				{
+					HashSet<Cdn.Expression> seen = new HashSet<Expression>();
+
+					Resolve(node, state.Instructions, seen, mapping);
+				}
 			}
 		}
 
-		private void AddDependency(Node node, object o)
+		private void AddDependency(Node node, object o, State mapped)
 		{
-			Node res;
+			Node res = null;
 
-			if (d_nodeMap.TryGetValue(o, out res))
+			if (mapped != null)
+			{
+				d_stateMap.TryGetValue(mapped, out res);
+			}
+			else
+			{
+				d_nodeMap.TryGetValue(o, out res);
+			}
+
+			if (res != null)
 			{
 				// Res might be in root, remove it
 				d_root.Dependencies.Remove(res);
-
 				node.Dependencies.Add(res);
 			}
 			else
 			{
 				List<Node> lst;
-				
+			
 				if (!d_unresolved.TryGetValue(o, out lst))
 				{
 					lst = new List<Node>();
 					d_unresolved[o] = lst;
 				}
-				
+			
 				lst.Add(node);
 			}
 		}
 
-		private void Resolve(Node node, Cdn.Variable variable, HashSet<Cdn.Expression> seen)
+		private void Resolve(Node node, Cdn.Variable variable, HashSet<Cdn.Expression> seen, Dictionary<object, State> mapping)
 		{
+			State mapped = null;
 			DataTable.DataItem item;
 
-			if (d_states.TryGetValue(variable, out item))
+			if ((mapping != null && mapping.TryGetValue(variable, out mapped)) ||
+			   d_states.TryGetValue(variable, out item))
 			{
 				seen.Add(variable.Expression);
-				AddDependency(node, variable);
+				AddDependency(node, variable, mapped);
 			}
 			else
 			{
-				Resolve(node, variable.Expression, seen);
+				Resolve(node, variable.Expression, seen, mapping);
 			}
 		}
 
-		private void Resolve(Node node, Cdn.Expression expression, HashSet<Cdn.Expression> seen)
+		private void Resolve(Node node, IEnumerable<Cdn.Instruction> instructions, HashSet<Cdn.Expression> seen, Dictionary<object, State> mapping)
+		{
+			foreach (var instruction in instructions)
+			{
+				Resolve(node, instruction, seen, mapping);
+			}
+		}
+
+		private void Resolve(Node node, Cdn.Expression expression, HashSet<Cdn.Expression> seen, Dictionary<object, State> mapping)
 		{
 			if (seen.Contains(expression))
 			{
 				return;
 			}
 
-			foreach (var instruction in expression.Instructions)
-			{
-				Resolve(node, instruction, seen);
-			}
-
-			foreach (var e in expression.Dependencies)
-			{
-				Resolve(node, e, seen);
-			}
+			Resolve(node, expression.Instructions, seen, mapping);
 		}
 
 		private bool As<T>(object o, out T item)
@@ -466,7 +499,7 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		private void Resolve(Node node, Cdn.Instruction instruction, HashSet<Cdn.Expression> seen)
+		private void Resolve(Node node, Cdn.Instruction instruction, HashSet<Cdn.Expression> seen, Dictionary<object, State> mapping)
 		{
 			InstructionVariable variable;
 			InstructionRand rand;
@@ -474,15 +507,15 @@ namespace Cdn.RawC.Programmer
 
 			if (As(instruction, out variable))
 			{
-				Resolve(node, variable.Variable, seen);
+				Resolve(node, variable.Variable, seen, mapping);
 			}
 			else if (As(instruction, out rand))
 			{
-				AddDependency(node, rand);
+				AddDependency(node, rand, null);
 			}
 			else if (As(instruction, out cusop))
 			{
-				AddDependency(node, cusop);
+				AddDependency(node, cusop, null);
 			}
 		}
 	}

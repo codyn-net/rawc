@@ -38,8 +38,8 @@ namespace Cdn.RawC
 
 					if (rand != null)
 					{
-						var seed = (int)(r.NextDouble() * (uint.MaxValue - 1) + 1);
-						rand.Seed = (uint)seed;
+						var seed = (uint)(r.NextDouble() * (uint.MaxValue - 1) + 1);
+						rand.Seed = seed;
 					}
 				}
 			});
@@ -141,7 +141,7 @@ namespace Cdn.RawC
 			var dynnet = new DynamicNetwork(shlib, program.Options.Basename);
 			double t = opts.ValidateRange[0];
 
-			dynnet.Init(t);
+			dynnet.Reset(t);
 
 			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].Index);
 
@@ -202,7 +202,7 @@ namespace Cdn.RawC
 				d_name = ToAsciiOnly(basename);
 	
 				// Define dynamic PInvoke method
-				var netinit = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_init",
+				var netinit = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_reset",
 				                                     shlib,
 				                                     MethodAttributes.Public |
 				                                     MethodAttributes.Static |
@@ -268,9 +268,9 @@ namespace Cdn.RawC
 				                    new object[] {index});
 			}
 
-			public void Init(double t)
+			public void Reset(double t)
 			{
-				d_type.InvokeMember("cdn_rawc_" + d_name + "_init",
+				d_type.InvokeMember("cdn_rawc_" + d_name + "_reset",
 				                    BindingFlags.InvokeMethod,
 				                    null,
 				                    Activator.CreateInstance(d_type),

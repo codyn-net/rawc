@@ -12,7 +12,8 @@ namespace Cdn.RawC.Programmer
 		private APIFunction d_apiDiff;
 		private APIFunction d_apiPost;
 		private APIFunction d_apiInit;
-		private APIFunction d_apiClear;
+		private APIFunction d_apiPrepare;
+		private APIFunction d_apiReset;
 
 		private List<Function> d_functions;
 		private List<Tree.Embedding> d_embeddings;
@@ -24,6 +25,7 @@ namespace Cdn.RawC.Programmer
 		private DataTable d_statetable;
 		private DataTable d_delayedCounters;
 		private DataTable d_delayedCountersSize;
+		private DataTable d_constants;
 		private List<DataTable> d_indexTables;
 		private List<DataTable> d_delayHistoryTables;
 		private Dictionary<DelayedState, DataTable> d_delayHistoryMap;
@@ -31,11 +33,14 @@ namespace Cdn.RawC.Programmer
 		private List<DelayedState> d_delayedStates;
 		private DataTable d_randSeedTable;
 		private DependencyGraph d_dependencyGraph;
+		private HashSet<State> d_initStates;
+		private DependencyFilter d_preparedStates;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
 			// Write out equations and everything
 			d_statetable = new DataTable("ss", true);
+			d_constants = new DataTable("constants", true);
 
 			d_functions = new List<Function>();
 			d_embeddings = new List<Tree.Embedding>(embeddings);
@@ -48,7 +53,8 @@ namespace Cdn.RawC.Programmer
 			d_apiDiff = new APIFunction("diff", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
 			d_apiPost = new APIFunction("post", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
 			d_apiInit = new APIFunction("init", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
-			d_apiClear = new APIFunction("clear", "void", "ValueType*", d_statetable.Name);
+			d_apiPrepare = new APIFunction("prepare", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
+			d_apiReset = new APIFunction("reset", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
 			d_functionMap = new Dictionary<string, Function>();
@@ -74,10 +80,11 @@ namespace Cdn.RawC.Programmer
 			ProgramFunctions();
 			ProgramCustomFunctions();
 
-			d_dependencyGraph = new DependencyGraph(d_statetable, d_embeddings);
+			ComputeDependencies();
 
-			ProgramInitialization();
-			ProgramClear();
+			ProgramPrepare();
+			ProgramInit();
+			ProgramReset();
 			ProgramSource();
 
 			d_statetable.Lock();
@@ -87,7 +94,44 @@ namespace Cdn.RawC.Programmer
 				table.Lock();
 			}
 		}
-		
+
+		private void ComputeDependencies()
+		{
+			var lst = new List<Tree.Embedding>();
+
+			foreach (var embedding in d_embeddings)
+			{
+				var f = d_embeddingFunctionMap[embedding];
+
+				if (!f.IsCustom)
+				{
+					lst.Add(embedding);
+				}
+			}
+
+			d_dependencyGraph = new DependencyGraph(d_statetable, lst);
+
+			Dictionary<object, State> initmap = new Dictionary<object, State>();
+
+			foreach (State st in Knowledge.Instance.InitializeStates)
+			{
+				initmap[st.DataKey] = st;
+			}
+
+			// Add initial states
+			foreach (State st in Knowledge.Instance.InitializeStates)
+			{
+				d_dependencyGraph.Add(st, initmap);
+			}
+
+			if (Cdn.RawC.Options.Instance.DependencyGraph != null)
+			{
+				d_dependencyGraph.WriteDot(Cdn.RawC.Options.Instance.DependencyGraph);
+			}
+
+			d_initStates = new HashSet<State>(Knowledge.Instance.InitializeStates);
+		}
+
 		public DataTable StateTable
 		{
 			get
@@ -193,6 +237,7 @@ namespace Cdn.RawC.Programmer
 				foreach (State r in Knowledge.Instance.RandStates)
 				{
 					InstructionRand rr = r.Instructions[0] as InstructionRand;
+
 					d_randSeedTable.Add(rr.Seed).Type = DataTable.DataItem.Flags.RandSeed;
 				}
 			}
@@ -413,7 +458,7 @@ namespace Cdn.RawC.Programmer
 
 			Computation.Loop ret = new Computation.Loop(this, dt, loop.Embedding, loop.Function);
 			List<Tree.Node> nodes = new List<Tree.Node>();
-			
+
 			// Promote any argument of the embedding that is not in the table and not the same value
 			// for all instances
 			foreach (Tree.Node node in loop.Instances)
@@ -432,6 +477,8 @@ namespace Cdn.RawC.Programmer
 						var st = new State(num.Value, new Instruction[] {num}, State.Flags.Constant);
 
 						DataTable.DataItem ditem = d_statetable.Add(st);
+						d_constants.Add(st);
+
 						d_equations[st] = Tree.Node.Create(st);
 						
 						ditem.Type = DataTable.DataItem.Flags.Constant;
@@ -468,6 +515,11 @@ namespace Cdn.RawC.Programmer
 			ret.Close();
 			
 			return ret;
+		}
+
+		public DataTable Constants
+		{
+			get { return d_constants; }
 		}
 
 		public int InitLoopsCount
@@ -510,6 +562,11 @@ namespace Cdn.RawC.Programmer
 				{
 					// TODO: partial?
 					loop.Add(d_equations[st]);
+
+					if ((d_statetable[st].Type & (DataTable.DataItem.Flags.Once | DataTable.DataItem.Flags.In)) != 0)
+					{
+						d_initStates.Remove(st);
+					}
 				}
 
 				if (loop.Instances.Count >= Cdn.RawC.Options.Instance.MinimumLoopSize)
@@ -528,6 +585,11 @@ namespace Cdn.RawC.Programmer
 			foreach (State state in states)
 			{
 				ret.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
+
+				if ((d_statetable[state].Type & (DataTable.DataItem.Flags.Once | DataTable.DataItem.Flags.In)) != 0)
+				{
+					d_initStates.Remove(state);
+				}
 			}
 
 			return ret;
@@ -581,7 +643,7 @@ namespace Cdn.RawC.Programmer
 		{
 			deps = deps.DependsOn(TDTModSet);
 
-			foreach (DependencyGraph.Group grp in d_dependencyGraph.Sort(deps))
+			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
 				if (grp.StatesCount > 0)
 				{
@@ -728,48 +790,69 @@ namespace Cdn.RawC.Programmer
 			ProgramPost();
 		}
 
-		private void ProgramClear()
+		private void ProgramPrepare()
 		{
-			d_apiClear.Add(new Computation.Comment("Clear data"));
-			d_apiClear.Add(new Computation.ZeroTable(d_statetable));
-			d_apiClear.Add(new Computation.Empty());
+			ProgramSetTDT(d_apiPrepare, true);
 
-			List<State> constants = new List<State>();
+			d_apiPrepare.Add(new Computation.Comment("Prepare data"));
+			d_apiPrepare.Add(new Computation.ZeroTable(d_statetable));
+			d_apiPrepare.Add(new Computation.Empty());
 
-			// Also initialize constants here
-			foreach (var item in d_statetable)
-			{
-				if ((item.Type & DataTable.DataItem.Flags.Constant) != 0)
-				{
-					constants.Add(item.Object as State);
-				}
-			}
-
-			if (constants.Count != 0)
-			{
-				d_apiClear.Add(new Computation.Comment("Initialize constants"));
-				d_apiClear.AddRange(AssignmentStates(constants, null));
-				d_apiClear.Add(new Computation.Empty());
-			}
-		}
-		
-		private void ProgramInitialization()
-		{
-			// Due to the way that delays are implemented, we are going to first
-			// initialize everything without a dependency on either t or dt
 			var rands = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
 
 			if (rands.Count > 0)
 			{
-				d_apiInit.Add(new Computation.Comment("Compute initial random values"));
-				d_apiInit.Add(new Computation.Rand(rands));
-				d_apiInit.Add(new Computation.Empty());
+				d_apiPrepare.Add(new Computation.Comment("Compute initial random values"));
+				d_apiPrepare.Add(new Computation.Rand(rands));
+				d_apiPrepare.Add(new Computation.Empty());
 			}
 
+			// Initialize constants here
+			d_apiPrepare.Add(new Computation.Comment("Copy constants"));
+			d_apiPrepare.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Count, -1));
+			d_apiPrepare.Add(new Computation.Empty());
+
+			// Initialize _IN_
+			var ins = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.PrepareStates);
+
+			// Create set of aux and init states
+			var states = new HashSet<State>(Knowledge.Instance.AuxiliaryStates);
+
+			foreach (var s in d_initStates)
+			{
+				states.Add(s);
+			}
+
+			var deps = new DependencyFilter(d_dependencyGraph, states);
+			var indeps = deps.DependencyOf(ins);
+
+			d_preparedStates = indeps;
+
+			foreach (var s in ins)
+			{
+				d_preparedStates.Add(s);
+			}
+
+			ProgramDependencies(d_apiPrepare, indeps, "Dependencies of _in_ variables");
+			ProgramDependencies(d_apiPrepare, new DependencyFilter(d_dependencyGraph, ins), "_in_ variables");
+		}
+		
+		private void ProgramInit()
+		{
+			// Due to the way that delays are implemented, we are going to first
+			// initialize everything without a dependency on either t or dt
 			var delaymodset = new DependencyFilter(d_dependencyGraph, d_delayedStates);
 			delaymodset.UnionWith(TDTModSet);
 
-			var initstates = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.InitializeStates);
+			// Make set of prepared states that are already computed in the
+			// prepare stage and which do not depend on any _in_ variables.
+			// Those can be removed from the init states
+			var prepped = d_preparedStates.DependsOn(Knowledge.Instance.FlaggedStates(Cdn.VariableFlags.In)).Not();
+
+			// Remove from initstates those that are already computed in 'prepare'
+			var initstates = new DependencyFilter(d_dependencyGraph, d_initStates);
+			initstates.RemoveWhere(a => prepped.Contains(a));
+
 			var depontime = initstates.DependsOn(delaymodset);
 			var beforetime = depontime.Not();
 
@@ -840,6 +923,15 @@ namespace Cdn.RawC.Programmer
 
 			ProgramDependencies(d_apiInit, depontimeLeft, "Finally, compute values that depended on t/dt or delays");
 		}
+
+		private void ProgramReset()
+		{
+			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
+			var t = new Tree.Node(null, new Instructions.Variable("t"));
+
+			d_apiReset.Add(new Computation.CallAPI(d_apiPrepare, ss, t));
+			d_apiReset.Add(new Computation.CallAPI(d_apiInit, ss, t));
+		}
 		
 		public IEnumerable<Cdn.Function> UsedCustomFunctions
 		{
@@ -851,15 +943,16 @@ namespace Cdn.RawC.Programmer
 		
 		public bool NodeIsInitialization(Computation.INode node)
 		{
-			return d_apiInit.Contains(node);
+			return d_apiInit.Contains(node) || d_apiPrepare.Contains(node);
 		}
 
 		public IEnumerable<APIFunction> APIFunctions
 		{
 			get
 			{
-				yield return d_apiClear;
+				yield return d_apiPrepare;
 				yield return d_apiInit;
+				yield return d_apiReset;
 				yield return d_apiTDT;
 				yield return d_apiPre;
 				yield return d_apiDiff;
@@ -888,6 +981,8 @@ namespace Cdn.RawC.Programmer
 				{
 					yield return d_randSeedTable;
 				}
+
+				yield return d_constants;
 			}
 		}
 		
