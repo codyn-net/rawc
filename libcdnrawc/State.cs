@@ -111,6 +111,54 @@ namespace Cdn.RawC
 			d_expression = RawC.Tree.Expression.Expand(instmap, exprs.ToArray());
 			Knowledge.Instance.UpdateInstructionMap(instmap);
 		}
+
+		private string TypeToString(Flags type)
+		{
+			if ((type & Flags.Initialization) != 0 && (type & Flags.Integrated) != 0)
+			{
+				return "i<";
+			}
+			else if ((type & Flags.Initialization) != 0)
+			{
+				return "i";
+			}
+			else if ((type & Flags.Integrated) != 0)
+			{
+				return "<";
+			}
+			else if ((type & Flags.Constant) != 0)
+			{
+				return "c";
+			}
+
+			return "";
+		}
+
+		public override string ToString()
+		{
+			var v = d_object as Cdn.Variable;
+
+			if (v != null)
+			{
+				var flag = v.Flags.ToString();
+
+				if (flag.Length > 2)
+				{
+					flag = flag.Substring(0, 3);
+				}
+
+				return String.Format("{0}{{{1}}}{{{2}}}", v.FullNameForDisplay, flag.ToLower(), TypeToString(d_type));
+			}
+
+			var i = d_object as Cdn.Instruction;
+
+			if (i != null)
+			{
+				return String.Format("{0}{{{1}}}", i.ToString(), TypeToString(d_type));
+			}
+
+			return base.ToString();
+		}
 		
 		public Cdn.Expression Expression
 		{

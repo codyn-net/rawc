@@ -50,13 +50,17 @@ namespace Cdn.RawC
 		public DerivativeState(Variable v, EdgeAction[] actions) : base(v, actions)
 		{
 			Type |= Flags.Derivative;
-
 			d_key = new Key(v);
 		}
 
 		public override object DataKey
 		{
 			get { return d_key; }
+		}
+
+		public override string ToString()
+		{
+			return String.Format("{0} (df/dt)", base.ToString());
 		}
 	}
 }
