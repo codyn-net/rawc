@@ -63,6 +63,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			written.Add(d_runHeaderFilename);
 			written.Add(d_runSourceFilename);
 
+			if (d_options.GeneratePythonWrapper)
+			{
+				written.Add(WritePythonWrapper());
+			}
+
 			if (d_options.Standalone != null)
 			{
 				// Copy rawc sources also
@@ -158,7 +163,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{"integrator", Knowledge.Instance.Network.Integrator.ClassId},
 				{"INTEGRATOR", Knowledge.Instance.Network.Integrator.ClassId.ToUpper()},
 				{"basename", d_program.Options.Basename},
-				{"BASENAME", d_program.Options.Basename.ToUpper()}
+				{"BASENAME", d_program.Options.Basename.ToUpper()},
+				{"valuetype", ValueType}
 			};
 
 			var ors = String.Join("|", (new List<string>(srep.Keys)).ToArray());
@@ -510,6 +516,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("}} CdnRawc{0}State;", CPrefix);
 			writer.WriteLine();
+		}
+
+		private string WritePythonWrapper()
+		{
+			var pydir = Path.Combine(d_program.Options.Output, "py" + CPrefixDown);
+
+			try
+			{
+				Directory.CreateDirectory(pydir);
+			} catch {}
+
+			var pyfile = Path.Combine(pydir, "__init__.py");
+
+			TextWriter writer = new StreamWriter(pyfile);
+			writer.Write(Template("Cdn.RawC.Programmer.Formatters.C.Resources.Wrapper.py"));
+			writer.Close();
+
+			return pyfile;
 		}
 
 		private void WriteRunSource()

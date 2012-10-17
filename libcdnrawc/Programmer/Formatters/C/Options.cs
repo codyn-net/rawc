@@ -25,12 +25,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public bool CompileShared;
 		[CommandLine.Option("standalone", ArgumentName="TYPE", OptionalArgument=true, DefaultArgument="minimal", Description="Create a standalone network (minimal, full)")]
 		public string Standalone;
+		[CommandLine.Option("generate-python-wrapper", Description="Generate ctypes based python wrapper")]
+		public bool GeneratePythonWrapper;
 
 		public string CPrefixDown;
 		
 		public Options(string name) : base(name)
 		{
-		}		
+		}
 	}
 }
 

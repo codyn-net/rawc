@@ -2,16 +2,14 @@
 
 #include <cdn-rawc/integrators/cdn-rawc-integrator-${integrator}.h>
 
-static CdnRawcIntegrator *integrator = 0;
-static CdnRawcNetwork *network = 0;
-
 static ValueType data[CDN_RAWC_${NAME}_DATA_SIZE * CDN_RAWC_INTEGRATOR_${INTEGRATOR}_DATA_SIZE];
 
 void
 cdn_rawc_${name}_reset (ValueType t)
 {
+	CdnRawcNetwork *network;
+
 	network = cdn_rawc_${name}_network ();
-	integrator = cdn_rawc_integrator_${integrator} ();
 
 	network->reset (data, t);
 }
@@ -19,14 +17,19 @@ cdn_rawc_${name}_reset (ValueType t)
 void
 cdn_rawc_${name}_init (ValueType t)
 {
+	CdnRawcNetwork *network;
+
+	network = cdn_rawc_${name}_network ();
+
 	network->init (data, t);
 }
 
 void
 cdn_rawc_${name}_prepare (ValueType t)
 {
+	CdnRawcNetwork *network;
+
 	network = cdn_rawc_${name}_network ();
-	integrator = cdn_rawc_integrator_${integrator} ();
 
 	network->prepare (data, t);
 }
@@ -34,6 +37,12 @@ cdn_rawc_${name}_prepare (ValueType t)
 void
 cdn_rawc_${name}_step (ValueType t, ValueType dt)
 {
+	CdnRawcNetwork *network;
+	CdnRawcIntegrator *integrator;
+
+	network = cdn_rawc_${name}_network ();
+	integrator = cdn_rawc_${name}_integrator ();
+
 	cdn_rawc_integrator_step (integrator,
 	                          network,
 	                          data,
@@ -44,7 +53,7 @@ cdn_rawc_${name}_step (ValueType t, ValueType dt)
 CdnRawcIntegrator *
 cdn_rawc_${name}_integrator (void)
 {
-	return integrator;
+	return cdn_rawc_integrator_${integrator} ();
 }
 
 ValueType

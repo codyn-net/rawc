@@ -116,7 +116,8 @@ RESOURCES = \
 	Programmer/Formatters/C/Resources/Standalone.make,Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make \
 	Programmer/Formatters/C/Resources/Include.make,Cdn.RawC.Programmer.Formatters.C.Resources.Include.make \
 	Programmer/Formatters/C/Resources/RunSource.c,Cdn.RawC.Programmer.Formatters.C.Resources.RunSource.c \
-	Programmer/Formatters/C/Resources/RunHeader.h,Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h
+	Programmer/Formatters/C/Resources/RunHeader.h,Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h \
+	Programmer/Formatters/C/Resources/Wrapper.py,Cdn.RawC.Programmer.Formatters.C.Resources.Wrapper.py
 
 EXTRAS = \
 	codyn-rawc-sharp.pc.in
