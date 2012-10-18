@@ -49,3 +49,7 @@ pkgconfig_DATA = \
 
 cdn-rawc-1.0.pc: cdn-rawc.pc
 	cp cdn-rawc.pc cdn-rawc-1.0.pc
+
+if ENABLE_PYTHON
+pkgpython_PYTHON = py/__init__.py
+endif
