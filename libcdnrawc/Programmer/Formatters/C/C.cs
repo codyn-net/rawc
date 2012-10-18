@@ -1362,6 +1362,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("\t\t\t.t = {0},", t.AliasOrIndex);
 			writer.WriteLine("\t\t\t.dt = {0},", dt.AliasOrIndex);
 			writer.WriteLine();
+
+			if (!Cdn.RawC.Options.Instance.NoMetadata)
+			{
+				writer.WriteLine(String.Format("\t\t\t.name = \"{0}\",", CPrefixDown));
+			}
+			else
+			{
+				writer.WriteLine("\t\t\t.name = 0,");
+			}
+
+			writer.WriteLine();
+
 			writer.WriteLine("\t\t\t.states = meta_states,");
 			writer.WriteLine("\t\t\t.states_size = sizeof (meta_states) / sizeof (CdnRawcStateMeta),");
 			writer.WriteLine();
