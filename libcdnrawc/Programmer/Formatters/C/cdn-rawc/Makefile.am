@@ -1,15 +1,17 @@
 lib_LTLIBRARIES = libcdnrawc-1.0.la
 
-SOURCE_FILES = \
+SOURCE_FILES =				\
+	cdn-rawc-network.c		\
 	cdn-rawc-integrator.c
 
-HEADER_FILES = \
-	cdn-rawc.h \
-	cdn-rawc-types.h \
+HEADER_FILES =			\
+	cdn-rawc.h		\
+	cdn-rawc-types.h	\
+	cdn-rawc-network.h	\
 	cdn-rawc-integrator.h
 
-INTEGRATOR_SOURCE_FILES = \
-	integrators/cdn-rawc-integrator-euler.c \
+INTEGRATOR_SOURCE_FILES =				\
+	integrators/cdn-rawc-integrator-euler.c		\
 	integrators/cdn-rawc-integrator-runge-kutta.c
 
 INTEGRATOR_HEADER_FILES = \
