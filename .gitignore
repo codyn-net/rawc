@@ -25,4 +25,6 @@ libcdnrawc/Config.cs
 libcdnrawc/Programmer/Formatters/C/cdn-rawc/integrators/.dirstamp
 libtool
 ltmain.sh
-./cdn-rawc
+/cdn-rawc
+py-compile
+/cdnrawc
