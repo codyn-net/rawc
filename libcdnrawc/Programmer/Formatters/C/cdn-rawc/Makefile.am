@@ -53,3 +53,7 @@ cdn-rawc-1.0.pc: cdn-rawc.pc
 if ENABLE_PYTHON
 pkgpython_PYTHON = py/__init__.py
 endif
+
+matlabscriptsdir = $(datadir)/cdn-rawc-1.0/matlab
+matlabscripts_DATA = \
+	matlab/cdnrawc.m
