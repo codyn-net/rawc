@@ -57,3 +57,9 @@ endif
 matlabscriptsdir = $(datadir)/cdn-rawc-1.0/matlab
 matlabscripts_DATA = \
 	matlab/cdnrawc.m
+
+EXTRA_DIST =				\
+	$(pkgconfig_DATA)		\
+	$(matlabscripts_DATA)		\
+	$(srcdata_DATA)			\
+	$(srcintegratorsdata_DATA)
