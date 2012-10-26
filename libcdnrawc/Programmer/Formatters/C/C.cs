@@ -164,14 +164,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{"INTEGRATOR", Knowledge.Instance.Network.Integrator.ClassId.ToUpper()},
 				{"basename", d_program.Options.Basename},
 				{"BASENAME", d_program.Options.Basename.ToUpper()},
-				{"valuetype", ValueType}
+				{"valuetype", ValueType},
+				{"cflags", d_options.CFlags},
+				{"libs", d_options.Libs},
 			};
 
 			var ors = String.Join("|", (new List<string>(srep.Keys)).ToArray());
 			var r = new System.Text.RegularExpressions.Regex("[$][{](" + ors + ")[}]");
 
 			ret = r.Replace(ret, (m) => {
-				return srep[m.Groups[1].Value];
+				var s = srep[m.Groups[1].Value];
+				return s == null ? "" : s;
 			});
 
 			r = new System.Text.RegularExpressions.Regex(@"[$][{]include:([^}]*)[}]");
@@ -255,7 +258,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 
 			StringBuilder args = new StringBuilder();
-			args.AppendFormat("CFLAGS='{0}'", d_options.CFlags);
 
 			if (verbose)
 			{

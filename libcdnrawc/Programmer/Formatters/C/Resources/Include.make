@@ -7,8 +7,8 @@ RANLIB = ranlib
 CFLAGS =
 LDFLAGS =
 
-${NAME}_CFLAGS = -I. -Winline
-${NAME}_LDFLAGS = -lm
+${NAME}_CFLAGS = -I. -Winline ${cflags}
+${NAME}_LDFLAGS = -lm ${libs}
 
 # Enable debug symbols if defined
 DEBUG =
