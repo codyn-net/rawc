@@ -837,15 +837,16 @@ namespace Cdn.RawC.Programmer
 			var deps = new DependencyFilter(d_dependencyGraph, states);
 			var indeps = deps.DependencyOf(ins);
 
+			ProgramDependencies(d_apiPrepare, indeps, "Dependencies of _in_ variables");
+			ProgramDependencies(d_apiPrepare, new DependencyFilter(d_dependencyGraph, ins), "_in_ variables");
+
+			// Prepared states are indesp and ins
 			d_preparedStates = indeps;
 
 			foreach (var s in ins)
 			{
 				d_preparedStates.Add(s);
 			}
-
-			ProgramDependencies(d_apiPrepare, indeps, "Dependencies of _in_ variables");
-			ProgramDependencies(d_apiPrepare, new DependencyFilter(d_dependencyGraph, ins), "_in_ variables");
 		}
 		
 		private void ProgramInit()
