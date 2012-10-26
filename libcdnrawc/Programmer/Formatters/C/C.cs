@@ -944,7 +944,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("static{0} {1} {2}[]{3} =",
 			                 table.IsConstant ? " const" : "",
-			                 table.IntegerType ? MinimumTableType(table) : ValueType,
+			                 table.IntegerType ? MinimumTableType(table) : "ValueType",
 			                 table.Name,
 			                 table.Columns > 0 ? String.Format("[{0}]", table.Columns) : "");
 			

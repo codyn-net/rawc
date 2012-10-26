@@ -2,15 +2,15 @@
 
 static void diff (CdnRawcIntegrator *integrator,
                   CdnRawcNetwork    *network,
-                  double            *data,
-                  double             t,
-                  double             dt);
+                  ValueType            *data,
+                  ValueType             t,
+                  ValueType             dt);
 
 static void step (CdnRawcIntegrator *integrator,
                   CdnRawcNetwork    *network,
-                  double            *data,
-                  double             t,
-                  double             dt);
+                  ValueType            *data,
+                  ValueType             t,
+                  ValueType             dt);
 
 static CdnRawcIntegratorRungeKutta integrator = {
 	{
@@ -28,17 +28,17 @@ cdn_rawc_integrator_runge_kutta ()
 
 static void
 update (CdnRawcNetwork *network,
-        double         *data,
+        ValueType         *data,
         uint32_t        order,
-        double          norm)
+        ValueType          norm)
 {
 	uint32_t i;
 	uint32_t offset;
 	uint32_t num;
 
-	double *states;
-	double *stateswr;
-	double *derivatives;
+	ValueType *states;
+	ValueType *stateswr;
+	ValueType *derivatives;
 
 	offset = (order - 1) * network->data_size;
 
@@ -57,11 +57,11 @@ update (CdnRawcNetwork *network,
 static void
 step (CdnRawcIntegrator *integrator,
       CdnRawcNetwork    *network,
-      double            *data,
-      double             t,
-      double             dt)
+      ValueType            *data,
+      ValueType             t,
+      ValueType             dt)
 {
-	double hdt = 0.5 * dt;
+	ValueType hdt = 0.5 * dt;
 
 	// Precompute step
 	network->pre (data, t, hdt);
@@ -75,15 +75,15 @@ step (CdnRawcIntegrator *integrator,
 static void
 diff (CdnRawcIntegrator *integrator,
       CdnRawcNetwork    *network,
-      double            *data,
-      double             t,
-      double             dt)
+      ValueType            *data,
+      ValueType             t,
+      ValueType             dt)
 {
 	uint32_t i;
-	double *states;
-	double *stateswr;
-	double *derivatives;
-	double hdt;
+	ValueType *states;
+	ValueType *stateswr;
+	ValueType *derivatives;
+	ValueType hdt;
 
 	states = data + network->states.start;
 	derivatives = data + network->derivatives.start;

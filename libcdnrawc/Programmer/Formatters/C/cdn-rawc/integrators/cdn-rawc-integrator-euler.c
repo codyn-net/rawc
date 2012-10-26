@@ -2,15 +2,9 @@
 
 static void diff (CdnRawcIntegrator *integrator,
                   CdnRawcNetwork    *network,
-                  double            *data,
-                  double             t,
-                  double             dt);
-
-static void step (CdnRawcIntegrator *integrator,
-                  CdnRawcNetwork    *network,
-                  double            *data,
-                  double             t,
-                  double             dt);
+                  ValueType         *data,
+                  ValueType          t,
+                  ValueType          dt);
 
 static CdnRawcIntegratorEuler integrator = {
 	{
@@ -29,9 +23,9 @@ cdn_rawc_integrator_euler ()
 static void
 diff (CdnRawcIntegrator *integrator,
       CdnRawcNetwork    *network,
-      double            *data,
-      double             t,
-      double             dt)
+      ValueType         *data,
+      ValueType          t,
+      ValueType          dt)
 {
 	ValueType *states;
 	ValueType *derivatives;
