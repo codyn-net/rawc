@@ -11,9 +11,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public List<string> CustomHeaders;
 		[CommandLine.Option("separate-math-header", Description="Whether or not to use a separate header for math defines")]
 		public bool SeparateMathHeader;
-		[CommandLine.Option("cflags", Description="Specify compiler flags for compilation (used with --compile and --validate)")]
+		[CommandLine.Option("cflags", Description="Specify compiler flags for compilation")]
 		public string CFlags;
-		[CommandLine.Option("libs", Description="Specify linker flags for compilation (used with --compile and --validate)")]
+		[CommandLine.Option("libs", Description="Specify linker flags for compilation")]
 		public string Libs;
 		[CommandLine.Option("symbolic-names", Description="Use symbolic names for state indices in the source code")]
 		public bool SymbolicNames;
