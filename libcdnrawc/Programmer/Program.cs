@@ -677,7 +677,18 @@ namespace Cdn.RawC.Programmer
 			ProgramSetTDT(d_apiPre);
 			
 			// All the instates
-			var instates = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.FlaggedStates(VariableFlags.In));
+			var ins = Knowledge.Instance.FlaggedStates(VariableFlags.In);
+			var instates = new DependencyFilter(d_dependencyGraph);
+
+			foreach (var i in ins)
+			{
+				Cdn.Variable v = (Cdn.Variable)i.Object;
+
+				if ((v.Flags & VariableFlags.Once) == 0)
+				{
+					instates.Add(i);
+				}
+			}
 
 			// The instates filtered by those that are dependencies of integrated
 			// states
