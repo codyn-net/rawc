@@ -161,6 +161,7 @@ namespace Cdn.RawC
 		private class DynamicNetwork
 		{
 			private Type d_type;
+			private Type d_valuetype;
 			private string d_name;
 		
 			private string ToAsciiOnly(string name)
@@ -182,6 +183,55 @@ namespace Cdn.RawC
 				return builder.ToString();
 			}
 
+			private void DetermineValueType(string shlib, ModuleBuilder mb, string name)
+			{
+				TypeBuilder tb = mb.DefineType("DynamicRawcType" + Guid.NewGuid().ToString("N"));
+
+				// Define dynamic PInvoke method
+				var typesize = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_get_type_size",
+				                                      shlib,
+				                                      MethodAttributes.Public |
+				                                      MethodAttributes.Static |
+				                                      MethodAttributes.PinvokeImpl,
+				                                      CallingConventions.Standard,
+				                                      typeof(byte),
+				                                      new Type[] {},
+				                                      CallingConvention.StdCall,
+				                                      CharSet.Auto);
+
+				// Implementation flags for preserving signature
+				typesize.SetImplementationFlags(typesize.GetMethodImplementationFlags() |
+				                                MethodImplAttributes.PreserveSig);
+			
+				Type tp;
+
+				try
+				{
+					tp = tb.CreateType();
+				}
+				catch (Exception e)
+				{
+					Console.Error.WriteLine("Could not create dynamic type proxy: {0}", e.Message);
+					d_valuetype = typeof(double);
+					return;
+				}
+
+				var s = (byte)tp.InvokeMember("cdn_rawc_" + d_name + "_get_type_size",
+				                              BindingFlags.InvokeMethod,
+				                              null,
+				                              Activator.CreateInstance(tp),
+				                              new object[] {});
+			
+				if (s == sizeof(float))
+				{
+					d_valuetype = typeof(float);
+				}
+				else
+				{
+					d_valuetype = typeof(double);
+				}
+			}
+
 			public DynamicNetwork(string shlib, string basename)
 			{
 				AssemblyName name = new AssemblyName("DynamicRawcAssembly" +
@@ -195,12 +245,12 @@ namespace Cdn.RawC
 				// Module builder
 				ModuleBuilder mb = ab.DefineDynamicModule("DynamicRawc");
 
-				// Type builder
-				TypeBuilder tb = mb.DefineType("DynamicRawc" +
-				                               Guid.NewGuid().ToString("N"));
-	
 				d_name = ToAsciiOnly(basename);
-	
+				DetermineValueType(shlib, mb, d_name);
+
+				// Type builder
+				TypeBuilder tb = mb.DefineType("DynamicRawc" + Guid.NewGuid().ToString("N"));
+
 				// Define dynamic PInvoke method
 				var netinit = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_reset",
 				                                     shlib,
@@ -209,7 +259,7 @@ namespace Cdn.RawC
 				                                     MethodAttributes.PinvokeImpl,
 				                                     CallingConventions.Standard,
 				                                     null,
-				                                     new Type[] {typeof(double)},
+				                                     new Type[] {d_valuetype},
 				                                     CallingConvention.StdCall,
 				                                     CharSet.Auto);
 	
@@ -224,7 +274,7 @@ namespace Cdn.RawC
 				                                     MethodAttributes.PinvokeImpl,
 				                                     CallingConventions.Standard,
 				                                     null,
-				                                     new Type[] {typeof(double), typeof(double)},
+				                                     new Type[] {d_valuetype, d_valuetype},
 				                                     CallingConvention.StdCall,
 				                                     CharSet.Auto);
 	
@@ -238,7 +288,7 @@ namespace Cdn.RawC
 	                                     MethodAttributes.Static |
 	                                     MethodAttributes.PinvokeImpl,
 	                                     CallingConventions.Standard,
-	                                     typeof(double),
+	                                     d_valuetype,
 	                                     new Type[] {typeof(UInt32)},
 	                                     CallingConvention.StdCall,
 	                                     CharSet.Auto);
@@ -261,11 +311,13 @@ namespace Cdn.RawC
 
 			public double Value(uint index)
 			{
-				return (double)d_type.InvokeMember("cdn_rawc_" + d_name + "_get",
-				                    BindingFlags.InvokeMethod,
-				                    null,
-				                    Activator.CreateInstance(d_type),
-				                    new object[] {index});
+				var f = d_type.InvokeMember("cdn_rawc_" + d_name + "_get",
+				                            BindingFlags.InvokeMethod,
+				                            null,
+				                            Activator.CreateInstance(d_type),
+				                            new object[] {index});
+
+				return (double)Convert.ChangeType(f, typeof(double));
 			}
 
 			public void Reset(double t)
@@ -274,7 +326,7 @@ namespace Cdn.RawC
 				                    BindingFlags.InvokeMethod,
 				                    null,
 				                    Activator.CreateInstance(d_type),
-				                    new object[] {t});
+				                    new object[] {Convert.ChangeType(t, d_valuetype)});
 			}
 
 			public void Step(double t, double dt)
@@ -283,7 +335,8 @@ namespace Cdn.RawC
 				                    BindingFlags.InvokeMethod,
 				                    null,
 				                    Activator.CreateInstance(d_type),
-				                    new object[] {t, dt});
+				                    new object[] {Convert.ChangeType(t, d_valuetype),
+					                              Convert.ChangeType(dt, d_valuetype)});
 			}
 		}
 	}
