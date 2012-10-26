@@ -1155,7 +1155,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			ChildMeta prev = null;
 
-			foreach (var v in obj.Variables)
+			var vars = obj.Variables;
+
+			if (obj == Knowledge.Instance.Network)
+			{
+				var v = vars;
+				vars = new Cdn.Variable[v.Length + 2];
+				v.CopyTo(vars, 2);
+
+				vars[0] = (Cdn.Variable)Knowledge.Instance.Time.Object;
+				vars[1] = (Cdn.Variable)Knowledge.Instance.TimeStep.Object;
+			}
+
+			foreach (var v in vars)
 			{
 				DataTable.DataItem item;
 
@@ -1243,7 +1255,15 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					uint nid = 0;
 
-					meta.NodeMap.TryGetValue(v.Object, out nid);
+					if (item.Object == Knowledge.Instance.Time ||
+					    item.Object == Knowledge.Instance.TimeStep)
+					{
+						meta.NodeMap.TryGetValue(Knowledge.Instance.Network, out nid);
+					}
+					else
+					{
+						meta.NodeMap.TryGetValue(v.Object, out nid);
+					}
 					
 					sm.Name = v.Name;
 					sm.Parent = nid;
