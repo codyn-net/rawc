@@ -566,7 +566,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			// Write interface
 			WriteAccessorEnum(writer);
 
-			writer.WriteLine("CdnRawcNetwork *cdn_rawc_{0}_network ();", CPrefixDown);
+			writer.WriteLine("CdnRawcNetwork *cdn_rawc_{0}_network (void);", CPrefixDown);
 			writer.WriteLine();
  			
 			// End protect for including this from C++

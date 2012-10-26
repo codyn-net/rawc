@@ -12,7 +12,7 @@ typedef struct
 
 #define CDN_RAWC_INTEGRATOR_RUNGE_KUTTA_DATA_SIZE 4
 
-CdnRawcIntegrator *cdn_rawc_integrator_runge_kutta ();
+CdnRawcIntegrator *cdn_rawc_integrator_runge_kutta (void);
 
 CDN_RAWC_END_DECLS
 

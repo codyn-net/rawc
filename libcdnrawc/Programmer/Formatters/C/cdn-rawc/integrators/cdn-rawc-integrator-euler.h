@@ -12,7 +12,7 @@ typedef struct
 
 #define CDN_RAWC_INTEGRATOR_EULER_DATA_SIZE 1
 
-CdnRawcIntegrator *cdn_rawc_integrator_euler ();
+CdnRawcIntegrator *cdn_rawc_integrator_euler (void);
 
 CDN_RAWC_END_DECLS
 
