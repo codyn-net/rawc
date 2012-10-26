@@ -44,6 +44,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			d_options = new Options("C Formatter");
 			d_enumMap = new List<EnumItem>();
 		}
+
+		private bool IsStandalone
+		{
+			get { return d_options.Standalone != null || d_options.ValueType != "double"; }
+		}
 		
 		public string[] Write(Program program)
 		{
@@ -63,7 +68,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			written.Add(d_runHeaderFilename);
 			written.Add(d_runSourceFilename);
 
-			if (d_options.Standalone != null)
+			if (IsStandalone)
 			{
 				// Copy rawc sources also
 				var sources = Path.Combine(Config.Data, "cdn-rawc-1.0/src/cdn-rawc");
@@ -121,7 +126,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var filename = Path.Combine(d_program.Options.Output, "Makefile");
 			TextWriter writer = new StreamWriter(filename);
 
-			if (d_options.Standalone != null)
+			if (IsStandalone)
 			{
 				writer.Write(Template("Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make"));
 			}
@@ -143,7 +148,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var sources = Path.GetFileName(d_sourceFilename) + " " + Path.GetFileName(d_runSourceFilename);
 			var headers = Path.GetFileName(d_headerFilename) + " " + Path.GetFileName(d_runHeaderFilename);
 
-			if (d_options.Standalone != null)
+			if (IsStandalone)
 			{
 				sources += " $(wildcard cdn-rawc/*.c) $(wildcard cdn-rawc/integrators/*.c)";
 				headers += " $(wildcard cdn-rawc/*.h) $(wildcard cdn-rawc/integrators/*.h)";
