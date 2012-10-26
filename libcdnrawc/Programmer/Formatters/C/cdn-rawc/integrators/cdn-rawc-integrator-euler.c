@@ -6,7 +6,7 @@ static void diff (CdnRawcIntegrator *integrator,
                   ValueType          t,
                   ValueType          dt);
 
-static CdnRawcIntegratorEuler integrator = {
+static CdnRawcIntegratorEuler integrator_class = {
 	{
 		0,
 		diff,
@@ -17,7 +17,7 @@ static CdnRawcIntegratorEuler integrator = {
 CdnRawcIntegrator *
 cdn_rawc_integrator_euler ()
 {
-	return (CdnRawcIntegrator *)&integrator;
+	return (CdnRawcIntegrator *)&integrator_class;
 }
 
 static void

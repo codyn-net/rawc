@@ -12,7 +12,7 @@ static void step (CdnRawcIntegrator *integrator,
                   ValueType             t,
                   ValueType             dt);
 
-static CdnRawcIntegratorRungeKutta integrator = {
+static CdnRawcIntegratorRungeKutta integrator_class = {
 	{
 		step,
 		diff,
@@ -23,7 +23,7 @@ static CdnRawcIntegratorRungeKutta integrator = {
 CdnRawcIntegrator *
 cdn_rawc_integrator_runge_kutta ()
 {
-	return (CdnRawcIntegrator *)&integrator;
+	return (CdnRawcIntegrator *)&integrator_class;
 }
 
 static void
