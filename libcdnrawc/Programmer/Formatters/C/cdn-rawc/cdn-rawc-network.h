@@ -30,10 +30,5 @@ void cdn_rawc_network_post    (CdnRawcNetwork *network,
                                ValueType       t,
                                ValueType       dt);
 
-ValueType *cdn_rawc_network_alloc (CdnRawcNetwork    *network,
-                                   CdnRawcIntegrator *integrator);
-
-void cdn_rawc_network_free        (ValueType *data);
-
 #endif /* __CDN_RAWC_NETWORK_H__ */
 

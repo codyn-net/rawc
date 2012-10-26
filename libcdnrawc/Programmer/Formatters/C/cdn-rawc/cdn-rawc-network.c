@@ -52,16 +52,3 @@ cdn_rawc_network_post (CdnRawcNetwork *network,
 {
 	network->post (data, t, dt);
 }
-
-ValueType *
-cdn_rawc_network_alloc (CdnRawcNetwork    *network,
-                        CdnRawcIntegrator *integrator)
-{
-	return malloc (sizeof (ValueType) * network->data_size * integrator->data_size);
-}
-
-void
-cdn_rawc_network_free (ValueType *data)
-{
-	free (data);
-}
