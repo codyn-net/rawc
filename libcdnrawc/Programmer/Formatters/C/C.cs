@@ -821,6 +821,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				                 function.Name,
 				                 GenerateArgsList("x", function.NumArguments, 0, "ValueType"));
 				writer.WriteLine("{");
+
+				if (function.Inline)
+				{
+					writer.WriteLine("\t/* Hey! This function is strictly inlined, so don't panic! */");
+				}
+
 				writer.WriteLine("\treturn {0};", FunctionToC(function));
 				writer.WriteLine("}");
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
