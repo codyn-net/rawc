@@ -141,13 +141,17 @@ namespace Cdn.RawC
 			if (v != null)
 			{
 				var flag = v.Flags.ToString();
+				var parts = flag.Split(new char[] {' ', ','}, StringSplitOptions.RemoveEmptyEntries);
 
-				if (flag.Length > 2)
+				for (int ip = 0; ip < parts.Length; ++ip)
 				{
-					flag = flag.Substring(0, 3);
+					if (parts[ip].Length > 2)
+					{
+						parts[ip] = parts[ip].Substring(0, 3);
+					}
 				}
 
-				return String.Format("{0}{{{1}}}{{{2}}}", v.FullNameForDisplay, flag.ToLower(), TypeToString(d_type));
+				return String.Format("{0}{{{1}}}{{{2}}}", v.FullNameForDisplay, String.Join(",", parts).ToLower(), TypeToString(d_type));
 			}
 
 			var i = d_object as Cdn.Instruction;
