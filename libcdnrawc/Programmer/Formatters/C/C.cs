@@ -568,6 +568,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("CdnRawcNetwork *cdn_rawc_{0}_network (void);", CPrefixDown);
 			writer.WriteLine();
+
+			writer.WriteLine("uint8_t cdn_rawc_{0}_get_type_size (void);", CPrefixDown);
+			writer.WriteLine();
  			
 			// End protect for including this from C++
 			writer.WriteLine("CDN_RAWC_END_DECLS"); 			
@@ -911,6 +914,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				WriteAPISource(writer, api);
 			}
+
+			writer.WriteLine("uint8_t");
+			writer.WriteLine("cdn_rawc_{0}_get_type_size ()", CPrefixDown);
+			writer.WriteLine("{");
+			writer.WriteLine("\treturn (uint8_t)sizeof (ValueType);");
+			writer.WriteLine("}");
+			writer.WriteLine();
 		}
 		
 		private string MinimumTableType(DataTable table)
@@ -1337,6 +1347,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine();
 			writer.WriteLine("\t\t.data_size = CDN_RAWC_{0}_DATA_SIZE,", CPrefixUp);
+			writer.WriteLine("\t\t.type_size = sizeof (ValueType),", CPrefixUp);
 
 			var t = d_program.StateTable[Knowledge.Instance.Time];
 			var dt = d_program.StateTable[Knowledge.Instance.TimeStep];

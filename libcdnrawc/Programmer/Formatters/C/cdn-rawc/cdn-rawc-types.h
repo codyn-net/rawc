@@ -92,6 +92,7 @@ typedef struct
 	CdnRawcRange derivatives;
 
 	uint32_t data_size;
+	uint8_t type_size;
 
 	CdnRawcNetworkMeta meta;
 } CdnRawcNetwork;
