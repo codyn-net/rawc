@@ -185,6 +185,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return SimpleOperator(context, instruction, " || ");
 			case MathFunctionType.Plus:
 				return SimpleOperator(context, instruction, " + ");
+			case MathFunctionType.Modulo:
+				return String.Format("{0}{1}",
+					                     Context.MathFunctionDefine(Cdn.MathFunctionType.Modulo, context.Node.Children.Count),
+					                     SimpleOperator(context, null, ", "));
 			case MathFunctionType.Power:
 				return String.Format("{0}{1}",
 					                     Context.MathFunctionDefine(Cdn.MathFunctionType.Pow, context.Node.Children.Count),

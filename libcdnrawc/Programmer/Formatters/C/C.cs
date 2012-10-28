@@ -645,6 +645,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			string name = Enum.GetName(typeof(Cdn.MathFunctionType), type);
 
+			var suffix = IsDouble ? "" : "f";
+
 			switch (type)
 			{
 			case MathFunctionType.Abs:
@@ -667,13 +669,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Round:
 			case MathFunctionType.Tan:
 			case MathFunctionType.Tanh:
-				return String.Format("{0}{1} ({2})", name.ToLower(), IsDouble ? "" : "f", GenerateArgsList("x", arguments));
+				return String.Format("{0}{1} ({2})", name.ToLower(), suffix, GenerateArgsList("x", arguments));
 			case MathFunctionType.Power:
-				return String.Format("pow{0} ({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
+				return String.Format("pow{0} ({1})", suffix, GenerateArgsList("x", arguments));
 			case MathFunctionType.Ln:
-				return String.Format("log{0} ({1})", IsDouble ? "" : "f", GenerateArgsList("x", arguments));
+				return String.Format("log{0} ({1})", suffix, GenerateArgsList("x", arguments));
 			case MathFunctionType.Lerp:
-				return "(x0 + (x1 - x0) * x2)";
+				return "(x1 + (x2 - x1) * x0)";
+			case MathFunctionType.Cycle:
+				return String.Format("(x0 > x2 ? (x1 + fmod{0} (x0 - x1, x2 - x1)) : (x0 < x1 ? (x2 - fmod{0} (x1 - x0, x2 - x1)) : x0))", suffix);
+			case MathFunctionType.Clip:
+				return "(x0 < x1 ? x1 : (x0 > x2 ? x2 : x0))";
 			case MathFunctionType.Max:
 				return NestedImplementation("CDM_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
 			case MathFunctionType.Min:
@@ -681,7 +687,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Sqsum:
 				return NestedImplementation("CDN_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
 			case MathFunctionType.Invsqrt:
-				return IsDouble ? "1 / sqrt (x0)" : "1 / sqrtf (x0)";
+				return String.Format("(1 / sqrt{0} (x0))", suffix);
+			case MathFunctionType.Modulo:
+				return String.Format("(x0 < 0 ? (fmod{0} (x0, x1) + x1) : (fmod{0} (x0, x1)))", suffix);
 			default:
 				break;
 					
@@ -744,7 +752,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			foreach (Cdn.InstructionFunction inst in d_program.CollectInstructions<Cdn.InstructionFunction>())
 			{
-				if (inst.Id > (uint)MathFunctionType.NumOperators || inst.Id == (uint)MathFunctionType.Power)
+				if (inst.Id > (uint)MathFunctionType.NumOperators || inst.Id == (uint)MathFunctionType.Power || inst.Id == (uint)MathFunctionType.Modulo)
 				{
 					WriteCustomMathDefine(writer, (Cdn.MathFunctionType)inst.Id, (int)inst.GetStackManipulation().Pop.Num, generated);
 				}
