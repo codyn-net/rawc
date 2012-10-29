@@ -13,6 +13,8 @@ namespace Cdn.RawC
 		private List<State> d_prepareStates;
 		private List<State> d_randStates;
 		private List<State> d_delayedStates;
+		private List<State> d_integratedConstraintStates;
+		private List<State> d_externalConstraintStates;
 		private Dictionary<Instruction, Instruction> d_instructionMapping;
 		private Dictionary<Instruction, double> d_delays;
 		private Dictionary<object, State> d_stateMap;
@@ -58,59 +60,23 @@ namespace Cdn.RawC
 			d_delayedStates = new List<State>();
 			d_derivativeStates = new List<State>();
 			d_derivativeMap = new Dictionary<object, State>();
-			
+			d_integratedConstraintStates = new List<State>();
+			d_externalConstraintStates = new List<State>();
+
 			d_instructionMapping = new Dictionary<Instruction, Instruction>();
 
 			Scan();
 		}
 
-		private IEnumerable<Edge> EdgesForProxies(Cdn.Object obj)
-		{
-			if (obj == null || obj.Parent == null)
-			{
-				yield break;
-			}
-
-			foreach (Edge link in obj.Parent.Edges)
-			{
-				yield return link;
-			}
-
-			foreach (Edge link in EdgesForProxies(obj.Parent))
-			{
-				yield return link;
-			}
-		}
-
-		private IEnumerable<Edge> EdgesForVariableAll(Variable prop)
-		{
-			Node node = prop.Object as Node;
-
-			if (node == null)
-			{
-				yield break;
-			}
-
-			foreach (Edge link in node.Edges)
-			{
-				yield return link;
-			}
-
-			foreach (Edge link in EdgesForProxies(prop.Object))
-			{
-				yield return link;
-			}
-		}
-
 		private IEnumerable<Edge> EdgesForVariable(Variable prop)
 		{
-			var s = new HashSet<Edge>();
+			HashSet<Cdn.Edge> unique = new HashSet<Edge>();
 
-			foreach (Edge item in EdgesForVariableAll(prop))
+			foreach (var action in prop.Actions)
 			{
-				if (s.Add(item))
+				if (unique.Add(action.Edge))
 				{
-					yield return item;
+					yield return action.Edge;
 				}
 			}
 		}
@@ -179,6 +145,21 @@ namespace Cdn.RawC
 			return false;
 		}
 
+		private void AddAux(State s, HashSet<object> unique)
+		{
+			if (unique != null && unique.Contains(s.Object))
+			{
+				return;
+			}
+
+			Cdn.Variable v = (Cdn.Variable)s.Object;
+
+			if ((v.Flags & (VariableFlags.In | VariableFlags.Once)) == 0)
+			{
+				d_auxStates.Add(s);
+			}
+		}
+
 		private void ExtractStates()
 		{
 			HashSet<object> unique = new HashSet<object>();
@@ -191,6 +172,15 @@ namespace Cdn.RawC
 				var st = new State(v, null);
 				AddState(unique, st);
 				d_integrated.Add(st);
+
+				if (v.Constraint != null)
+				{
+					// Add special state computation for constraint
+					var cst = new ConstraintState(v);
+
+					d_integratedConstraintStates.Add(cst);
+					d_externalConstraintStates.Add(cst);
+				}
 			}
 
 			// Add states for the derivatives
@@ -211,30 +201,43 @@ namespace Cdn.RawC
 			{
 				if ((v.Flags & VariableFlags.FunctionArgument) == 0)
 				{
-					var s = ExpandedState(v);
+					if (!unique.Contains(v))
+					{
+						var s = ExpandedState(v);
 
-					AddState(unique, s);
+						AddState(unique, s);
+
+						if (v.Constraint != null)
+						{
+							var cst = new ConstraintState(v);
+							d_externalConstraintStates.Add(cst);
+						}
+					}
 				}
 			}
+
+			HashSet<object> auxset = new HashSet<object>();
 
 			// Add out variables
 			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
 			{
-				State s = ExpandedState(v);
-
-				AddState(unique, s);
-
-				if ((v.Flags & (VariableFlags.In | VariableFlags.Once)) == 0)
+				if (!unique.Contains(v))
 				{
-					d_auxStates.Add(s);
+					State s = ExpandedState(v);
+					AddState(unique, s);
+
+					AddAux(s, auxset);
 				}
 			}
 
 			// Add once variables
 			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Once))
 			{
-				var s = ExpandedState(v);
-				AddState(unique, s);
+				if (!unique.Contains(v))
+				{
+					var s = ExpandedState(v);
+					AddState(unique, s);
+				}
 			}
 		}
 
@@ -320,17 +323,82 @@ namespace Cdn.RawC
 			get { return d_initialize; }
 		}
 
+		public IEnumerable<State> IntegratedConstraintStates
+		{
+			get { return d_integratedConstraintStates; }
+		}
+
+		public IEnumerable<State> ExternalConstraintStates
+		{
+			get { return d_externalConstraintStates; }
+		}
+
 		private void Scan()
 		{
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
 			ScanVariables(d_network.Integrator);
 			ScanVariables(d_network);
 
+			PromoteConstraints();
+
 			ExtractStates();
 			ExtractDelayedStates();
 
 			ExtractInitialize();
 			ExtractRand();
+		}
+
+		private void PromoteConstraint(Cdn.Variable variable)
+		{
+			var c = variable.Constraint;
+
+			if (c == null)
+			{
+				return;
+			}
+
+			// Create a separate variable for the actual expression of
+			// 'variable' and set the new expression of 'variable' to the
+			// constraint expression.
+			var nv = new Cdn.Variable(String.Format("_{0}_unc", variable.Name), variable.Expression.Copy(), VariableFlags.None);
+			variable.Object.AddVariable(nv);
+
+			var instrs = variable.Constraint.Instructions;
+
+			for (int i = 0; i < instrs.Length; ++i)
+			{
+				Cdn.InstructionVariable vinstr;
+
+				vinstr = instrs[i] as InstructionVariable;
+
+				if (vinstr != null && vinstr.Variable == variable)
+				{
+					instrs[i] = (Cdn.Instruction)vinstr.Copy();
+					((InstructionVariable)instrs[i]).Variable = nv;
+				}
+			}
+
+			var expr = variable.Constraint.Copy();
+
+			expr.Instructions = instrs;
+			variable.Expression = expr;
+
+			if (!variable.Integrated)
+			{
+				foreach (var action in variable.Actions)
+				{
+					// Redirect edge to the unconstraint variable for direct edges
+					action.Target = nv.Name;
+				}
+			}
+		}
+
+		private void PromoteConstraints()
+		{
+			foreach (var variable in d_variables)
+			{
+				PromoteConstraint(variable);
+			}
 		}
 
 		private void ExtractInitialize()

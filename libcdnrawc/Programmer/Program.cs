@@ -9,6 +9,7 @@ namespace Cdn.RawC.Programmer
 		
 		private APIFunction d_apiTDT;
 		private APIFunction d_apiPre;
+		private APIFunction d_apiPreDiff;
 		private APIFunction d_apiDiff;
 		private APIFunction d_apiPost;
 		private APIFunction d_apiInit;
@@ -50,6 +51,7 @@ namespace Cdn.RawC.Programmer
 			d_apiTDT.Private = true;
 
 			d_apiPre = new APIFunction("pre", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
+			d_apiPreDiff = new APIFunction("prediff", "void", "ValueType*", d_statetable.Name);
 			d_apiDiff = new APIFunction("diff", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
 			d_apiPost = new APIFunction("post", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
 			d_apiInit = new APIFunction("init", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
@@ -116,6 +118,12 @@ namespace Cdn.RawC.Programmer
 			foreach (State st in Knowledge.Instance.InitializeStates)
 			{
 				initmap[st.DataKey] = st;
+			}
+
+			// Add constraint states
+			foreach (var st in Knowledge.Instance.ExternalConstraintStates)
+			{
+				d_dependencyGraph.Add(st, null);
 			}
 
 			// Add initial states
@@ -584,7 +592,18 @@ namespace Cdn.RawC.Programmer
 
 			foreach (State state in states)
 			{
-				ret.Add(new Computation.Assignment(state, d_statetable[state], d_equations[state]));
+				DataTable.DataItem item;
+
+				if (state is ConstraintState)
+				{
+					item = d_statetable[state.Object];
+				}
+				else
+				{
+					item = d_statetable[state];
+				}
+
+				ret.Add(new Computation.Assignment(state, item, d_equations[state]));
 
 				if ((d_statetable[state].Type & (DataTable.DataItem.Flags.Once | DataTable.DataItem.Flags.In)) != 0)
 				{
@@ -693,13 +712,39 @@ namespace Cdn.RawC.Programmer
 			// The instates filtered by those that are dependencies of integrated
 			// states
 			instates.Filter().DependencyOf(derivatives);
-			deps = deps.DependsOn(instates);
 
-			// Finally, exclude those that depend on t/dt since they are already
-			// computed by the TDT api call
+			deps = new DependencyFilter(d_dependencyGraph, deps);
+			deps.AddRange(Knowledge.Instance.ExternalConstraintStates);
+
+			deps.Filter().DependsOn(instates);
+
 			ProgramDependencies(d_apiPre,
 			                    deps,
 			                    "Dependencies of derivatives that depend on <in>");
+		}
+
+		private void ProgramPreDiff(DependencyFilter deps, DependencyFilter derivatives)
+		{
+			// PreDiff is called from the integrator just before every
+			// diff, except for the first call to diff. This is used to
+			// do any computation for which states are assumed to have changed
+			// but not other values (like ins)
+
+			// Compute set of nodes which depend on real states and
+			// which in turn are dependencies for the derivatives
+			var states = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.Integrated);
+
+			deps = deps.DependsOn(states).Filter().DependencyOf(derivatives);
+			ProgramDependencies(d_apiPreDiff, deps, "Dependencies of derivatives that depend on states");
+
+
+			// Compute constraints on states on which derivatives depend
+			states.Filter().DependencyOf(derivatives);
+
+			var filt = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.IntegratedConstraintStates);
+			filt.Filter().DependsOn(states);
+
+			ProgramDependencies(d_apiPreDiff, filt, "Constraints on integrated states used for derivation");
 		}
 
 		private void ProgramDiff(DependencyFilter deps,
@@ -714,13 +759,6 @@ namespace Cdn.RawC.Programmer
 				d_apiDiff.Add(new Computation.CallAPI(d_apiTDT, data));
 			}
 
-			// Compute set of nodes which depend on real states and
-			// which in turn are dependencies for the derivatives
-			var states = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.Integrated);
-			deps = deps.DependsOn(states).Filter().DependencyOf(derivatives);
-
-			ProgramDependencies(d_apiDiff, deps, "Dependencies of derivatives that depend on states");
-
 			if (derivatives.Count > 0)
 			{
 				ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
@@ -730,6 +768,14 @@ namespace Cdn.RawC.Programmer
 		private void ProgramPost()
 		{
 			ProgramSetTDT(d_apiPost);
+
+			// Apply constraints for integrated states
+			var states = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.Integrated);
+			var constraints = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.IntegratedConstraintStates);
+
+			constraints.Filter().DependsOn(states);
+
+			ProgramDependencies(d_apiPost, constraints, "Integrated states constraints");
 
 			// Generate new random values
 			var rands  = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
@@ -797,6 +843,7 @@ namespace Cdn.RawC.Programmer
 			var deps = aux.DependencyOf(derivatives);
 
 			ProgramPre(deps, derivatives);
+			ProgramPreDiff(deps, derivatives);
 			ProgramDiff(deps, derivatives);
 			ProgramPost();
 		}
@@ -967,6 +1014,7 @@ namespace Cdn.RawC.Programmer
 				yield return d_apiReset;
 				yield return d_apiTDT;
 				yield return d_apiPre;
+				yield return d_apiPreDiff;
 				yield return d_apiDiff;
 				yield return d_apiPost;
 			}

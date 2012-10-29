@@ -214,6 +214,11 @@ namespace Cdn.RawC
 			{
 				ResolveState(state, embeddings, mapping, ret);
 			}
+
+			foreach (State state in Knowledge.Instance.ExternalConstraintStates)
+			{
+				ResolveState(state, embeddings, mapping, ret);
+			}
 			
 			return ret;
 		}

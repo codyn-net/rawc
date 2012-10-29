@@ -110,7 +110,8 @@ namespace Cdn.RawC.Programmer
 
 			if (state.Object == obj)
 			{
-				return false;
+				// Only constraint states and derivative states can depend on themselves
+				return state is ConstraintState || state is DerivativeState;
 			}
 
 			if (!d_stateMap.TryGetValue(state, out node))
@@ -118,6 +119,7 @@ namespace Cdn.RawC.Programmer
 				return false;
 			}
 
+			HashSet<Node> seen = new HashSet<Node>();
 			Queue<Node> deps = new Queue<Node>();
 
 			deps.Enqueue(node);
@@ -125,6 +127,13 @@ namespace Cdn.RawC.Programmer
 			while (deps.Count > 0)
 			{
 				var n = deps.Dequeue();
+
+				if (seen.Contains(n))
+				{
+					continue;
+				}
+
+				seen.Add(n);
 
 				if (n.State.Object == obj || n.State.DataKey == obj)
 				{
@@ -401,14 +410,16 @@ namespace Cdn.RawC.Programmer
 			// another representing simply the state).
 			if ((state.Type & State.Flags.Integrated) == 0 ||
 			    (state.Type & State.Flags.Initialization) != 0 ||
-			    (state.Type & State.Flags.Derivative) != 0)
+			    (state.Type & State.Flags.Derivative) != 0 ||
+			    (state.Type & State.Flags.Constraint) != 0)
 			{
 				var v = state.Object as Cdn.Variable;
 
 				// Additionally check if the variable which the state represents
 				// is not an IN or ONCE variable, unless this state is actually
-				// representing the intial value computation of that variable
-				if (v == null || ((v.Flags & (Cdn.VariableFlags.In | Cdn.VariableFlags.Once)) == 0 || (state.Type & State.Flags.Initialization) != 0))
+				// representing the intial value computation or derivative
+				// computation of that variable
+				if (v == null || state is ConstraintState || ((v.Flags & (Cdn.VariableFlags.In | Cdn.VariableFlags.Once)) == 0 || (state.Type & (State.Flags.Initialization | State.Flags.Derivative)) != 0))
 				{
 					HashSet<Cdn.Expression> seen = new HashSet<Expression>();
 

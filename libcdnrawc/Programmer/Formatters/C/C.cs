@@ -1343,7 +1343,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
 
-			foreach (string name in new string[] {"prepare", "init", "reset", "pre", "diff", "post"})
+			foreach (string name in new string[] {"prepare", "init", "reset", "pre", "prediff", "diff", "post"})
 			{
 				writer.WriteLine("\t\t.{0} = {1}_{0},", name, pref);
 			}

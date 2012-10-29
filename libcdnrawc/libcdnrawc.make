@@ -45,6 +45,7 @@ all: $(ASSEMBLY) $(PROGRAMFILES) $(LINUX_PKGCONFIG)
 
 FILES = \
 	State.cs \
+	ConstraintState.cs \
 	DerivativeState.cs \
 	DelayedState.cs \
 	Knowledge.cs \

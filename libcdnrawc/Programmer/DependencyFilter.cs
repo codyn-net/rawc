@@ -21,6 +21,14 @@ namespace Cdn.RawC.Programmer
 			d_filter = false;
 		}
 
+		public void AddRange(IEnumerable<State> range)
+		{
+			foreach (State s in range)
+			{
+				Add(s);
+			}
+		}
+
 		public DependencyFilter DependencyOf(IEnumerable<State> states)
 		{
 			DependencyFilter ret = (d_filter ? this : new DependencyFilter(d_graph, this));

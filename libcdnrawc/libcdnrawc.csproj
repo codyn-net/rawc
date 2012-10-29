@@ -103,6 +103,7 @@
     <Compile Include="Validator.cs" />
     <Compile Include="Programmer\DependencyGraph.cs" />
     <Compile Include="Programmer\DependencyGroup.cs" />
+    <Compile Include="ConstraintState.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

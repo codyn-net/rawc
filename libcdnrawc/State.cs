@@ -13,6 +13,7 @@ namespace Cdn.RawC
 			Initialization = 1 << 1,
 			Derivative = 1 << 2,
 			Constant = 1 << 3,
+			Constraint = 1 << 4,
 		}
 
 		private object d_object;
