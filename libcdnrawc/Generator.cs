@@ -283,7 +283,7 @@ namespace Cdn.RawC
 
 			if (!d_network.Compile(null, error))
 			{
-				throw new Exception(String.Format("Failed to compile network: {0}", error.Message));
+				throw new Exception(String.Format("Failed to compile network: {0}", error.FormattedString));
 			}
 		}
 		
