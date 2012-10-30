@@ -1,3 +1,9 @@
 #!/bin/sh
 
-exec mono @RUN_DEBUG@"@expanded_libdir@/@PACKAGE@/cdn-rawc.exe" "$@"
+rawcpath="@expanded_libdir@/@PACKAGE@/cdn-rawc.exe"
+
+if [ ! -z "$CDN_RAWC_GDB" ]; then
+	exec gdb --args mono --debug "$rawcpath" "$@"
+else
+	exec mono @RUN_DEBUG@"$rawcpath" "$@"
+fi
