@@ -274,7 +274,7 @@ namespace Cdn.RawC
 			{
 				d_network = new Cdn.Network(d_filename);
 			}
-			catch (Exception e)
+			catch (GLib.GException e)
 			{
 				throw new Exception(String.Format("Failed to load network: {0}", e.Message));
 			}
