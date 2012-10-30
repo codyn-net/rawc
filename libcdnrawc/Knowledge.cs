@@ -351,13 +351,13 @@ namespace Cdn.RawC
 			ExtractRand();
 		}
 
-		private void PromoteConstraint(Cdn.Variable variable)
+		private Cdn.Variable PromoteConstraint(Cdn.Variable variable)
 		{
 			var c = variable.Constraint;
 
 			if (c == null)
 			{
-				return;
+				return null;
 			}
 
 			// Create a separate variable for the actual expression of
@@ -382,8 +382,8 @@ namespace Cdn.RawC
 			}
 
 			var expr = variable.Constraint.Copy();
-
 			expr.Instructions = instrs;
+
 			variable.Expression = expr;
 
 			if (!variable.Integrated)
@@ -394,14 +394,25 @@ namespace Cdn.RawC
 					action.Target = nv.Name;
 				}
 			}
+
+			return nv;
 		}
 
 		private void PromoteConstraints()
 		{
+            var added = new List<Variable>();
+
 			foreach (var variable in d_variables)
 			{
-				PromoteConstraint(variable);
+				var nv = PromoteConstraint(variable);
+
+				if (nv != null)
+				{
+					added.Add(nv);
+				}
 			}
+
+			d_variables.AddRange(added);
 		}
 
 		private void ExtractInitialize()
