@@ -28,8 +28,11 @@ namespace Cdn.RawC
 
 		public static Knowledge Initialize(Cdn.Network network)
 		{
-			s_instance = new Knowledge(network);
-			s_instance.Init();
+			if (s_instance == null || s_instance.Network != network)
+			{
+				s_instance = new Knowledge(network);
+				s_instance.Init();
+			}
 
 			return s_instance;
 		}
