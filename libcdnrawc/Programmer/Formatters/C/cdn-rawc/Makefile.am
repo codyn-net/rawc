@@ -2,11 +2,13 @@ lib_LTLIBRARIES = libcdnrawc-1.0.la
 
 SOURCE_FILES =				\
 	cdn-rawc-network.c		\
+	cdn-rawc-math.c			\
 	cdn-rawc-integrator.c
 
 HEADER_FILES =			\
 	cdn-rawc.h		\
 	cdn-rawc-types.h	\
+	cdn-rawc-math.h		\
 	cdn-rawc-network.h	\
 	cdn-rawc-integrator.h
 

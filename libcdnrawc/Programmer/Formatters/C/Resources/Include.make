@@ -7,7 +7,15 @@ RANLIB = ranlib
 CFLAGS =
 LDFLAGS =
 
-${NAME}_CFLAGS = -I. -Winline -Wmissing-prototypes -Wstrict-prototypes -Wshadow -Wunused-function -DValueType=${valuetype} ${cflags}
+WARNINGS = 				\
+	inline				\
+	missing-prototypes		\
+	implicit-function-declaration	\
+	strict-prototypes		\
+	shadow				\
+	unused-function
+
+${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags}
 ${NAME}_LDFLAGS = -lm ${libs}
 
 # Enable debug symbols if defined

@@ -636,94 +636,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		private string MathFunctionMap(Cdn.InstructionFunction instruction)
-		{
-			return MathFunctionMap((Cdn.MathFunctionType)instruction.Id, (int)instruction.GetStackManipulation().Pop.Num);
-		}
-		
-		private string MathFunctionMap(Cdn.MathFunctionType type, int arguments)
-		{
-			string name = Enum.GetName(typeof(Cdn.MathFunctionType), type);
-
-			var suffix = IsDouble ? "" : "f";
-
-			switch (type)
-			{
-			case MathFunctionType.Abs:
-			case MathFunctionType.Acos:
-			case MathFunctionType.Asin:
-			case MathFunctionType.Atan:
-			case MathFunctionType.Atan2:
-			case MathFunctionType.Ceil:
-			case MathFunctionType.Cos:
-			case MathFunctionType.Cosh:
-			case MathFunctionType.Exp:
-			case MathFunctionType.Exp2:
-			case MathFunctionType.Floor:
-			case MathFunctionType.Hypot:
-			case MathFunctionType.Sin:
-			case MathFunctionType.Sinh:
-			case MathFunctionType.Sqrt:
-			case MathFunctionType.Log10:
-			case MathFunctionType.Pow:
-			case MathFunctionType.Round:
-			case MathFunctionType.Tan:
-			case MathFunctionType.Tanh:
-				return String.Format("{0}{1} ({2})", name.ToLower(), suffix, GenerateArgsList("x", arguments));
-			case MathFunctionType.Power:
-				return String.Format("pow{0} ({1})", suffix, GenerateArgsList("x", arguments));
-			case MathFunctionType.Ln:
-				return String.Format("log{0} ({1})", suffix, GenerateArgsList("x", arguments));
-			case MathFunctionType.Lerp:
-				return "(x1 + (x2 - x1) * x0)";
-			case MathFunctionType.Cycle:
-				return String.Format("(x0 > x2 ? (x1 + fmod{0} (x0 - x1, x2 - x1)) : (x0 < x1 ? (x2 - fmod{0} (x1 - x0, x2 - x1)) : x0))", suffix);
-			case MathFunctionType.Clip:
-				return "(x0 < x1 ? x1 : (x0 > x2 ? x2 : x0))";
-			case MathFunctionType.Max:
-				return NestedImplementation("CDM_MATH_MAX", arguments, "(x0 > x1 ? x0 : x1)");
-			case MathFunctionType.Min:
-				return NestedImplementation("CDN_MATH_MIN", arguments, "(x0 < x1 ? x0 : x1)");
-			case MathFunctionType.Sqsum:
-				return NestedImplementation("CDN_MATH_SQSUM", arguments, "x0 * x0 + x1 * x1");
-			case MathFunctionType.Invsqrt:
-				return String.Format("(1 / sqrt{0} (x0))", suffix);
-			case MathFunctionType.Modulo:
-				return String.Format("(x0 < 0 ? (fmod{0} (x0, x1) + x1) : (fmod{0} (x0, x1)))", suffix);
-			default:
-				break;
-					
-			}
-			
-			throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
-		}
-		
-		private void WriteCustomMathDefine(TextWriter writer, Cdn.MathFunctionType type, int arguments, HashSet<string> generated)
-		{
-			string def = Context.MathFunctionDefine(type, arguments);
-			
-			if (!generated.Add(def))
-			{
-				return;
-			}
-			
-			// Note: this does not actually work in the general case...
-			if (Cdn.Math.FunctionIsVariable(type) && arguments > 2)
-			{
-				WriteCustomMathDefine(writer, type, arguments - 1, generated);
-			}
-			
-			string mathmap = MathFunctionMap(type, arguments);
-			List<string > args = new List<string>();
-				
-			for (int i = 0; i < arguments; ++i)
-			{
-				args.Add(String.Format("x{0}", i));
-			}
-			
-			WriteDefine(writer, def, String.Format("({0})", GenerateArgsList("x", arguments)), mathmap);
-		}
-		
 		private void WriteDefine(TextWriter writer, string name, string args, string val, params object[] objs)
 		{
 			WriteDefine(writer, name, args, val, null, objs);
@@ -743,18 +655,20 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 		}
 
-		private void WriteCustomMathDefines(TextWriter writer)
+		private void WriteCustomMathRequired(TextWriter writer)
 		{
-			// Always define random stuff, it's a bit special...
-			WriteDefine(writer, "CDN_MATH_RAND", "()", "(random () / (ValueType)RAND_MAX)");
-			
-			HashSet<string> generated = new HashSet<string>();
-			
+			var generated = new HashSet<string>();
+
 			foreach (Cdn.InstructionFunction inst in d_program.CollectInstructions<Cdn.InstructionFunction>())
 			{
 				if (inst.Id > (uint)MathFunctionType.NumOperators || inst.Id == (uint)MathFunctionType.Power || inst.Id == (uint)MathFunctionType.Modulo)
 				{
-					WriteCustomMathDefine(writer, (Cdn.MathFunctionType)inst.Id, (int)inst.GetStackManipulation().Pop.Num, generated);
+					string def = Context.MathFunctionDefine(inst);
+
+					if (generated.Add(def))
+					{
+						writer.WriteLine("#define {0}_REQUIRED", def);
+					}
 				}
 			}
 		}
@@ -1431,8 +1345,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			TextWriter writer = new StreamWriter(d_sourceFilename);
 			
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
-			writer.WriteLine("#include <math.h>");
-			writer.WriteLine("#include <stdlib.h>");
 			writer.WriteLine("#include <stdint.h>");
 			writer.WriteLine("#include <string.h>");
 			
@@ -1453,6 +1365,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("#endif");
 
 			writer.WriteLine();
+			WriteCustomMathRequired(writer);
+			writer.WriteLine();
 
 			if (d_options.CustomHeaders != null)
 			{
@@ -1471,37 +1385,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 			}
 
-			TextWriter math;
-			string guard = null;
-			
-			if (d_options.SeparateMathHeader)
-			{
-				string mathbase = d_program.Options.Basename + "_math.h";
-				string filename = Path.Combine(d_program.Options.Output, mathbase);
-				
-				writer.WriteLine("#include \"{0}\"", mathbase);
-				writer.WriteLine();
-				math = new StreamWriter(filename);
-			  	
-				guard = ToAsciiOnly(mathbase).ToUpper();
-			
-				math.WriteLine("#ifndef __{0}__", guard);
-				math.WriteLine("#define __{0}__", guard);
-				math.WriteLine();
-			}
-			else
-			{
-				math = writer;
-			}
-			
-			WriteCustomMathDefines(math);
-			WriteFunctionDefines(math);
-			
-			if (d_options.SeparateMathHeader)
-			{
-				math.WriteLine("#endif /* __{0}__ */", guard);
-				math.Close();
-			}
+			writer.WriteLine("#include <cdn-rawc/cdn-rawc-math.h>");
+			writer.WriteLine();
+
+			WriteFunctionDefines(writer);
 			
 			WriteDataTables(writer);
 			WriteFunctions(writer);
