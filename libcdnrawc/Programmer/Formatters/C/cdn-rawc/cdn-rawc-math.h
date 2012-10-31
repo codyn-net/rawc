@@ -1,10 +1,4 @@
-#ifndef GNUC_INLINE
-#ifdef __GNUC__
-#define GNUC_INLINE __attribute__ ((always_inline))
-#else
-#define GNUC_INLINE
-#endif
-#endif
+#include <cdn-rawc/cdn-rawc-macros.h>
 
 #ifndef CDN_MATH_DEFINE_PROTOS
 #define CDN_MATH_DEFINE_PROTOS

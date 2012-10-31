@@ -8,6 +8,7 @@ SOURCE_FILES =				\
 HEADER_FILES =			\
 	cdn-rawc.h		\
 	cdn-rawc-types.h	\
+	cdn-rawc-macros.h	\
 	cdn-rawc-math.h		\
 	cdn-rawc-network.h	\
 	cdn-rawc-integrator.h

@@ -1,15 +1,8 @@
 #ifndef __CDN_RAWC_TYPES_H__
 #define __CDN_RAWC_TYPES_H__
 
-#ifdef __cplusplus
-#define CDN_RAWC_BEGIN_DECLS extern "C" {
-#define CDN_RAWC_END_DECLS }
-#else
-#define CDN_RAWC_BEGIN_DECLS
-#define CDN_RAWC_END_DECLS
-#endif
-
 #include <stdint.h>
+#include <cdn-rawc/cdn-rawc-macros.h>
 
 CDN_RAWC_BEGIN_DECLS
 

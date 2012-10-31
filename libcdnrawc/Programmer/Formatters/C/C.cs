@@ -1347,23 +1347,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine("#include <stdint.h>");
 			writer.WriteLine("#include <string.h>");
+			writer.WriteLine("#include <cdn-rawc/cdn-rawc-macros.h>");
 			
-			writer.WriteLine();
-			
-			writer.WriteLine("#if __GNUC__ >= 2 && __GNUC_MINOR__ > 96");
-			writer.WriteLine("#define GNUC_PURE __attribute__ ((pure))");
-			writer.WriteLine("#else");
-			writer.WriteLine("#define GNUC_PURE");
-			writer.WriteLine("#endif");
-			
-			writer.WriteLine();
-
-			writer.WriteLine("#ifdef __GNUC__");
-			writer.WriteLine("#define GNUC_INLINE __attribute__ ((always_inline))");
-			writer.WriteLine("#else");
-			writer.WriteLine("#define GNUC_INLINE");
-			writer.WriteLine("#endif");
-
 			writer.WriteLine();
 			WriteCustomMathRequired(writer);
 			writer.WriteLine();
