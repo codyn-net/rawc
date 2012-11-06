@@ -15,6 +15,7 @@ namespace Cdn.RawC.Programmer
 		private APIFunction d_apiInit;
 		private APIFunction d_apiPrepare;
 		private APIFunction d_apiReset;
+		private APIFunction d_apiEvents;
 
 		private List<Function> d_functions;
 		private List<Tree.Embedding> d_embeddings;
@@ -36,6 +37,7 @@ namespace Cdn.RawC.Programmer
 		private DependencyGraph d_dependencyGraph;
 		private HashSet<State> d_initStates;
 		private DependencyFilter d_preparedStates;
+		private Dictionary<Cdn.Event, Computation.INode> d_eventPrograms;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
@@ -57,6 +59,7 @@ namespace Cdn.RawC.Programmer
 			d_apiInit = new APIFunction("init", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
 			d_apiPrepare = new APIFunction("prepare", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
 			d_apiReset = new APIFunction("reset", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
+			d_apiEvents = new APIFunction("events_update", "void", "ValueType*", d_statetable.Name);
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
 			d_functionMap = new Dictionary<string, Function>();
@@ -66,6 +69,7 @@ namespace Cdn.RawC.Programmer
 			d_delayHistoryTables = new List<DataTable>();
 			d_delayedStates = new List<DelayedState>();
 			d_delayHistoryMap = new Dictionary<DelayedState, DataTable>();
+			d_eventPrograms = new Dictionary<Event, Computation.INode>();
 
 			d_delayedCounters = new DataTable("delay_counters", true);
 			d_delayedCounters.IntegerType = true;
@@ -88,6 +92,7 @@ namespace Cdn.RawC.Programmer
 			ProgramInit();
 			ProgramReset();
 			ProgramSource();
+			ProgramEvents();
 
 			d_statetable.Lock();
 
@@ -132,6 +137,15 @@ namespace Cdn.RawC.Programmer
 				d_dependencyGraph.Add(st, initmap);
 			}
 
+			// Add event set states
+			foreach (var pair in Knowledge.Instance.EventSetStates)
+			{
+				foreach (var st in pair.Value)
+				{
+					d_dependencyGraph.Add(st, null);
+				}
+			}
+
 			if (Cdn.RawC.Options.Instance.DependencyGraph != null)
 			{
 				d_dependencyGraph.WriteDot(Cdn.RawC.Options.Instance.DependencyGraph);
@@ -170,6 +184,18 @@ namespace Cdn.RawC.Programmer
 			{
 				return d_functions;
 			}
+		}
+
+		public Computation.INode EventProgram(Cdn.Event ev)
+		{
+			Computation.INode ret;
+
+			if (d_eventPrograms.TryGetValue(ev, out ret))
+			{
+				return ret;
+			}
+
+			return null;
 		}
 		
 		private void ProgramDataTables()
@@ -652,10 +678,10 @@ namespace Cdn.RawC.Programmer
 				dteq = new Tree.Node(null, new Instructions.Variable("dt"));
 			}
 
-			func.Add(new Computation.Comment("Set t and dt"));
-			func.Add(new Computation.Assignment(null, t, teq));
-			func.Add(new Computation.Assignment(null, dt, dteq));
-			func.Add(new Computation.Empty());
+			func.Body.Add(new Computation.Comment("Set t and dt"));
+			func.Body.Add(new Computation.Assignment(null, t, teq));
+			func.Body.Add(new Computation.Assignment(null, dt, dteq));
+			func.Body.Add(new Computation.Empty());
 		}
 		
 		private void ProgramTDTDeps(DependencyFilter deps)
@@ -666,14 +692,14 @@ namespace Cdn.RawC.Programmer
 			{
 				if (grp.StatesCount > 0)
 				{
-					d_apiTDT.Add(new Computation.Comment("Dependencies of integrated variables that depend on t or dt"));
-					d_apiTDT.AddRange(AssignmentStates(grp.States, grp.Embedding));
-					d_apiTDT.Add(new Computation.Empty());
+					d_apiTDT.Body.Add(new Computation.Comment("Dependencies of integrated variables that depend on t or dt"));
+					d_apiTDT.Body.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					d_apiTDT.Body.Add(new Computation.Empty());
 				}
 			}
 		}
 
-		private void ProgramDependencies(APIFunction api, DependencyFilter deps, string comment)
+		private void ProgramDependencies(Computation.IBlock api, DependencyFilter deps, string comment)
 		{
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
@@ -681,11 +707,11 @@ namespace Cdn.RawC.Programmer
 				{
 					if (!string.IsNullOrEmpty(comment))
 					{
-						api.Add(new Computation.Comment(comment));
+						api.Body.Add(new Computation.Comment(comment));
 					}
 
-					api.AddRange(AssignmentStates(grp.States, grp.Embedding));
-					api.Add(new Computation.Empty());
+					api.Body.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					api.Body.Add(new Computation.Empty());
 				}
 			}
 		}
@@ -716,11 +742,44 @@ namespace Cdn.RawC.Programmer
 			deps = new DependencyFilter(d_dependencyGraph, deps);
 			deps.AddRange(Knowledge.Instance.ExternalConstraintStates);
 
-			deps.Filter().DependsOn(instates);
+			var diffdeps = deps.Filter().DependsOn(instates);
 
 			ProgramDependencies(d_apiPre,
-			                    deps,
+			                    diffdeps,
 			                    "Dependencies of derivatives that depend on <in>");
+
+			instates.Not();
+			deps.Not();
+
+			// Check for derivative parts which are only "active" in a particular
+			// state (events)
+			foreach (var grp in Knowledge.Instance.EventStateGroups)
+			{
+				if (instates.Count == 0 || deps.Count == 0)
+				{
+					break;
+				}
+
+				var states = new DependencyFilter(d_dependencyGraph, grp.States);
+
+				instates.DependencyOf(states);
+				deps.DependsOn(instates);
+
+				if (deps.Count > 0)
+				{
+					var cond = new Computation.StateConditional(grp);
+
+					ProgramDependencies(cond,
+					                    deps,
+					                    "Dependencies of event state dependent derivatives that depend on <in>");
+
+					d_apiPre.Body.Add(cond);
+					d_apiPre.Body.Add(new Computation.Empty());
+				}
+
+				instates.Not();
+				deps.Not();
+			}
 		}
 
 		private void ProgramPreDiff(DependencyFilter deps, DependencyFilter derivatives)
@@ -732,14 +791,45 @@ namespace Cdn.RawC.Programmer
 
 			// Compute set of nodes which depend on real states and
 			// which in turn are dependencies for the derivatives
-			var states = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.Integrated);
+			var states = new DependencyFilter(d_dependencyGraph,
+			                                  Knowledge.Instance.Integrated);
 
 			deps = deps.DependsOn(states).Filter().DependencyOf(derivatives);
 			ProgramDependencies(d_apiPreDiff, deps, "Dependencies of derivatives that depend on states");
 
+			deps.Not();
+
+			var alldiff = new DependencyFilter(d_dependencyGraph, derivatives);
+
+			foreach (var grp in Knowledge.Instance.EventStateGroups)
+			{
+				alldiff.AddRange(grp.States);
+
+				if (deps.Count == 0)
+				{
+					continue;
+				}
+
+				var evstates = new DependencyFilter(d_dependencyGraph, grp.States);
+				deps.DependencyOf(evstates);
+
+				if (deps.Count > 0)
+				{
+					var cond = new Computation.StateConditional(grp);
+				
+					ProgramDependencies(cond,
+					                    deps,
+					                    "Dependencies of event state dependent derivatives that depend on states");
+
+					d_apiPreDiff.Body.Add(cond);
+					d_apiPreDiff.Body.Add(new Computation.Empty());
+				}
+
+				deps.Not();
+			}
 
 			// Compute constraints on states on which derivatives depend
-			states.Filter().DependencyOf(derivatives);
+			states.Filter().DependencyOf(alldiff);
 
 			var filt = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.IntegratedConstraintStates);
 			filt.Filter().DependsOn(states);
@@ -752,17 +842,25 @@ namespace Cdn.RawC.Programmer
 		{
 			ProgramSetTDT(d_apiDiff);
 
-			if (d_apiTDT.SourceCount > 0)
+			if (d_apiTDT.Body.Count > 0)
 			{
 				// Call calculate t/dt integrated dependencies
 				var data = new Tree.Node(null, new Instructions.Variable("data"));
-				d_apiDiff.Add(new Computation.CallAPI(d_apiTDT, data));
+				d_apiDiff.Body.Add(new Computation.CallAPI(d_apiTDT, data));
 			}
 
-			if (derivatives.Count > 0)
+			foreach (var grp in Knowledge.Instance.EventStateGroups)
 			{
-				ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
+				var cond = new Computation.StateConditional(grp);
+				var eq = new DependencyFilter(d_dependencyGraph, grp.States);
+
+				ProgramDependencies(cond, eq, "Calculate event state dependent derivatives");
+
+				d_apiDiff.Body.Add(cond);
+				d_apiDiff.Body.Add(new Computation.Empty());
 			}
+			
+			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
 		}
 
 		private void ProgramPost()
@@ -782,9 +880,9 @@ namespace Cdn.RawC.Programmer
 
 			if (rands.Count > 0)
 			{
-				d_apiPost.Add(new Computation.Comment("Compute new random values"));
-				d_apiPost.Add(new Computation.Rand(rands));
-				d_apiPost.Add(new Computation.Empty());
+				d_apiPost.Body.Add(new Computation.Comment("Compute new random values"));
+				d_apiPost.Body.Add(new Computation.Rand(rands));
+				d_apiPost.Body.Add(new Computation.Empty());
 			}
 
 			// Compute set of things that have changed
@@ -811,19 +909,19 @@ namespace Cdn.RawC.Programmer
 
 			if (grps.StatesCount > 0)
 			{
-				d_apiPost.Add(new Computation.Empty());
-				d_apiPost.Add(new Computation.Comment("Write values of delayed expressions"));
+				d_apiPost.Body.Add(new Computation.Empty());
+				d_apiPost.Body.Add(new Computation.Comment("Write values of delayed expressions"));
 
 				foreach (var grp in grps)
 				{
 					// TODO: check with loops
-					d_apiPost.AddRange(AssignmentStates(grp.States, grp.Embedding));
-					d_apiPost.Add(new Computation.Empty());
+					d_apiPost.Body.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					d_apiPost.Body.Add(new Computation.Empty());
 				}
 
-				d_apiPost.Add(new Computation.Comment("Increment delayed counters"));
-				d_apiPost.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
-				d_apiPost.Add(new Computation.Empty());
+				d_apiPost.Body.Add(new Computation.Comment("Increment delayed counters"));
+				d_apiPost.Body.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
+				d_apiPost.Body.Add(new Computation.Empty());
 			}
 
 			// Update aux variables that depend on delays
@@ -840,7 +938,14 @@ namespace Cdn.RawC.Programmer
 			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
 
 			// Compute subset of aux on which integrated depends
-			var deps = aux.DependencyOf(derivatives);
+			var allderiv = new DependencyFilter(d_dependencyGraph, derivatives);
+
+			foreach (var grp in Knowledge.Instance.EventStateGroups)
+			{
+				allderiv.AddRange(grp.States);
+			}
+
+			var deps = aux.DependencyOf(allderiv);
 
 			ProgramPre(deps, derivatives);
 			ProgramPreDiff(deps, derivatives);
@@ -852,23 +957,23 @@ namespace Cdn.RawC.Programmer
 		{
 			ProgramSetTDT(d_apiPrepare, true);
 
-			d_apiPrepare.Add(new Computation.Comment("Prepare data"));
-			d_apiPrepare.Add(new Computation.ZeroTable(d_statetable));
-			d_apiPrepare.Add(new Computation.Empty());
+			d_apiPrepare.Body.Add(new Computation.Comment("Prepare data"));
+			d_apiPrepare.Body.Add(new Computation.ZeroTable(d_statetable));
+			d_apiPrepare.Body.Add(new Computation.Empty());
 
 			var rands = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
 
 			if (rands.Count > 0)
 			{
-				d_apiPrepare.Add(new Computation.Comment("Compute initial random values"));
-				d_apiPrepare.Add(new Computation.Rand(rands));
-				d_apiPrepare.Add(new Computation.Empty());
+				d_apiPrepare.Body.Add(new Computation.Comment("Compute initial random values"));
+				d_apiPrepare.Body.Add(new Computation.Rand(rands));
+				d_apiPrepare.Body.Add(new Computation.Empty());
 			}
 
 			// Initialize constants here
-			d_apiPrepare.Add(new Computation.Comment("Copy constants"));
-			d_apiPrepare.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Count, -1));
-			d_apiPrepare.Add(new Computation.Empty());
+			d_apiPrepare.Body.Add(new Computation.Comment("Copy constants"));
+			d_apiPrepare.Body.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Count, -1));
+			d_apiPrepare.Body.Add(new Computation.Empty());
 
 			// Initialize _IN_
 			var ins = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.PrepareStates);
@@ -941,8 +1046,8 @@ namespace Cdn.RawC.Programmer
 
 			if (d_delayedStates.Count > 0)
 			{
-				d_apiInit.Add(new Computation.Empty());
-				d_apiInit.Add(new Computation.Comment("Initialize delayed history"));
+				d_apiInit.Body.Add(new Computation.Empty());
+				d_apiInit.Body.Add(new Computation.Comment("Initialize delayed history"));
 
 				// Generate delay initialization
 				for (int i = 0; i < d_delayedStates.Count; ++i)
@@ -970,8 +1075,8 @@ namespace Cdn.RawC.Programmer
 						deps.AddRange(AssignmentStates(dd, null));
 					}
 
-					d_apiInit.Add(new Computation.InitializeDelayHistory(ids, d_delayHistoryTables[i], d_equations[ids], deps, delays.Contains(ids)));
-					d_apiInit.Add(new Computation.Empty());
+					d_apiInit.Body.Add(new Computation.InitializeDelayHistory(ids, d_delayHistoryTables[i], d_equations[ids], deps, delays.Contains(ids)));
+					d_apiInit.Body.Add(new Computation.Empty());
 				}
 			}
 			else
@@ -988,8 +1093,29 @@ namespace Cdn.RawC.Programmer
 			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
 			var t = new Tree.Node(null, new Instructions.Variable("t"));
 
-			d_apiReset.Add(new Computation.CallAPI(d_apiPrepare, ss, t));
-			d_apiReset.Add(new Computation.CallAPI(d_apiInit, ss, t));
+			d_apiReset.Body.Add(new Computation.CallAPI(d_apiPrepare, ss, t));
+			d_apiReset.Body.Add(new Computation.CallAPI(d_apiInit, ss, t));
+		}
+
+		private void ProgramEvents()
+		{
+			var eq = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
+			ProgramDependencies(d_apiEvents, eq, "Event conditions");
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				var lst = Knowledge.Instance.EventSetStates[ev];
+
+				if (lst.Count > 0)
+				{
+					var b = new Computation.Block();
+					var filt = new DependencyFilter(d_dependencyGraph, lst);
+
+					ProgramDependencies(b, filt, null);
+
+					d_eventPrograms[ev] = b;
+				}
+			}
 		}
 		
 		public IEnumerable<Cdn.Function> UsedCustomFunctions
@@ -1002,7 +1128,7 @@ namespace Cdn.RawC.Programmer
 		
 		public bool NodeIsInitialization(Computation.INode node)
 		{
-			return d_apiInit.Contains(node) || d_apiPrepare.Contains(node);
+			return d_apiInit.Body.Contains(node) || d_apiPrepare.Body.Contains(node);
 		}
 
 		public IEnumerable<APIFunction> APIFunctions
@@ -1017,6 +1143,7 @@ namespace Cdn.RawC.Programmer
 				yield return d_apiPreDiff;
 				yield return d_apiDiff;
 				yield return d_apiPost;
+				yield return d_apiEvents;
 			}
 		}
 		

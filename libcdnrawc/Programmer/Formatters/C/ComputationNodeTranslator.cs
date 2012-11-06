@@ -15,6 +15,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                          new Type[] {typeof(Computation.INode), typeof(Context)})
 		{
 		}
+
+		public static string Reindent(string s, string indent)
+		{
+			if (String.IsNullOrEmpty(s))
+			{
+				return s;
+			}
+
+			string[] lines = s.Split('\n');
+			return indent + String.Join("\n" + indent, lines).Replace("\n" + indent + "\n", "\n\n");
+		}
 		
 		public static string Translate(Computation.INode node, Context context)
 		{
@@ -64,6 +75,72 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			ret.Append("}");
 			
+			return ret.ToString();
+		}
+
+		private string Translate(Computation.Block node, Context context)
+		{
+			var ret = new StringBuilder();
+
+			ret.AppendLine("{");
+
+			for (int i = 0; i < node.Body.Count; ++i)
+			{
+				var child = node.Body[i];
+
+				if (i != node.Body.Count - 1 || !(child is Computation.Empty))
+				{
+					ret.AppendLine(Reindent(Translate(child, context), "\t"));
+				}
+			}
+
+			ret.AppendLine("}");
+
+			return ret.ToString();
+		}
+
+		private string Translate(Computation.StateConditional node, Context context)
+		{
+			StringBuilder ret = new StringBuilder();
+			var indices = node.EventStateGroup.Indices;
+			List<string> conditions = new List<string>();
+
+			foreach (var idx in indices)
+			{
+				var evstate = Knowledge.Instance.EventStates[idx];
+				var container = Knowledge.Instance.EventStatesMap[evstate.Node];
+
+				conditions.Add(String.Format("evstates[{0}] == {1}", container.Index, idx));
+			}
+
+			var cond = String.Join(" || ", conditions);
+
+			ret.AppendLine("{");
+			ret.AppendFormat("\t{0} const *evstates = ({0} const *)({1} + {2});",
+			                 context.Options.EventStateType,
+			                 context.Program.StateTable.Name,
+			                 context.Program.StateTable.Count);
+
+			ret.AppendLine();
+			ret.AppendLine();
+
+			ret.AppendFormat("\tif ({0})", cond);
+			ret.AppendLine();
+			ret.AppendLine("\t{");
+
+			for (int i = 0; i < node.Body.Count; ++i)
+			{
+				var child = node.Body[i];
+
+				if (i != node.Body.Count - 1 || !(child is Computation.Empty))
+				{
+					ret.AppendLine(Reindent(Translate(child, context), "\t\t"));
+				}
+			}
+
+			ret.AppendLine("\t}");
+			ret.Append("}");
+
 			return ret.ToString();
 		}
 
@@ -388,11 +465,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return "/* No constants to copy */";
 			}
-		}
-
-		private string Reindent(string ret, string indent)
-		{
-			return indent + ret.Replace("\n", "\n" + indent).Replace("\n" + indent + "\n", "\n\n");
 		}
 	}
 }

@@ -27,6 +27,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public string Standalone;
 
 		public string CPrefixDown;
+		public string EventStateType;
 		
 		public Options(string name) : base(name)
 		{

@@ -219,6 +219,14 @@ namespace Cdn.RawC
 			{
 				ResolveState(state, embeddings, mapping, ret);
 			}
+
+			foreach (var ev in Knowledge.Instance.EventSetStates)
+			{
+				foreach (var state in ev.Value)
+				{
+					ResolveState(state, embeddings, mapping, ret);
+				}
+			}
 			
 			return ret;
 		}

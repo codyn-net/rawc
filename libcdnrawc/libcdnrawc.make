@@ -48,6 +48,9 @@ FILES = \
 	ConstraintState.cs \
 	DerivativeState.cs \
 	DelayedState.cs \
+	EventActionState.cs \
+	EventSetState.cs \
+	EventNodeState.cs \
 	Knowledge.cs \
 	Exception.cs \
 	CommandLine/OptionGroup.cs \
@@ -82,6 +85,8 @@ FILES = \
 	Programmer/Formatters/C/InstructionTranslator.cs \
 	Programmer/Formatters/IFormatter.cs \
 	Programmer/DataTable.cs \
+	Programmer/Computation/Block.cs \
+	Programmer/Computation/IBlock.cs \
 	Programmer/Computation/INode.cs \
 	Programmer/Computation/IncrementDelayedCounters.cs \
 	Programmer/Computation/CopyTable.cs \
@@ -91,6 +96,7 @@ FILES = \
 	Programmer/Computation/Loop.cs \
 	Programmer/Computation/CallAPI.cs \
 	Programmer/Computation/Assignment.cs \
+	Programmer/Computation/StateConditional.cs \
 	Programmer/Computation/InitializeDelayHistory.cs \
 	Programmer/Computation/Rand.cs \
 	Programmer/Program.cs \

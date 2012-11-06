@@ -14,6 +14,9 @@ namespace Cdn.RawC
 			Derivative = 1 << 2,
 			Constant = 1 << 3,
 			Constraint = 1 << 4,
+			EventAction = 1 << 5,
+			EventNode = 1 << 6,
+			EventSet = 1 << 7,
 		}
 
 		private object d_object;
@@ -87,7 +90,19 @@ namespace Cdn.RawC
 			{
 				foreach (EdgeAction action in d_actions)
 				{
-					exprs.Add(action.Equation);
+					Cdn.Variable subvar;
+
+					if (Knowledge.Instance.EventActionProperties.TryGetValue(action, out subvar))
+					{
+						Cdn.Expression e = new Cdn.Expression(subvar.Name);
+						e.Instructions = new Cdn.Instruction[] {new Cdn.InstructionVariable(subvar)};
+
+						exprs.Add(e);
+					}
+					else
+					{
+						exprs.Add(action.Equation);
+					}
 				}
 			}
 			else

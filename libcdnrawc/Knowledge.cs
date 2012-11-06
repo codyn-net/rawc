@@ -25,6 +25,37 @@ namespace Cdn.RawC
 		private Dictionary<Cdn.VariableFlags, List<Cdn.Variable>> d_flaggedVariables;
 		private List<Cdn.Variable> d_variables;
 		private HashSet<object> d_randStateSet;
+		private List<State> d_eventEquationStates;
+		private List<EventNodeState> d_eventNodeStates;
+		private Dictionary<Cdn.Event, List<EventSetState>> d_eventSetStates;
+		
+		public class EventState
+		{
+			public Node Node;
+			public string Name;
+			public List<Cdn.EdgeAction> ActiveActions;
+			public int Index;
+		}
+		
+		public class EventStateGroup
+		{
+			public List<int> Indices;
+			public List<Cdn.EdgeAction> Actions;
+			public List<State> States;
+		}
+
+		public class EventStateContainer
+		{
+			public List<string> States;
+			public int Index;
+		}
+
+		private List<Cdn.Event> d_events;
+		private List<EventState> d_eventStates;
+		private Dictionary<string, EventState> d_eventStateIdMap;
+		private Dictionary<Cdn.EdgeAction, Cdn.Variable> d_eventActionProperties;
+		private Dictionary<Cdn.Node, EventStateContainer> d_eventStatesMap;
+		private Dictionary<string, EventStateGroup> d_eventStateGroups;
 
 		public static Knowledge Initialize(Cdn.Network network)
 		{
@@ -65,26 +96,31 @@ namespace Cdn.RawC
 			d_derivativeMap = new Dictionary<object, State>();
 			d_integratedConstraintStates = new List<State>();
 			d_externalConstraintStates = new List<State>();
+			d_events = new List<Event>();
+			d_eventStates = new List<EventState>();
+			d_eventStatesMap = new Dictionary<Node, EventStateContainer>();
+			d_eventActionProperties = new Dictionary<Cdn.EdgeAction, Cdn.Variable>();
+			d_eventStateIdMap = new Dictionary<string, EventState>();
+			d_eventStateGroups = new Dictionary<string, EventStateGroup>();
+			d_eventEquationStates = new List<State>();
+			d_eventNodeStates = new List<EventNodeState>();
+			d_eventSetStates = new Dictionary<Event, List<EventSetState>>();
 
 			d_instructionMapping = new Dictionary<Instruction, Instruction>();
+
+			d_eventStates.Add(new EventState {
+				Index = 0,
+			});
 
 			Scan();
 		}
 
-		private IEnumerable<Edge> EdgesForVariable(Variable prop)
-		{
-			HashSet<Cdn.Edge> unique = new HashSet<Edge>();
-
-			foreach (var action in prop.Actions)
-			{
-				if (unique.Add(action.Edge))
-				{
-					yield return action.Edge;
-				}
-			}
-		}
-
 		private delegate State StateCreator(Variable v, EdgeAction[] actions);
+		
+		private string EventStateId(Node node, string state)
+		{
+			return String.Format("{0}@{1}", node.Handle.ToString(), state);
+		}
 
 		private State ExpandedState(Variable prop)
 		{
@@ -95,20 +131,7 @@ namespace Cdn.RawC
 
 		private State ExpandedState(Variable prop, StateCreator creator)
 		{
-			List<EdgeAction> actions = new List<EdgeAction>();
-
-			foreach (Edge link in EdgesForVariable(prop))
-			{
-				foreach (EdgeAction action in link.Actions)
-				{
-					if (action.TargetVariable == prop)
-					{
-						actions.Add(action);
-					}
-				}
-			}
-			
-			return creator(prop, actions.ToArray());
+			return creator(prop, prop.Actions);
 		}
 
 		public void UpdateInstructionMap(Dictionary<Instruction, Instruction> mapping)
@@ -163,16 +186,145 @@ namespace Cdn.RawC
 			}
 		}
 
+		private string UniqueVariableName(Cdn.Object obj, string name)
+		{
+			if (obj.Variable(name) == null)
+			{
+				return name;
+			}
+
+			int i = 0;
+
+			while (true)
+			{
+				var nm = String.Format("{0}_{1}", name, i);
+
+				if (obj.Variable(nm) == null)
+				{
+					return nm;
+				}
+
+				++i;
+			}
+		}
+		
+		public Cdn.Node FindStateNode(Cdn.Node parent)
+		{
+			while (true)
+			{
+				if (d_eventStatesMap.ContainsKey(parent))
+				{
+					return parent;
+				}
+
+				var next = parent.Parent;
+
+				if (next == null)
+				{
+					return parent;
+				}
+
+				parent = next;
+			}
+		}
+
+		private void ExtractEventActionStates(Cdn.Variable v)
+		{
+			foreach (Cdn.EdgeAction action in v.Actions)
+			{
+				var ph = action.Phases;
+				var eph = action.Edge.Phases;
+				
+				if (ph.Length != 0 || eph.Length != 0)
+				{
+					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
+					var nv = new Cdn.Variable(nm, action.Equation.Copy(), Cdn.VariableFlags.None);
+
+					action.Edge.AddVariable(nv);
+					d_eventActionProperties[action] = nv;
+
+					var evst = new EventActionState(action, nv);
+
+					AddState(null, evst);
+
+					HashSet<string> hs;
+
+					if (ph.Length != 0)
+					{
+						hs = new HashSet<string>(ph);
+
+						if (eph.Length != 0)
+						{
+							hs.IntersectWith(eph);
+						}
+					}
+					else
+					{
+						hs = new HashSet<string>(eph);
+					}
+
+					var node = FindStateNode(action.Edge.Parent);
+					List<int> indices = new List<int>();
+
+					foreach (var st in hs)
+					{
+						var evstdid = EventStateId(node, st);
+						EventState revst;
+
+						if (d_eventStateIdMap.TryGetValue(evstdid, out revst))
+						{
+							indices.Add(revst.Index);
+							revst.ActiveActions.Add(action);
+						}
+					}
+
+					if (indices.Count != 0)
+					{
+						indices.Sort();
+						string key = String.Join(",", indices.ConvertAll(a => a.ToString()));
+
+						EventStateGroup grp;
+					
+						if (!d_eventStateGroups.TryGetValue(key, out grp))
+						{
+							grp = new EventStateGroup {
+								Actions = new List<Cdn.EdgeAction>(),
+								States = new List<State>(),
+								Indices = indices,
+							};
+
+							d_eventStateGroups[key] = grp;
+						}
+					
+						grp.Actions.Add(action);
+						grp.States.Add(evst);
+					}
+				}
+			}
+		}
+
+		public EventState GetEventState(Cdn.Node parent, string state)
+		{
+			return d_eventStateIdMap[EventStateId(parent, state)];
+		}
+
 		private void ExtractStates()
 		{
 			HashSet<object> unique = new HashSet<object>();
+			
+			// Add t/dt
+			AddState(unique, ExpandedState(Network.Integrator.Variable("t")));
+			AddState(unique, ExpandedState(Network.Integrator.Variable("dt")));
 
 			// Add integrated state variables
 			var integrated = Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated);
 
 			foreach (var v in integrated)
 			{
+				ExtractEventActionStates(v);
+
 				var st = new State(v, null);
+
 				AddState(unique, st);
 				d_integrated.Add(st);
 
@@ -336,16 +488,102 @@ namespace Cdn.RawC
 			get { return d_externalConstraintStates; }
 		}
 
+		private void AddLogicalNodeState()
+		{
+
+		}
+
+		private IEnumerable<EventLogicalNode> EventNodes(EventLogicalNode node)
+		{
+			yield return node;
+
+			if (node.Left != null)
+			{
+				foreach (var n in EventNodes(node.Left))
+				{
+					yield return n;
+				}
+			}
+
+			if (node.Right != null)
+			{
+				foreach (var n in EventNodes(node.Right))
+				{
+					yield return n;
+				}
+			}
+		}
+
+		private void AddEventNodeState(EventNodeState s)
+		{
+			AddState(null, s);
+			d_eventNodeStates.Add(s);
+		}
+
+		private struct EventNode
+		{
+			public Cdn.Event Event;
+			public Cdn.EventLogicalNode Node;
+		}
+
+		private void ExtractEventStates()
+		{
+			Queue<EventNode> states = new Queue<EventNode>();
+
+			foreach (var ev in d_events)
+			{
+				var n = new EventNode {
+					Event = ev,
+					Node = ev.LogicalTree
+				};
+
+				states.Enqueue(n);
+			}
+
+			// Expand nodes
+			while (states.Count > 0)
+			{
+				var n = states.Dequeue();
+
+				// Add three states for each node to hold the 
+				// 1) previous value of the event equation
+				// 2) current value of the event equation
+				// 3) distance value of the event equation
+				AddEventNodeState(new EventNodeState(n.Event, n.Node, EventNodeState.StateType.Previous));
+
+				var current = new EventNodeState(n.Event, n.Node, EventNodeState.StateType.Current);
+				AddEventNodeState(current);
+
+				if (n.Node.Expression != null)
+				{
+					d_eventEquationStates.Add(current);
+				}
+
+				AddEventNodeState(new EventNodeState(n.Event, n.Node, EventNodeState.StateType.Distance));
+
+				if (n.Node.Left != null)
+				{
+					states.Enqueue(new EventNode { Event = n.Event, Node = n.Node.Left});
+				}
+
+				if (n.Node.Right != null)
+				{
+					states.Enqueue(new EventNode { Event = n.Event, Node = n.Node.Right});
+				}
+			}
+		}
+
 		private void Scan()
 		{
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
-			ScanVariables(d_network.Integrator);
-			ScanVariables(d_network);
+			Scan(d_network.Integrator);
+			Scan(d_network);
 
 			PromoteConstraints();
 
 			ExtractStates();
 			ExtractDelayedStates();
+			ExtractEventStates();
 
 			ExtractInitialize();
 			ExtractRand();
@@ -425,6 +663,11 @@ namespace Cdn.RawC
 				}
 
 				if ((state.Type & Cdn.RawC.State.Flags.Derivative) != 0)
+				{
+					continue;
+				}
+
+				if ((state.Type & Cdn.RawC.State.Flags.EventNode) != 0)
 				{
 					continue;
 				}
@@ -587,10 +830,80 @@ namespace Cdn.RawC
 			}
 		}
 
-		private void ScanVariables(Cdn.Object obj)
+		private EventState AddEventState(Cdn.Event ev)
+		{
+			EventStateContainer states;
+
+			var node = ev.Parent;
+			var state = ev.GotoState;
+
+			if (!d_eventStatesMap.TryGetValue(node, out states))
+			{
+				states = new EventStateContainer {
+					States = new List<string>(),
+					Index = d_eventStatesMap.Count,
+				};
+
+				d_eventStatesMap[node] = states;
+			}
+			
+			if (!states.States.Contains(state))
+			{
+				states.States.Add(state);
+
+				var evs = new EventState {
+					Node = node,
+					Name = state,
+					ActiveActions = new List<Cdn.EdgeAction>(),
+					Index = d_eventStates.Count,
+				};
+
+				d_eventStates.Add(evs);
+				d_eventStateIdMap[EventStateId(evs.Node, evs.Name)] = evs;
+				return evs;
+			}
+			else
+			{
+				return d_eventStateIdMap[EventStateId(node, state)];
+			}
+		}
+
+		private void ScanEvent(Cdn.Event ev)
+		{
+			if (ev == null)
+			{
+				return;
+			}
+
+			d_events.Add(ev);
+
+			if (!String.IsNullOrEmpty(ev.GotoState))
+			{
+				AddEventState(ev);
+			}
+
+			var vars = ev.SetVariables;
+			var lst = new List<EventSetState>();
+
+			foreach (var v in vars)
+			{
+				lst.Add(new EventSetState(v));
+			}
+
+			d_eventSetStates[ev] = lst;
+		}
+
+		public Dictionary<Cdn.Event, List<EventSetState>> EventSetStates
+		{
+			get { return d_eventSetStates; }
+		}
+
+		private void Scan(Cdn.Object obj)
 		{
 			d_variables.AddRange(obj.Variables);
-			
+
+			ScanEvent(obj as Cdn.Event);
+
 			foreach (Cdn.Variable prop in obj.Variables)
 			{
 				AddFlaggedVariable(prop);
@@ -602,10 +915,15 @@ namespace Cdn.RawC
 			{
 				return;
 			}
-			
+
+			if (grp.HasSelfEdge)
+			{
+				Scan((Cdn.Object)grp.SelfEdge);
+			}
+
 			foreach (Cdn.Object child in grp.Children)
 			{
-				ScanVariables(child);
+				Scan(child);
 			}
 		}
 
@@ -645,6 +963,11 @@ namespace Cdn.RawC
 					yield return prop;
 				}
 			}
+		}
+
+		public Dictionary<Cdn.EdgeAction, Cdn.Variable> EventActionProperties
+		{
+			get { return d_eventActionProperties; }
 		}
 
 		public State State(object o)
@@ -726,6 +1049,68 @@ namespace Cdn.RawC
 			{
 				return d_network;
 			}
+		}
+
+		public Dictionary<Node, EventStateContainer> EventStatesMap
+		{
+			get { return d_eventStatesMap; }
+		}
+
+		public int EventContainersCount
+		{
+			get
+			{
+				return d_eventStatesMap.Count;
+			}
+		}
+
+		public List<EventState> EventStates
+		{
+			get
+			{
+				return d_eventStates;
+			}
+		}
+		
+		public IEnumerable<EventStateGroup> EventStateGroups
+		{
+			get
+			{
+				foreach (var pair in d_eventStateGroups)
+				{
+					yield return pair.Value;
+				}
+			}
+		}
+		
+		public int EventStateGroupsCount
+		{
+			get { return d_eventStateGroups.Count; }
+		}
+
+		public IEnumerable<State> EventEquationStates
+		{
+			get { return d_eventEquationStates; }
+		}
+
+		public IEnumerable<EventNodeState> EventNodeStates
+		{
+			get { return d_eventNodeStates; }
+		}
+
+		public int EventNodeStatesCount
+		{
+			get { return d_eventNodeStates.Count; }
+		}
+
+		public IEnumerable<Cdn.Event> Events
+		{
+			get { return d_events; }
+		}
+
+		public int EventsCount
+		{
+			get { return d_events.Count; }
 		}
 	}
 }

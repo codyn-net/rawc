@@ -418,8 +418,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					prop = item.Key as Cdn.Variable;
 				}
-
-				if (prop == null)
+				
+				if (prop == null || prop.Flags == 0)
 				{
 					if (!(Cdn.RawC.Options.Instance.Verbose && d_options.SymbolicNames))
 					{
@@ -479,9 +479,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					shortname = String.Format("{0}__{1}", orig, id);
 				}
 				
+				var comment = fullname;
+				
+				if (isdiff)
+				{
+					comment += "'";
+				}
+				
 				names.Add(enumname);
 				values.Add(item.Index.ToString());
-				comments.Add(fullname);
+				comments.Add(comment);
 				
 				maxname = System.Math.Max(maxname, enumname.Length);
 				maxval = System.Math.Max(maxval, item.Index.ToString().Length);
@@ -558,9 +565,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			// Protect for including this from C++
 			writer.WriteLine("CDN_RAWC_BEGIN_DECLS");
- 			
+
 			writer.WriteLine();
-			writer.WriteLine("#define CDN_RAWC_{0}_DATA_SIZE {1}", CPrefixUp, d_program.StateTable.Count);
+
+			var evtcnt = Knowledge.Instance.EventContainersCount;
+
+			if (evtcnt > 0)
+			{
+				string ctype = EventStateType;
+
+				writer.WriteLine("#define CDN_RAWC_{0}_DATA_SIZE ({1} + ({2} * sizeof({3}) + sizeof(ValueType) - 1) / sizeof(ValueType))",
+				                 CPrefixUp,
+				                 d_program.StateTable.Count,
+				                 Knowledge.Instance.EventStatesMap.Count,
+				                 ctype);
+			}
+			else
+			{
+				writer.WriteLine("#define CDN_RAWC_{0}_DATA_SIZE {1}", CPrefixUp, d_program.StateTable.Count);
+			}
+
 			writer.WriteLine();
  			
 			// Write interface
@@ -755,22 +779,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine();
 			}
 		}
-		
-		private string Reindent(string s, string indent)
-		{
-			if (String.IsNullOrEmpty(s))
-			{
-				return s;
-			}
 
-			string[] lines = s.Split('\n');
-			return indent + String.Join("\n" + indent, lines).Replace("\n" + indent + "\n", "\n\n");
-		}
-		
 		private void WriteComputationNode(TextWriter writer, Computation.INode node)
 		{
+			WriteComputationNode(writer, node, "\t");
+		}
+		
+		private void WriteComputationNode(TextWriter writer, Computation.INode node, string indent)
+		{
 			Context context = new Context(d_program, d_options);
-			writer.WriteLine(Reindent(ComputationNodeTranslator.Translate(node, context), "\t"));
+			writer.WriteLine(ComputationNodeTranslator.Reindent(ComputationNodeTranslator.Translate(node, context), indent));
 		}
 		
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
@@ -798,7 +816,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private void WriteAPISource(TextWriter writer, APIFunction api)
 		{
-			if (api.Private && api.SourceCount == 0)
+			if (api.Private && api.Body.Count == 0)
 			{
 				return;
 			}
@@ -830,7 +848,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine(")");
 
 			writer.WriteLine("{");
-			WriteComputationNodes(writer, api.Source);
+			WriteComputationNodes(writer, api.Body);
 			writer.WriteLine("}");
 
 			writer.WriteLine();
@@ -853,8 +871,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string MinimumTableType(DataTable table)
 		{
-			ulong maxnum = table.MaxSize;
-
+			return MinimumCType(table.MaxSize);
+		}
+	
+		private string MinimumCType(ulong maxnum)
+		{
 			if (maxnum < (ulong)byte.MaxValue)
 			{
 				return "uint8_t";
@@ -1196,6 +1217,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					sm.Name = v.Name;
 					sm.Parent = nid;
 				}
+				else
+				{
+					break;
+				}
 
 				meta.States.Add(sm);
 			}
@@ -1245,6 +1270,87 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();			
 		}
 
+		private string EventNodeType(EventNodeState ev)
+		{
+			switch (ev.Node.CompareType)
+			{
+			case Cdn.MathFunctionType.Less:
+				return "CDN_RAWC_EVENT_STATE_TYPE_LESS";
+			case Cdn.MathFunctionType.LessOrEqual:
+				return "CDN_RAWC_EVENT_STATE_TYPE_LESS_OR_EQUAL";
+			case Cdn.MathFunctionType.Greater:
+				return "CDN_RAWC_EVENT_STATE_TYPE_GREATER";
+			case Cdn.MathFunctionType.GreaterOrEqual:
+				return "CDN_RAWC_EVENT_STATE_TYPE_GREATER_OR_EQUAL";
+			case Cdn.MathFunctionType.Equal:
+				return "CDN_RAWC_EVENT_STATE_TYPE_EQUAL";
+			case Cdn.MathFunctionType.And:
+				return "CDN_RAWC_EVENT_STATE_TYPE_AND";
+			case Cdn.MathFunctionType.Or:
+				return "CDN_RAWC_EVENT_STATE_TYPE_OR";
+			default:
+				return null;
+			}
+		}
+
+		private void WriteNetworkEvents(TextWriter writer)
+		{
+			writer.WriteLine("\tstatic CdnRawcEvent events[] = {");
+
+			Dictionary<Cdn.EventLogicalNode, int> nodemap = new Dictionary<EventLogicalNode, int>();
+			int i = 0;
+
+			foreach (var ev in Knowledge.Instance.EventNodeStates)
+			{
+				if (ev.Type != EventNodeState.StateType.Previous)
+				{
+					continue;
+				}
+
+				nodemap[ev.Node] = i;
+				i++;
+			}
+
+			foreach (var ev in Knowledge.Instance.EventNodeStates)
+			{
+				if (ev.Type != EventNodeState.StateType.Previous)
+				{
+					continue;
+				}
+
+				writer.Write("\t\t{ ");
+
+				string approx;
+
+				if (ev.Event.Approximation == double.MaxValue)
+				{
+					if (ValueType == "float")
+					{
+						approx = "FLT_MAX";
+					}
+					else
+					{
+						approx = "DBL_MAX";
+					}
+				}
+				else
+				{
+					approx = NumberTranslator.Translate(ev.Event.Approximation, new Context(d_program, d_options));
+				}
+
+				writer.Write("{0}, {1}, {2}, {3}",
+				             EventNodeType(ev),
+				             approx,
+				             ev.Node.Left != null ? nodemap[ev.Node.Left] : 0,
+				             ev.Node.Right != null ? nodemap[ev.Node.Right] : 0);
+
+				writer.WriteLine(" },");
+			}
+
+			writer.WriteLine("\t};");
+			writer.WriteLine();
+		}
+
 		private void WriteNetwork(TextWriter writer)
 		{
 			var pref = CPrefixDown;
@@ -1254,10 +1360,25 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("{");
 			
 			WriteNetworkMeta(writer);
+			WriteNetworkEvents(writer);
 
 			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
 
-			foreach (string name in new string[] {"prepare", "init", "reset", "pre", "prediff", "diff", "post"})
+			var funcs = new string[] {
+				"prepare",
+				"init",
+				"reset",
+				"pre",
+				"prediff",
+				"diff",
+				"post",
+				"events_update",
+				"event_active",
+				"event_fire",
+				"event_get_value",
+			};
+
+			foreach (string name in funcs)
 			{
 				writer.WriteLine("\t\t.{0} = {1}_{0},", name, pref);
 			}
@@ -1293,9 +1414,29 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine("\t\t.derivatives = {.start = 0, .end = 0},");
 			}
 
+			enu = Knowledge.Instance.EventNodeStates.GetEnumerator();
+
+			if (enu.MoveNext())
+			{
+				var eventvalues = d_program.StateTable[enu.Current];
+
+				writer.WriteLine("\t\t.event_values = {{.start = {0}, .end = {1}}},",
+				                 eventvalues.AliasOrIndex,
+				                 eventvalues.Index + Knowledge.Instance.EventNodeStatesCount);
+			}
+			else
+			{
+				writer.WriteLine("\t\t.derivatives = {.start = 0, .end = 0},");
+			}
+
 			writer.WriteLine();
 			writer.WriteLine("\t\t.data_size = CDN_RAWC_{0}_DATA_SIZE,", CPrefixUp);
-			writer.WriteLine("\t\t.type_size = sizeof (ValueType),", CPrefixUp);
+			writer.WriteLine("\t\t.type_size = sizeof (ValueType),");
+
+			writer.WriteLine();
+			writer.WriteLine("\t\t.events_size = {0},", Knowledge.Instance.EventsCount);
+			writer.WriteLine("\t\t.events_size_all = {0},", Knowledge.Instance.EventNodeStatesCount / 3);
+			writer.WriteLine("\t\t.events = events,");
 
 			var t = d_program.StateTable[Knowledge.Instance.Time];
 			var dt = d_program.StateTable[Knowledge.Instance.TimeStep];
@@ -1336,16 +1477,173 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("}");
 			writer.WriteLine();
 		}
+
+		private void WriteEventsSource(TextWriter writer)
+		{
+			WriteEventGetValue(writer);
+			WriteEventActive(writer);
+			WriteEventFire(writer);
+		}
+
+		private void WriteEventActive(TextWriter writer)
+		{
+			writer.WriteLine("static uint8_t");
+			writer.WriteLine("{0}_event_active (ValueType *{1}, uint32_t i)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			writer.WriteLine("{");
+
+			writer.WriteLine("\t{0} const *evstates = ({0} const *)({1} + {2});",
+			                 EventStateType,
+			                 d_program.StateTable.Name,
+			                 d_program.StateTable.Count);
+
+			writer.WriteLine();
+			writer.WriteLine("\tswitch (i)");
+			writer.WriteLine("\t{");
+
+			int i = 0;
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				var phases = ev.Phases;
+				++i;
+
+				if (phases.Length == 0)
+				{
+					continue;
+				}
+
+				writer.WriteLine("\tcase {0}:", i - 1);
+
+				var parent = Knowledge.Instance.FindStateNode(ev);
+				var cont = Knowledge.Instance.EventStatesMap[parent];
+				var idx = cont.Index;
+
+				List<string> conditions = new List<string>();
+
+				foreach (var ph in phases)
+				{
+					var st = Knowledge.Instance.GetEventState(parent, ph);
+
+					conditions.Add(String.Format("evstates[{0}] == {1}", idx, st.Index));
+				}
+
+				writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+			}
+
+			writer.WriteLine("\tdefault:");
+			writer.WriteLine("\t\treturn 1;");
+
+			writer.WriteLine("\t}");
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+
+		private void WriteEventFire(TextWriter writer)
+		{
+			writer.WriteLine("static void");
+			writer.WriteLine("{0}_event_fire (ValueType *{1}, uint32_t i)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			writer.WriteLine("{");
+
+			writer.WriteLine("\t{0} *evstates = ({0} *)({1} + {2});",
+			                 EventStateType,
+			                 d_program.StateTable.Name,
+			                 d_program.StateTable.Count);
+
+			writer.WriteLine();
+			writer.WriteLine("\tswitch (i)");
+			writer.WriteLine("\t{");
+
+			int i = 0;
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				var state = ev.GotoState;
+				++i;
+
+				var prg = d_program.EventProgram(ev);
+
+				if (String.IsNullOrEmpty(state) && prg == null)
+				{
+					continue;
+				}
+
+				writer.WriteLine("\tcase {0}:", i - 1);
+
+				if (!String.IsNullOrEmpty(state))
+				{
+					var parent = Knowledge.Instance.FindStateNode(ev);
+					var cont = Knowledge.Instance.EventStatesMap[parent];
+					var idx = cont.Index;
+					var st = Knowledge.Instance.GetEventState(parent, state);
+
+					writer.WriteLine("\t\tevstates[{0}] = {1};",
+					                 idx,
+					                 st.Index);
+				}
+
+				if (prg != null)
+				{
+					WriteComputationNode(writer, prg, "\t\t");
+				}
+
+				writer.WriteLine("\t\tbreak;");
+			}
+
+			writer.WriteLine("\tdefault:");
+			writer.WriteLine("\t\tbreak;");
+
+			writer.WriteLine("\t}");
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+
+		private void WriteEventGetValue(TextWriter writer)
+		{
+			writer.WriteLine("static CdnRawcEventValue *");
+			writer.WriteLine("{0}_event_get_value (ValueType *data, uint32_t i)", CPrefixDown);
+			writer.WriteLine("{");
+
+			var enu = Knowledge.Instance.EventNodeStates.GetEnumerator();
+			int start;
+
+			if (enu.MoveNext())
+			{
+				start = d_program.StateTable[enu.Current].Index;
+			}
+			else
+			{
+				start = d_program.StateTable.Count;
+			}
+
+			writer.WriteLine("\treturn (CdnRawcEventValue *)(data + {0} + i);",
+			                 start);
+
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+
+		private string EventStateType
+		{
+			get { return MinimumCType((ulong)Knowledge.Instance.EventStates.Count); }
+		}
 		
 		private void WriteSource()
 		{
 			d_options.CPrefixDown = CPrefixDown;
+			d_options.EventStateType = EventStateType;
 
 			d_sourceFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".c");
 			TextWriter writer = new StreamWriter(d_sourceFilename);
 			
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine("#include <stdint.h>");
+			writer.WriteLine("#include <float.h>");
 			writer.WriteLine("#include <string.h>");
 			writer.WriteLine("#include <cdn-rawc/cdn-rawc-macros.h>");
 			
@@ -1378,6 +1676,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			WriteDataTables(writer);
 			WriteFunctions(writer);
 			WriteAPISource(writer);
+
+			WriteEventsSource(writer);
 
 			WriteNetwork(writer);
 

@@ -104,6 +104,12 @@
     <Compile Include="Programmer\DependencyGraph.cs" />
     <Compile Include="Programmer\DependencyGroup.cs" />
     <Compile Include="ConstraintState.cs" />
+    <Compile Include="EventActionState.cs" />
+    <Compile Include="Programmer\Computation\StateConditional.cs" />
+    <Compile Include="Programmer\Computation\IBlock.cs" />
+    <Compile Include="EventNodeState.cs" />
+    <Compile Include="EventSetState.cs" />
+    <Compile Include="Programmer\Computation\Block.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

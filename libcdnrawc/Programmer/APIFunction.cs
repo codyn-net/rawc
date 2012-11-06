@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Cdn.RawC.Programmer
 {
-	public class APIFunction
+	public class APIFunction : Computation.IBlock
 	{
 		private string d_name;
 		private List<Computation.INode> d_source;
@@ -26,14 +26,9 @@ namespace Cdn.RawC.Programmer
 			set { d_private = value; }
 		}
 
-		public void Add(Computation.INode node)
+		public List<Computation.INode> Body
 		{
-			d_source.Add(node);
-		}
-
-		public void AddRange(IEnumerable<Computation.INode> nodes)
-		{
-			d_source.AddRange(nodes);
+			get { return d_source; }
 		}
 
 		public string[] Arguments
@@ -46,25 +41,10 @@ namespace Cdn.RawC.Programmer
 			get { return d_returnType; }
 		}
 
-		public IEnumerable<Computation.INode> Source
-		{
-			get { return d_source; }
-		}
-
-		public int SourceCount
-		{
-			get { return d_source.Count; }
-		}
-
 		public string Name
 		{
 			get { return d_name; }
 		}	
-
-		public bool Contains(Computation.INode node)
-		{
-			return d_source.Contains(node);
-		}
 	}
 }
 

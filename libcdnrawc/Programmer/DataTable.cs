@@ -324,16 +324,7 @@ namespace Cdn.RawC.Programmer
 			get
 			{
 				object basekey = BaseKey(key);
-				
-				if (!d_items.ContainsKey(basekey) && !d_locked)
-				{
-					Add(basekey);
-					return d_items[basekey];
-				}
-				else
-				{
-					return d_items[basekey];
-				}
+				return d_items[basekey];
 			}
 		}
 		

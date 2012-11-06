@@ -72,6 +72,33 @@ typedef struct
 	uint32_t children_size;
 } CdnRawcNetworkMeta;
 
+typedef enum
+{
+	CDN_RAWC_EVENT_STATE_TYPE_LESS,
+	CDN_RAWC_EVENT_STATE_TYPE_LESS_OR_EQUAL,
+	CDN_RAWC_EVENT_STATE_TYPE_GREATER,
+	CDN_RAWC_EVENT_STATE_TYPE_GREATER_OR_EQUAL,
+	CDN_RAWC_EVENT_STATE_TYPE_EQUAL,
+	CDN_RAWC_EVENT_STATE_TYPE_AND,
+	CDN_RAWC_EVENT_STATE_TYPE_OR,
+} CdnRawcEventStateType;
+
+typedef struct
+{
+	ValueType previous_value;
+	ValueType current_value;
+	ValueType distance;
+} CdnRawcEventValue;
+
+typedef struct
+{
+	CdnRawcEventStateType type;
+	ValueType approximation;
+
+	uint32_t left;
+	uint32_t right;
+} CdnRawcEvent;
+
 typedef struct
 {
 	void (*prepare) (ValueType *data, ValueType t);
@@ -82,11 +109,28 @@ typedef struct
 	void (*diff) (ValueType *data, ValueType t, ValueType dt);
 	void (*post) (ValueType *data, ValueType t, ValueType dt);
 
+	void (*events_update) (ValueType *data);
+
+	uint8_t (*event_active) (ValueType *data,
+	                         uint32_t   i);
+
+	void (*event_fire) (ValueType *data,
+	                    uint32_t   i);
+
+	CdnRawcEventValue * (*event_get_value) (ValueType *data,
+	                                        uint32_t   i);
+
 	CdnRawcRange states;
 	CdnRawcRange derivatives;
+	CdnRawcRange event_values;
 
 	uint32_t data_size;
 	uint8_t type_size;
+
+	uint32_t events_size;
+	uint32_t events_size_all;
+
+	CdnRawcEvent const *events;
 
 	CdnRawcNetworkMeta meta;
 } CdnRawcNetwork;
