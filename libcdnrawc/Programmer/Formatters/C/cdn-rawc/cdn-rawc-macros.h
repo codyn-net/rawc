@@ -26,5 +26,11 @@
 #define GNUC_INLINE
 #endif
 
+#if defined(__GNUC__)  || __has_attribute(unused)
+#define GNUC_UNUSED __attribute__ ((unused))
+#else
+#define GNUC_UNUSED
+#endif
+
 #endif /* __CDN_RAWC_MACROS_H__ */
 

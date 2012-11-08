@@ -60,6 +60,50 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return "-INFINITY";
 			}
+			else if (number == Double.MaxValue)
+			{
+				if (context.Options.ValueType == "float")
+				{
+					return "FLT_MAX";
+				}
+				else
+				{
+					return "DBL_MAX";
+				}
+			}
+			else if (number == Double.MinValue)
+			{
+				if (context.Options.ValueType == "float")
+				{
+					return "-FLT_MAX";
+				}
+				else
+				{
+					return "-DBL_MAX";
+				}
+			}
+			else if (number == Double.Epsilon)
+			{
+				if (context.Options.ValueType == "float")
+				{
+					return "FLT_MIN";
+				}
+				else
+				{
+					return "DBL_MIN";
+				}
+			}
+			else if (number == -Double.Epsilon)
+			{
+				if (context.Options.ValueType == "float")
+				{
+					return "-FLT_MIN";
+				}
+				else
+				{
+					return "-DBL_MIN";
+				}
+			}
 
 			string val = Translate(number, 15, context);
 

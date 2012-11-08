@@ -1,8 +1,9 @@
 #include "cdn-rawc-integrator-euler.h"
+#include <stdio.h>
 
 static void diff (CdnRawcIntegrator *integrator,
                   CdnRawcNetwork    *network,
-                  ValueType         *data,
+                  void              *data,
                   ValueType          t,
                   ValueType          dt);
 
@@ -10,7 +11,7 @@ static CdnRawcIntegratorEuler integrator_class = {
 	{
 		0,
 		diff,
-		CDN_RAWC_INTEGRATOR_EULER_DATA_SIZE
+		CDN_RAWC_INTEGRATOR_EULER_ORDER
 	}
 };
 
@@ -23,7 +24,7 @@ cdn_rawc_integrator_euler ()
 static void
 diff (CdnRawcIntegrator *integrator,
       CdnRawcNetwork    *network,
-      ValueType         *data,
+      void              *data,
       ValueType          t,
       ValueType          dt)
 {
@@ -32,8 +33,8 @@ diff (CdnRawcIntegrator *integrator,
 	uint32_t i;
 	uint32_t num;
 
-	states = data + network->states.start;
-	derivatives = data + network->derivatives.start;
+	states = network->get_states (data);
+	derivatives = network->get_derivatives (data);
 
 	num = network->states.end - network->states.start;
 

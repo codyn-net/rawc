@@ -2,7 +2,7 @@
 
 #include <cdn-rawc/integrators/cdn-rawc-integrator-${integrator}.h>
 
-static ValueType data[CDN_RAWC_${NAME}_DATA_SIZE * CDN_RAWC_INTEGRATOR_${INTEGRATOR}_DATA_SIZE];
+static CdnRawcNetwork${Name} data[CDN_RAWC_INTEGRATOR_${INTEGRATOR}_ORDER + CDN_RAWC_NETWORK_${NAME}_SPACE_FOR_EVENTS];
 
 void
 cdn_rawc_${name}_reset (ValueType t)
@@ -59,18 +59,18 @@ cdn_rawc_${name}_integrator (void)
 ValueType
 cdn_rawc_${name}_get (CdnRawc${Name}State index)
 {
-	return data[index];
+	return data[0].data[index];
 }
 
 void
 cdn_rawc_${name}_set (CdnRawc${Name}State index,
                       ValueType value)
 {
-	data[index] = value;
+	data[0].data[index] = value;
 }
 
 ValueType *
 cdn_rawc_${name}_data (void)
 {
-	return data;
+	return data[0].data;
 }

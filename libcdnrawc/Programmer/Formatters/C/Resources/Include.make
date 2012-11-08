@@ -13,7 +13,8 @@ WARNINGS = 				\
 	implicit-function-declaration	\
 	strict-prototypes		\
 	shadow				\
-	unused-function
+	unused-function		\
+	unused-variable
 
 ${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags}
 ${NAME}_LDFLAGS = -lm ${libs}

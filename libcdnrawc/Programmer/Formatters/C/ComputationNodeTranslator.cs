@@ -223,7 +223,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			if (node.State.Operator.InitialValue == null)
 			{
-				ret.AppendLine(Translate(new Computation.ZeroTable(node.History), context));
+				ret.AppendLine(Translate(new Computation.ZeroMemory(node.History), context));
 
 				ret.AppendFormat("{0}[{1}] = 0.0;",
 					context.Program.StateTable.Name,
@@ -409,9 +409,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		private string Translate(Computation.ZeroTable node, Context context)
+		private string Translate(Computation.ZeroMemory node, Context context)
 		{
-			if (node.DataTable.IntegerType)
+			if (node.Name == null)
+			{
+				return String.Format("memset (network, 0, CDN_RAWC_NETWORK_{0}_SIZE);", context.Options.CPrefixUp);
+			}
+			else if (node.DataTable == null)
+			{
+				return string.Format("memset ({0}, 0, {1});", node.Name, node.Size);
+			}
+			else if (node.DataTable.IntegerType)
 			{
 				return String.Format("memset ({0}, 0, sizeof ({0}));",
 				                     node.DataTable.Name);

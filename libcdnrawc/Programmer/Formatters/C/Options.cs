@@ -26,7 +26,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		[CommandLine.Option("standalone", ArgumentName="TYPE", OptionalArgument=true, DefaultArgument="minimal", Description="Create a standalone network (minimal, full)")]
 		public string Standalone;
 
+		public string CPrefix;
 		public string CPrefixDown;
+		public string CPrefixUp;
 		public string EventStateType;
 		
 		public Options(string name) : base(name)

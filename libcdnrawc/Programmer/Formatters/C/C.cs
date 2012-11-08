@@ -546,6 +546,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.Close();
 		}
+
+		private bool NeedsSpaceForEvents()
+		{
+			if (Knowledge.Instance.EventsCount == 0)
+			{
+				return false;
+			}
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				if (ev.Approximation != Double.MaxValue)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
 		
 		private void WriteHeader()
 		{
@@ -565,25 +583,21 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			// Protect for including this from C++
 			writer.WriteLine("CDN_RAWC_BEGIN_DECLS");
-
 			writer.WriteLine();
 
-			var evtcnt = Knowledge.Instance.EventContainersCount;
+			writer.WriteLine("typedef struct");
+			writer.WriteLine("{");
+			writer.WriteLine("\tValueType data[{0}];", d_program.StateTable.Count);
+			writer.WriteLine("\t{0} event_states[{1}];", EventStateType, Knowledge.Instance.EventContainersCount);
+			writer.WriteLine("\t{0} events_active[{1}];", EventType, Knowledge.Instance.EventsCount);
+			writer.WriteLine("\tuint32_t events_active_size;");
+			writer.WriteLine("}} CdnRawcNetwork{0};", CPrefix);
+			writer.WriteLine();
 
-			if (evtcnt > 0)
-			{
-				string ctype = EventStateType;
-
-				writer.WriteLine("#define CDN_RAWC_{0}_DATA_SIZE ({1} + ({2} * sizeof({3}) + sizeof(ValueType) - 1) / sizeof(ValueType))",
-				                 CPrefixUp,
-				                 d_program.StateTable.Count,
-				                 Knowledge.Instance.EventStatesMap.Count,
-				                 ctype);
-			}
-			else
-			{
-				writer.WriteLine("#define CDN_RAWC_{0}_DATA_SIZE {1}", CPrefixUp, d_program.StateTable.Count);
-			}
+			writer.WriteLine("#define CDN_RAWC_NETWORK_{0}_SIZE sizeof(CdnRawcNetwork{1})", CPrefixUp, CPrefix);
+			writer.WriteLine("#define CDN_RAWC_NETWORK_{0}_SPACE_FOR_EVENTS {1}",
+			                 CPrefixUp,
+			                 NeedsSpaceForEvents() ? 1 : 0);
 
 			writer.WriteLine();
  			
@@ -695,6 +709,45 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					}
 				}
 			}
+
+			bool hasabs = generated.Contains("CDN_MATH_ABS");
+			bool hasmax = generated.Contains("CDN_MATH_MAX");
+
+			if (!hasabs || !hasmax)
+			{
+				foreach (var st in Knowledge.Instance.EventNodeStates)
+				{
+					if (!hasabs &&
+					    st.Node.CompareType == MathFunctionType.Equal &&
+					    st.Event.Approximation != Double.MaxValue)
+					{
+						generated.Add("CDN_MATH_ABS");
+						hasabs = true;
+
+						writer.WriteLine("#define CDN_MATH_ABS_REQUIRED");
+
+						if (hasmax)
+						{
+							break;
+						}
+					}
+
+					if (!hasmax &&
+					    (st.Node.CompareType == Cdn.MathFunctionType.And ||
+					     st.Node.CompareType == Cdn.MathFunctionType.Or))
+					{
+						generated.Add("CDN_MATH_MAX");
+						hasmax = true;
+
+						writer.WriteLine("#define CDN_MATH_MAX_REQUIRED");
+
+						if (hasabs)
+						{
+							break;
+						}
+					}
+				}
+			}
 		}
 		
 		private void WriteFunctionDefines(TextWriter writer)
@@ -759,7 +812,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
 				writer.WriteLine();
 			}
-			
+
+			// API Function declarations
+			foreach (var api in d_program.APIFunctions)
+			{
+				if (api.Private && api.Body.Count == 0)
+				{
+					continue;
+				}
+
+				WriteAPIDecl(writer, api, false);
+				writer.WriteLine(";");
+			}
+
+			writer.WriteLine("static void {0}_events_update_distance (void *data);", CPrefixDown);
+			writer.WriteLine("static void {0}_events_post_update (void *data);", CPrefixDown);
+			writer.WriteLine("static uint32_t {0}_get_events_active_size (void *data);", CPrefixDown);
+			writer.WriteLine("static uint32_t {0}_get_events_active (void *data, uint32_t i);", CPrefixDown);
+			writer.WriteLine("static CdnRawcEventValue *{0}_get_events_value (void *data, uint32_t i);", CPrefixDown);
+
+			writer.WriteLine();
+						
 			foreach (Programmer.Function function in d_program.Functions)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
@@ -813,8 +886,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				written = true;
 			}
 		}
-		
-		private void WriteAPISource(TextWriter writer, APIFunction api)
+
+		private void WriteAPIDecl(TextWriter writer, APIFunction api, bool hasbody)
 		{
 			if (api.Private && api.Body.Count == 0)
 			{
@@ -822,7 +895,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			writer.Write("static ");
-			writer.WriteLine(api.ReturnType);
+			writer.Write(api.ReturnType);
+
+			if (hasbody)
+			{
+				writer.WriteLine();
+			}
+			else
+			{
+				writer.Write(" ");
+			}
+
 			writer.Write("{0}_{1} (", CPrefixDown, api.Name);
 
 			for (int i = 0; i < api.Arguments.Length; i += 2)
@@ -845,12 +928,61 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 			}
 
-			writer.WriteLine(")");
+			writer.Write(")");
+		}
+
+		private void WriteNetworkVariable(TextWriter writer)
+		{
+			WriteNetworkVariable(writer, null);
+		}
+
+		private void WriteNetworkVariable(TextWriter writer, string decl)
+		{
+			WriteNetworkVariable(writer, decl, true);
+		}
+
+		private void WriteNetworkVariable(TextWriter writer, string decl, bool needsss)
+		{
+			writer.WriteLine("\tCdnRawcNetwork{0} *network = data;", CPrefix);
+
+			if (needsss)
+			{
+				writer.WriteLine("\tValueType *{0} GNUC_UNUSED;", d_program.StateTable.Name);
+			}
+
+			if (decl != null)
+			{
+				writer.WriteLine(decl);
+			}
+
+			writer.WriteLine();
+
+			if (needsss)
+			{
+				writer.WriteLine("\t{0} = network->data;", d_program.StateTable.Name);
+				writer.WriteLine();
+			}
+		}
+		
+		private void WriteAPISource(TextWriter writer, APIFunction api)
+		{
+			if (api.Private && api.Body.Count == 0)
+			{
+				return;
+			}
+
+			WriteAPIDecl(writer, api, true);
+			writer.WriteLine();
 
 			writer.WriteLine("{");
-			WriteComputationNodes(writer, api.Body);
-			writer.WriteLine("}");
 
+			if (api.Body.Count != 0)
+			{
+				WriteNetworkVariable(writer);
+				WriteComputationNodes(writer, api.Body);
+			}
+
+			writer.WriteLine("}");
 			writer.WriteLine();
 		}
 
@@ -1293,64 +1425,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 
-		private void WriteNetworkEvents(TextWriter writer)
-		{
-			writer.WriteLine("\tstatic CdnRawcEvent events[] = {");
-
-			Dictionary<Cdn.EventLogicalNode, int> nodemap = new Dictionary<EventLogicalNode, int>();
-			int i = 0;
-
-			foreach (var ev in Knowledge.Instance.EventNodeStates)
-			{
-				if (ev.Type != EventNodeState.StateType.Previous)
-				{
-					continue;
-				}
-
-				nodemap[ev.Node] = i;
-				i++;
-			}
-
-			foreach (var ev in Knowledge.Instance.EventNodeStates)
-			{
-				if (ev.Type != EventNodeState.StateType.Previous)
-				{
-					continue;
-				}
-
-				writer.Write("\t\t{ ");
-
-				string approx;
-
-				if (ev.Event.Approximation == double.MaxValue)
-				{
-					if (ValueType == "float")
-					{
-						approx = "FLT_MAX";
-					}
-					else
-					{
-						approx = "DBL_MAX";
-					}
-				}
-				else
-				{
-					approx = NumberTranslator.Translate(ev.Event.Approximation, new Context(d_program, d_options));
-				}
-
-				writer.Write("{0}, {1}, {2}, {3}",
-				             EventNodeType(ev),
-				             approx,
-				             ev.Node.Left != null ? nodemap[ev.Node.Left] : 0,
-				             ev.Node.Right != null ? nodemap[ev.Node.Right] : 0);
-
-				writer.WriteLine(" },");
-			}
-
-			writer.WriteLine("\t};");
-			writer.WriteLine();
-		}
-
 		private void WriteNetwork(TextWriter writer)
 		{
 			var pref = CPrefixDown;
@@ -1360,7 +1434,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("{");
 			
 			WriteNetworkMeta(writer);
-			WriteNetworkEvents(writer);
 
 			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
 
@@ -1373,9 +1446,15 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				"diff",
 				"post",
 				"events_update",
-				"event_active",
-				"event_fire",
-				"event_get_value",
+				"events_post_update",
+				"events_fire",
+				"get_data",
+				"get_states",
+				"get_derivatives",
+				"get_nth",
+				"get_events_active",
+				"get_events_active_size",
+				"get_events_value",
 			};
 
 			foreach (string name in funcs)
@@ -1385,58 +1464,30 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine();
 
-			var enu = Knowledge.Instance.Integrated.GetEnumerator();
-			if (enu.MoveNext())
-			{
-				var integrated = d_program.StateTable[enu.Current];
+			var range = d_program.StateRange(Knowledge.Instance.Integrated);
 
-				writer.WriteLine("\t\t.states = {{.start = {0}, .end = {1}}},",
-				                 integrated.AliasOrIndex,
-				                 integrated.Index + Knowledge.Instance.IntegratedCount);
-			}
-			else
-			{
-				writer.WriteLine("\t\t.states = {.start = 0, .end = 0},");
-			}
+			writer.WriteLine("\t\t.states = {{.start = {0}, .end = {1}, .stride = 1}},",
+			                 range[0],
+			                 range[1]);
 
-			enu = Knowledge.Instance.DerivativeStates.GetEnumerator();
+			range = d_program.StateRange(Knowledge.Instance.DerivativeStates);
 
-			if (enu.MoveNext())
-			{
-				var derivatives = d_program.StateTable[enu.Current];
+			writer.WriteLine("\t\t.derivatives = {{.start = {0}, .end = {1}, .stride = 1}},",
+			                 range[0],
+			                 range[1]);
 
-				writer.WriteLine("\t\t.derivatives = {{.start = {0}, .end = {1}}},",
-				                 derivatives.AliasOrIndex,
-				                 derivatives.Index + Knowledge.Instance.DerivativeStatesCount);
-			}
-			else
-			{
-				writer.WriteLine("\t\t.derivatives = {.start = 0, .end = 0},");
-			}
+			range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
 
-			enu = Knowledge.Instance.EventNodeStates.GetEnumerator();
-
-			if (enu.MoveNext())
-			{
-				var eventvalues = d_program.StateTable[enu.Current];
-
-				writer.WriteLine("\t\t.event_values = {{.start = {0}, .end = {1}}},",
-				                 eventvalues.AliasOrIndex,
-				                 eventvalues.Index + Knowledge.Instance.EventNodeStatesCount);
-			}
-			else
-			{
-				writer.WriteLine("\t\t.derivatives = {.start = 0, .end = 0},");
-			}
+			writer.WriteLine("\t\t.event_values = {{.start = {0}, .end = {1}, .stride = 3}},",
+			                 range[0],
+			                 range[0] + (range[1] - range[0]) * 3);
 
 			writer.WriteLine();
-			writer.WriteLine("\t\t.data_size = CDN_RAWC_{0}_DATA_SIZE,", CPrefixUp);
+			writer.WriteLine("\t\t.size = CDN_RAWC_NETWORK_{0}_SIZE,", CPrefixUp);
+			writer.WriteLine("\t\t.data_size = sizeof (ValueType) * {0},", d_program.StateTable.Count);
+			writer.WriteLine("\t\t.event_refinement = {0},", NeedsSpaceForEvents() ? 1 : 0);
 			writer.WriteLine("\t\t.type_size = sizeof (ValueType),");
-
-			writer.WriteLine();
-			writer.WriteLine("\t\t.events_size = {0},", Knowledge.Instance.EventsCount);
-			writer.WriteLine("\t\t.events_size_all = {0},", Knowledge.Instance.EventNodeStatesCount / 3);
-			writer.WriteLine("\t\t.events = events,");
+			writer.WriteLine("\t\t.minimum_timestep = {0},", Knowledge.Instance.Network.Integrator.MinimumTimestep);
 
 			var t = d_program.StateTable[Knowledge.Instance.Time];
 			var dt = d_program.StateTable[Knowledge.Instance.TimeStep];
@@ -1466,7 +1517,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 			writer.WriteLine("\t\t\t.children = meta_children,");
 			writer.WriteLine("\t\t\t.children_size = sizeof (meta_children) / sizeof (CdnRawcChildMeta),");
-			writer.WriteLine();
 			writer.WriteLine("\t\t},");
 
 			writer.WriteLine("\t};");
@@ -1478,65 +1528,333 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 		}
 
-		private void WriteEventsSource(TextWriter writer)
+		private string EventNodeStateVariable(Cdn.EventLogicalNode node, EventNodeState.StateType type)
 		{
-			WriteEventGetValue(writer);
-			WriteEventActive(writer);
-			WriteEventFire(writer);
+			var st = d_program.StateTable[EventNodeState.Key(node, type)];
+
+			return String.Format("{0}[{1}]", d_program.StateTable.Name, st.AliasOrIndex);
 		}
 
-		private void WriteEventActive(TextWriter writer)
+		private string EventConditionHolds(Cdn.Event ev, Cdn.EventLogicalNode node, EventNodeState.StateType type)
 		{
-			writer.WriteLine("static uint8_t");
-			writer.WriteLine("{0}_event_active (ValueType *{1}, uint32_t i)",
-			                 CPrefixDown,
-			                 d_program.StateTable.Name);
+			var st = EventNodeStateVariable(node, type);
+
+			switch (node.CompareType)
+			{
+			case Cdn.MathFunctionType.Less:
+			case Cdn.MathFunctionType.Greater:
+				return String.Format("{0} > 0",
+				                     st);
+			case Cdn.MathFunctionType.LessOrEqual:
+			case Cdn.MathFunctionType.GreaterOrEqual:
+			case Cdn.MathFunctionType.And:
+			case Cdn.MathFunctionType.Or:
+				return String.Format("{0} >= 0",
+				                     st);
+			case Cdn.MathFunctionType.Equal:
+				if (ev.Approximation != Double.MaxValue)
+				{
+					var approx = NumberTranslator.Translate(ev.Approximation, new Context(d_program, d_options));
+
+					return String.Format("CDN_MATH_ABS ({0}) <= {1}",
+					                     st,
+					                     approx);
+				}
+				else
+				{
+					return "1";
+				}
+			default:
+				return "0";
+			}
+		}
+
+		private void WriteEventsUpdateDistance(TextWriter writer)
+		{
+			writer.WriteLine("static void");
+			writer.WriteLine("{0}_events_update_distance (void *data)",
+			                 CPrefixDown);
 
 			writer.WriteLine("{");
 
-			writer.WriteLine("\t{0} const *evstates = ({0} const *)({1} + {2});",
-			                 EventStateType,
-			                 d_program.StateTable.Name,
-			                 d_program.StateTable.Count);
+			// Write updates of the logical nodes
+			var states = new List<EventNodeState>(Knowledge.Instance.EventNodeStates);
 
-			writer.WriteLine();
-			writer.WriteLine("\tswitch (i)");
-			writer.WriteLine("\t{");
-
-			int i = 0;
-
-			foreach (var ev in Knowledge.Instance.Events)
+			if (states.Count == 0)
 			{
-				var phases = ev.Phases;
-				++i;
+				writer.WriteLine("}");
+				writer.WriteLine();
+				return;
+			}
 
-				if (phases.Length == 0)
+			WriteNetworkVariable(writer);
+
+			bool first = true;
+
+			// Compute in reverse order to get the right dependencies
+			for (int i = states.Count - 1; i >= 0; --i)
+			{
+				var st = states[i];
+
+				if (st.Type != EventNodeState.StateType.Current)
 				{
 					continue;
 				}
 
-				writer.WriteLine("\tcase {0}:", i - 1);
-
-				var parent = Knowledge.Instance.FindStateNode(ev);
-				var cont = Knowledge.Instance.EventStatesMap[parent];
-				var idx = cont.Index;
-
-				List<string> conditions = new List<string>();
-
-				foreach (var ph in phases)
+				if (first)
 				{
-					var st = Knowledge.Instance.GetEventState(parent, ph);
-
-					conditions.Add(String.Format("evstates[{0}] == {1}", idx, st.Index));
+					first = false;
+				}
+				else
+				{
+					writer.WriteLine();
 				}
 
-				writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+				switch (st.Node.CompareType)
+				{
+				case Cdn.MathFunctionType.And:
+				case Cdn.MathFunctionType.Or:
+				{
+					var dist = EventNodeStateVariable(st.Node, EventNodeState.StateType.Distance);
+					var cur = EventNodeStateVariable(st.Node, EventNodeState.StateType.Current);
+					var ldist = EventNodeStateVariable(st.Node.Left, EventNodeState.StateType.Distance);
+					var rdist = EventNodeStateVariable(st.Node.Right, EventNodeState.StateType.Distance);
+
+					if (st.Node.CompareType == Cdn.MathFunctionType.And)
+					{
+						var lcond = EventConditionHolds(st.Event, st.Node.Left, EventNodeState.StateType.Current);
+						var rcond = EventConditionHolds(st.Event, st.Node.Right, EventNodeState.StateType.Current);
+
+						writer.WriteLine("\tif ({0} >= 0 && {1} >= 0)", ldist, rdist);
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = CDN_MATH_MAX ({1}, {2});", dist, ldist, rdist);
+						writer.WriteLine("\t}");
+						writer.WriteLine("\telse if ({0} >= 0 && {1})", ldist, rcond);
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = {1};", dist, ldist);
+						writer.WriteLine("\t}");
+						writer.WriteLine("\telse if ({0} >= 0 && {1})", rdist, lcond);
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = {1};", dist, rdist);
+						writer.WriteLine("\t}");
+						writer.WriteLine();
+					}
+					else
+					{
+						writer.WriteLine("\t{0} = CDN_MATH_MAX ({1}, {2});", dist, ldist, rdist);
+					}
+
+					writer.WriteLine("\t{0} = ({1} >= 0 ? 0 : -1);", cur, dist);
+				}
+				break;
+				default:
+				{
+					var prevCond = EventConditionHolds(st.Event, st.Node, EventNodeState.StateType.Previous);
+					var curCond = EventConditionHolds(st.Event, st.Node, EventNodeState.StateType.Current);
+
+					var dist = EventNodeStateVariable(st.Node, EventNodeState.StateType.Distance);
+					var prev = EventNodeStateVariable(st.Node, EventNodeState.StateType.Previous);
+					var cur = EventNodeStateVariable(st.Node, EventNodeState.StateType.Current);
+
+					// Compute distance for actual values
+					writer.WriteLine("\tif (!({0}) && {1})", prevCond, curCond);
+					writer.WriteLine("\t{");
+
+					if (st.Event.Approximation == Double.MaxValue)
+					{
+						writer.WriteLine("\t\t{0} = 1;", dist);
+					}
+					else
+					{
+						var approx = NumberTranslator.Translate(st.Event.Approximation, new Context(d_program, d_options));
+
+						writer.WriteLine("\t\tif ({0} <= {1})", cur, approx);
+						writer.WriteLine("\t\t{");
+						writer.WriteLine("\t\t\t{0} = 1;", dist);
+						writer.WriteLine("\t\t}");
+						writer.WriteLine("\t\telse");
+						writer.WriteLine("\t\t{");
+						writer.Write("\t\t\t{0} = {1} / ({1} - {2})", dist, prev, cur);
+						
+						if (st.Node.CompareType == Cdn.MathFunctionType.Less ||
+						    st.Node.CompareType == Cdn.MathFunctionType.Greater)
+						{
+							writer.WriteLine(" + 1e-10;");
+						}
+						else
+						{
+							writer.WriteLine(";");
+						}
+
+						writer.WriteLine("\t\t}");
+					}
+
+					writer.WriteLine("\t}");
+					writer.WriteLine("\telse");
+					writer.WriteLine("\t{");
+					writer.WriteLine("\t\t{0} = -1;", dist);
+					writer.WriteLine("\t}");
+
+					break;
+				}
+				}
 			}
 
-			writer.WriteLine("\tdefault:");
-			writer.WriteLine("\t\treturn 1;");
+			var range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
 
+			writer.WriteLine();
+			writer.WriteLine("\t{");
+			writer.WriteLine("\tuint32_t i;");
+			writer.WriteLine();
+			writer.WriteLine("\tnetwork->events_active_size = 0;");
+			writer.WriteLine();
+			writer.WriteLine("\tfor (i = 0; i < {0}; ++i)", Knowledge.Instance.EventsCount);
+			writer.WriteLine("\t{");
+			writer.WriteLine("\t\tif ({0}_event_active (data, i) && {1}[{2} + i * 3] >= 0)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name,
+			                 range[0] + 2);
+
+			writer.WriteLine("\t\t{");
+			writer.WriteLine("\t\t\tuint32_t j;");
+			writer.WriteLine("\t\t\tCdnRawcEventValue *vi = {0}_get_events_value (data, i);", CPrefixDown);
+			writer.WriteLine();
+			writer.WriteLine("\t\t\tfor (j = network->events_active_size; j > 0; --j)");
+			writer.WriteLine("\t\t\t{");
+			writer.WriteLine("\t\t\t\tCdnRawcEventValue *vj = {0}_get_events_value (data, network->events_active[j - 1]);", CPrefixDown);
+			writer.WriteLine();
+			writer.WriteLine("\t\t\t\tif (vj->distance <= vi->distance)");
+			writer.WriteLine("\t\t\t\t{");
+			writer.WriteLine("\t\t\t\t\tbreak;");
+			writer.WriteLine("\t\t\t\t}");
+			writer.WriteLine("\t\t\t\telse");
+			writer.WriteLine("\t\t\t\t{");
+			writer.WriteLine("\t\t\t\t\tnetwork->events_active[j] = network->events_active[j - 1];");
+			writer.WriteLine("\t\t\t\t}");
+			writer.WriteLine("\t\t\t}");
+			writer.WriteLine();
+			writer.WriteLine("\t\t\tnetwork->events_active[j] = i;");
+			writer.WriteLine("\t\t\t++network->events_active_size;");
+			writer.WriteLine("\t\t}");
 			writer.WriteLine("\t}");
+			writer.WriteLine("\t}");
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+
+		private void WriteEventsPostUpdate(TextWriter writer)
+		{
+			writer.WriteLine("static void");
+			writer.WriteLine("{0}_events_post_update (void *data)",
+			                 CPrefixDown);
+
+			writer.WriteLine("{");
+
+			var enu = Knowledge.Instance.EventNodeStates.GetEnumerator();
+
+			if (enu.MoveNext())
+			{
+				WriteNetworkVariable(writer);
+
+				var st = d_program.StateTable[enu.Current];
+				var idx = st.AliasOrIndex;
+
+				writer.WriteLine("\tint i;");
+				writer.WriteLine();
+
+				writer.WriteLine("\tfor (i = {0}; i < {1}; i += 3)", idx, st.Index + Knowledge.Instance.EventNodeStatesCount);
+				writer.WriteLine("\t{");
+				writer.WriteLine("\t\t{0}[i] = {0}[i + 1];",
+				                 d_program.StateTable.Name);
+				writer.WriteLine("\t}");
+			}
+
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+
+		private void WriteEventsSource(TextWriter writer)
+		{
+			WriteEventActive(writer);
+			WriteEventFire(writer);
+			WriteEventsUpdateDistance(writer);
+			WriteEventsPostUpdate(writer);
+		}
+
+		private void WriteEventActive(TextWriter writer)
+		{
+			if (Knowledge.Instance.EventNodeStatesCount == 0)
+			{
+				return;
+			}
+
+			writer.WriteLine("static uint8_t");
+			writer.WriteLine("{0}_event_active (void *data, uint32_t i)",
+			                 CPrefixDown);
+
+			writer.WriteLine("{");
+
+			bool hasit = false;
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				if (ev.Phases.Length > 0)
+				{
+					hasit = true;
+					break;
+				}
+			}
+
+			if (!hasit)
+			{
+				writer.WriteLine("\treturn 1;");
+			}
+			else
+			{
+				WriteNetworkVariable(writer, String.Format("\t{0} const *evstates;", EventStateType));
+
+				writer.WriteLine("\tevstates = network->event_states;");
+
+				writer.WriteLine();
+				writer.WriteLine("\tswitch (i)");
+				writer.WriteLine("\t{");
+
+				int i = 0;
+
+				foreach (var ev in Knowledge.Instance.Events)
+				{
+					var phases = ev.Phases;
+					++i;
+	
+					if (phases.Length == 0)
+					{
+						continue;
+					}
+	
+					writer.WriteLine("\tcase {0}:", i - 1);
+	
+					var parent = Knowledge.Instance.FindStateNode(ev);
+					var cont = Knowledge.Instance.EventStatesMap[parent];
+					var idx = cont.Index;
+	
+					List<string> conditions = new List<string>();
+	
+					foreach (var ph in phases)
+					{
+						var st = Knowledge.Instance.GetEventState(parent, ph);
+	
+						conditions.Add(String.Format("evstates[{0}] == {1}", idx, st.Index));
+					}
+	
+					writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+				}
+	
+				writer.WriteLine("\tdefault:");
+				writer.WriteLine("\t\treturn 1;");
+	
+				writer.WriteLine("\t}");
+			}
+
 			writer.WriteLine("}");
 			writer.WriteLine();
 		}
@@ -1544,20 +1862,41 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteEventFire(TextWriter writer)
 		{
 			writer.WriteLine("static void");
-			writer.WriteLine("{0}_event_fire (ValueType *{1}, uint32_t i)",
-			                 CPrefixDown,
-			                 d_program.StateTable.Name);
+			writer.WriteLine("{0}_events_fire (void *data)",
+			                 CPrefixDown);
 
 			writer.WriteLine("{");
 
-			writer.WriteLine("\t{0} *evstates = ({0} *)({1} + {2});",
-			                 EventStateType,
-			                 d_program.StateTable.Name,
-			                 d_program.StateTable.Count);
+			bool hasit = false;
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				var state = ev.GotoState;
+				var prg = d_program.EventProgram(ev);
+
+				if (!String.IsNullOrEmpty(state) || prg != null)
+				{
+					hasit = true;
+					break;
+				}
+			}
+
+			if (!hasit)
+			{
+				writer.WriteLine("}");
+				writer.WriteLine();
+				return;
+			}
+
+			WriteNetworkVariable(writer, "\tuint32_t event;");
+
+			writer.WriteLine("\tfor (event = 0; event < network->events_active_size; ++event)");
+			writer.WriteLine("\t{");
+			writer.WriteLine("\t\tuint32_t i = network->events_active[event];");
 
 			writer.WriteLine();
-			writer.WriteLine("\tswitch (i)");
-			writer.WriteLine("\t{");
+			writer.WriteLine("\t\tswitch (i)");
+			writer.WriteLine("\t\t{");
 
 			int i = 0;
 
@@ -1573,7 +1912,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					continue;
 				}
 
-				writer.WriteLine("\tcase {0}:", i - 1);
+				writer.WriteLine("\t\tcase {0}:", i - 1);
 
 				if (!String.IsNullOrEmpty(state))
 				{
@@ -1582,48 +1921,112 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					var idx = cont.Index;
 					var st = Knowledge.Instance.GetEventState(parent, state);
 
-					writer.WriteLine("\t\tevstates[{0}] = {1};",
+					writer.WriteLine("\t\t\tnetwork->evstates[{0}] = {1};",
 					                 idx,
 					                 st.Index);
 				}
 
 				if (prg != null)
 				{
-					WriteComputationNode(writer, prg, "\t\t");
+					WriteComputationNode(writer, prg, "\t\t\t");
 				}
 
-				writer.WriteLine("\t\tbreak;");
+				writer.WriteLine("\t\t\tbreak;");
 			}
 
-			writer.WriteLine("\tdefault:");
-			writer.WriteLine("\t\tbreak;");
+			writer.WriteLine("\t\tdefault:");
+			writer.WriteLine("\t\t\tbreak;");
 
+			writer.WriteLine("\t\t}");
 			writer.WriteLine("\t}");
 			writer.WriteLine("}");
 			writer.WriteLine();
 		}
 
-		private void WriteEventGetValue(TextWriter writer)
+		private void WriteDataAccessors(TextWriter writer)
 		{
-			writer.WriteLine("static CdnRawcEventValue *");
-			writer.WriteLine("{0}_event_get_value (ValueType *data, uint32_t i)", CPrefixDown);
+			writer.WriteLine("static ValueType *");
+			writer.WriteLine("{0}_get_data (void *data)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
 			writer.WriteLine("{");
+			WriteNetworkVariable(writer);
+			writer.WriteLine("\treturn ss;");
+			writer.WriteLine("}");
+			writer.WriteLine();
 
-			var enu = Knowledge.Instance.EventNodeStates.GetEnumerator();
-			int start;
+			writer.WriteLine("static ValueType *");
+			writer.WriteLine("{0}_get_states (void *data)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
 
-			if (enu.MoveNext())
-			{
-				start = d_program.StateTable[enu.Current].Index;
-			}
-			else
-			{
-				start = d_program.StateTable.Count;
-			}
+			var range = d_program.StateRange(Knowledge.Instance.Integrated);
 
-			writer.WriteLine("\treturn (CdnRawcEventValue *)(data + {0} + i);",
-			                 start);
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer);
+			writer.WriteLine("\treturn ss + {0};", range[0]);
+			writer.WriteLine("}");
+			writer.WriteLine();
 
+			writer.WriteLine("static ValueType *");
+			writer.WriteLine("{0}_get_derivatives (void *data)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			range = d_program.StateRange(Knowledge.Instance.DerivativeStates);
+
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer);
+			writer.WriteLine("\treturn ss + {0};", range[0]);
+			writer.WriteLine("}");
+			writer.WriteLine();
+
+			writer.WriteLine("static void *");
+			writer.WriteLine("{0}_get_nth (void *data, uint32_t nth)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer);
+			writer.WriteLine("\treturn network + nth;");
+			writer.WriteLine("}");
+			writer.WriteLine();
+
+			writer.WriteLine("static uint32_t");
+			writer.WriteLine("{0}_get_events_active_size (void *data)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer, null, false);
+			writer.WriteLine("\treturn network->events_active_size;");
+			writer.WriteLine("}");
+			writer.WriteLine();
+
+			writer.WriteLine("static uint32_t");
+			writer.WriteLine("{0}_get_events_active (void *data, uint32_t i)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer, null, false);
+			writer.WriteLine("\treturn (uint32_t)network->events_active[i];");
+			writer.WriteLine("}");
+			writer.WriteLine();
+
+			writer.WriteLine("static CdnRawcEventValue *");
+			writer.WriteLine("{0}_get_events_value (void *data, uint32_t i)",
+			                 CPrefixDown,
+			                 d_program.StateTable.Name);
+
+			range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
+
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer);
+			writer.WriteLine("\treturn (CdnRawcEventValue *)({0} + {1} + i * 3);",
+			                 d_program.StateTable.Name,
+			                 range[0]);
 			writer.WriteLine("}");
 			writer.WriteLine();
 		}
@@ -1632,10 +2035,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			get { return MinimumCType((ulong)Knowledge.Instance.EventStates.Count); }
 		}
+
+		private string EventType
+		{
+			get { return MinimumCType((ulong)Knowledge.Instance.EventsCount); }
+		}
 		
 		private void WriteSource()
 		{
+			d_options.CPrefix = CPrefix;
 			d_options.CPrefixDown = CPrefixDown;
+			d_options.CPrefixUp = CPrefixUp;
 			d_options.EventStateType = EventStateType;
 
 			d_sourceFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".c");
@@ -1674,10 +2084,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			WriteFunctionDefines(writer);
 			
 			WriteDataTables(writer);
+
 			WriteFunctions(writer);
 			WriteAPISource(writer);
 
 			WriteEventsSource(writer);
+			WriteDataAccessors(writer);
 
 			WriteNetwork(writer);
 

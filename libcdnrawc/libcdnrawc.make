@@ -91,7 +91,7 @@ FILES = \
 	Programmer/Computation/IncrementDelayedCounters.cs \
 	Programmer/Computation/CopyTable.cs \
 	Programmer/Computation/Comment.cs \
-	Programmer/Computation/ZeroTable.cs \
+	Programmer/Computation/ZeroMemory.cs \
 	Programmer/Computation/Empty.cs \
 	Programmer/Computation/Loop.cs \
 	Programmer/Computation/CallAPI.cs \

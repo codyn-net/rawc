@@ -77,7 +77,6 @@
     <Compile Include="Programmer\Formatters\C\InstructionTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\Context.cs" />
     <Compile Include="Programmer\Formatters\C\ComputationNodeTranslator.cs" />
-    <Compile Include="Programmer\Computation\ZeroTable.cs" />
     <Compile Include="Programmer\Computation\Comment.cs" />
     <Compile Include="Programmer\Computation\CopyTable.cs" />
     <Compile Include="Programmer\Formatters\C\Options.cs" />
@@ -110,6 +109,7 @@
     <Compile Include="EventNodeState.cs" />
     <Compile Include="EventSetState.cs" />
     <Compile Include="Programmer\Computation\Block.cs" />
+    <Compile Include="Programmer\Computation\ZeroMemory.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

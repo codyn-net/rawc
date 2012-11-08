@@ -4,7 +4,7 @@
 
 void
 cdn_rawc_network_prepare (CdnRawcNetwork *network,
-                          ValueType      *data,
+                          void           *data,
                           ValueType       t)
 {
 	network->prepare (data, t);
@@ -12,7 +12,7 @@ cdn_rawc_network_prepare (CdnRawcNetwork *network,
 
 void
 cdn_rawc_network_init (CdnRawcNetwork *network,
-                       ValueType      *data,
+                       void           *data,
                        ValueType       t)
 {
 	network->init (data, t);
@@ -20,7 +20,7 @@ cdn_rawc_network_init (CdnRawcNetwork *network,
 
 void
 cdn_rawc_network_reset (CdnRawcNetwork *network,
-                        ValueType      *data,
+                        void           *data,
                         ValueType       t)
 {
 	network->reset (data, t);
@@ -28,7 +28,7 @@ cdn_rawc_network_reset (CdnRawcNetwork *network,
 
 void
 cdn_rawc_network_pre (CdnRawcNetwork *network,
-                      ValueType      *data,
+                      void           *data,
                       ValueType       t,
                       ValueType       dt)
 {
@@ -37,7 +37,7 @@ cdn_rawc_network_pre (CdnRawcNetwork *network,
 
 void
 cdn_rawc_network_diff (CdnRawcNetwork *network,
-                       ValueType      *data,
+                       void            *data,
                        ValueType       t,
                        ValueType       dt)
 {
@@ -46,40 +46,59 @@ cdn_rawc_network_diff (CdnRawcNetwork *network,
 
 void
 cdn_rawc_network_post (CdnRawcNetwork *network,
-                       ValueType      *data,
+                       void           *data,
                        ValueType       t,
                        ValueType       dt)
 {
 	network->post (data, t, dt);
 }
 
-CdnRawcEventValue *
-cdn_rawc_network_event_get_value (CdnRawcNetwork *network,
-                                  ValueType      *data,
-                                  uint32_t        i)
-{
-	return network->event_get_value (data, i);
-}
-
 void
 cdn_rawc_network_events_update (CdnRawcNetwork *network,
-                                ValueType      *data)
+                                void           *data)
 {
 	network->events_update (data);
 }
 
-uint8_t
-cdn_rawc_network_get_event_active (CdnRawcNetwork *network,
-                                   ValueType      *data,
-                                   uint32_t        i)
+void
+cdn_rawc_network_events_post_update (CdnRawcNetwork *network,
+                                     void           *data)
 {
-	return network->event_active (data, i);
+	network->events_post_update (data);
 }
 
 void
-cdn_rawc_network_event_fire (CdnRawcNetwork *network,
-                             ValueType      *data,
-                             uint32_t        i)
+cdn_rawc_network_events_fire (CdnRawcNetwork *network,
+                              void           *data)
 {
-	network->event_fire (data, i);
+	network->events_fire (data);
+}
+
+ValueType *
+cdn_rawc_network_get_data (CdnRawcNetwork *network,
+                           void           *data)
+{
+	return network->get_data (data);
+}
+
+ValueType *
+cdn_rawc_network_get_states (CdnRawcNetwork *network,
+                             void           *data)
+{
+	return network->get_states (data);
+}
+
+ValueType *
+cdn_rawc_network_get_derivatives (CdnRawcNetwork *network,
+                                  void           *data)
+{
+	return network->get_derivatives (data);
+}
+
+void *
+cdn_rawc_network_get_nth (CdnRawcNetwork *network,
+                          void           *data,
+                          uint32_t        nth)
+{
+	return network->get_nth (data, nth);
 }

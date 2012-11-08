@@ -39,12 +39,17 @@ namespace Cdn.RawC
 
 		public override object DataKey
 		{
-			get { return string.Format("{0}@{1}", ((Cdn.EventLogicalNode)Object).Handle, d_type); }
+			get { return Key((Cdn.EventLogicalNode)Object, d_type); }
 		}
 
 		public override string ToString()
 		{
 			return String.Format("{0} (evn)", base.ToString());
+		}
+
+		public static string Key(Cdn.EventLogicalNode node, StateType type)
+		{
+			return String.Format("{0}@{1}", node.Handle, type);
 		}
 	}
 }

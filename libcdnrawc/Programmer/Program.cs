@@ -16,6 +16,7 @@ namespace Cdn.RawC.Programmer
 		private APIFunction d_apiPrepare;
 		private APIFunction d_apiReset;
 		private APIFunction d_apiEvents;
+		private APIFunction d_apiEventsDistance;
 
 		private List<Function> d_functions;
 		private List<Tree.Embedding> d_embeddings;
@@ -49,17 +50,18 @@ namespace Cdn.RawC.Programmer
 			d_embeddings = new List<Tree.Embedding>(embeddings);
 			d_embeddingFunctionMap = new Dictionary<Tree.Embedding, Function>();
 			
-			d_apiTDT = new APIFunction("tdtdeps", "void", "ValueType *", "data");
+			d_apiTDT = new APIFunction("tdtdeps", "void", "void *", "data");
 			d_apiTDT.Private = true;
 
-			d_apiPre = new APIFunction("pre", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
-			d_apiPreDiff = new APIFunction("prediff", "void", "ValueType*", d_statetable.Name);
-			d_apiDiff = new APIFunction("diff", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
-			d_apiPost = new APIFunction("post", "void", "ValueType*", d_statetable.Name, "ValueType", "t", "ValueType", "dt");
-			d_apiInit = new APIFunction("init", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
-			d_apiPrepare = new APIFunction("prepare", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
-			d_apiReset = new APIFunction("reset", "void", "ValueType*", d_statetable.Name, "ValueType", "t");
-			d_apiEvents = new APIFunction("events_update", "void", "ValueType*", d_statetable.Name);
+			d_apiPre = new APIFunction("pre", "void", "void*", "data", "ValueType", "t", "ValueType", "dt");
+			d_apiPreDiff = new APIFunction("prediff", "void", "void*", "data");
+			d_apiDiff = new APIFunction("diff", "void", "void*", "data", "ValueType", "t", "ValueType", "dt");
+			d_apiPost = new APIFunction("post", "void", "void*", "data", "ValueType", "t", "ValueType", "dt");
+			d_apiInit = new APIFunction("init", "void", "void*", "data", "ValueType", "t");
+			d_apiPrepare = new APIFunction("prepare", "void", "void*", "data", "ValueType", "t");
+			d_apiReset = new APIFunction("reset", "void", "void*", "data", "ValueType", "t");
+			d_apiEvents = new APIFunction("events_update", "void", "void*", "data");
+			d_apiEventsDistance = new APIFunction("events_update_distance", "void", "void*", "data");
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
 			d_functionMap = new Dictionary<string, Function>();
@@ -99,6 +101,28 @@ namespace Cdn.RawC.Programmer
 			foreach (DataTable table in DataTables)
 			{
 				table.Lock();
+			}
+		}
+
+		public int[] StateRange(IEnumerable<State> states)
+		{
+			var enu = states.GetEnumerator();
+
+			if (!enu.MoveNext())
+			{
+				return new int[] {0, 0};
+			}
+			else
+			{
+				var start = d_statetable[enu.Current].Index;
+				var end = start + 1;
+
+				while (enu.MoveNext())
+				{
+					++end;
+				}
+
+				return new int[] {start, end};
 			}
 		}
 
@@ -958,7 +982,7 @@ namespace Cdn.RawC.Programmer
 			ProgramSetTDT(d_apiPrepare, true);
 
 			d_apiPrepare.Body.Add(new Computation.Comment("Prepare data"));
-			d_apiPrepare.Body.Add(new Computation.ZeroTable(d_statetable));
+			d_apiPrepare.Body.Add(new Computation.ZeroMemory());
 			d_apiPrepare.Body.Add(new Computation.Empty());
 
 			var rands = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
@@ -1086,6 +1110,9 @@ namespace Cdn.RawC.Programmer
 			}
 
 			ProgramDependencies(d_apiInit, depontimeLeft, "Finally, compute values that depended on t/dt or delays");
+
+			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
+			d_apiInit.Body.Add(new Computation.CallAPI(d_apiEvents, ss));
 		}
 
 		private void ProgramReset()
@@ -1101,6 +1128,9 @@ namespace Cdn.RawC.Programmer
 		{
 			var eq = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
 			ProgramDependencies(d_apiEvents, eq, "Event conditions");
+
+			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
+			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsDistance, ss));
 
 			foreach (var ev in Knowledge.Instance.Events)
 			{

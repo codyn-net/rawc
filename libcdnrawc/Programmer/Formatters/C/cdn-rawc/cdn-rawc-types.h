@@ -2,9 +2,10 @@
 #define __CDN_RAWC_TYPES_H__
 
 #include <stdint.h>
-#include <cdn-rawc/cdn-rawc-macros.h>
 
-CDN_RAWC_BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef ValueType
 #define ValueType double
@@ -14,6 +15,7 @@ typedef struct
 {
 	uint32_t start;
 	uint32_t end;
+	uint32_t stride;
 } CdnRawcRange;
 
 typedef struct
@@ -72,65 +74,72 @@ typedef struct
 	uint32_t children_size;
 } CdnRawcNetworkMeta;
 
-typedef enum
-{
-	CDN_RAWC_EVENT_STATE_TYPE_LESS,
-	CDN_RAWC_EVENT_STATE_TYPE_LESS_OR_EQUAL,
-	CDN_RAWC_EVENT_STATE_TYPE_GREATER,
-	CDN_RAWC_EVENT_STATE_TYPE_GREATER_OR_EQUAL,
-	CDN_RAWC_EVENT_STATE_TYPE_EQUAL,
-	CDN_RAWC_EVENT_STATE_TYPE_AND,
-	CDN_RAWC_EVENT_STATE_TYPE_OR,
-} CdnRawcEventStateType;
-
 typedef struct
 {
-	ValueType previous_value;
-	ValueType current_value;
+	ValueType previous;
+	ValueType current;
 	ValueType distance;
 } CdnRawcEventValue;
 
 typedef struct
 {
-	CdnRawcEventStateType type;
-	ValueType approximation;
-
-	uint32_t left;
-	uint32_t right;
-} CdnRawcEvent;
+	ValueType *data;
+} CdnRawcData;
 
 typedef struct
 {
-	void (*prepare) (ValueType *data, ValueType t);
-	void (*init) (ValueType *data, ValueType t);
-	void (*reset) (ValueType *data, ValueType t);
-	void (*pre)  (ValueType *data, ValueType t, ValueType dt);
-	void (*prediff) (ValueType *data);
-	void (*diff) (ValueType *data, ValueType t, ValueType dt);
-	void (*post) (ValueType *data, ValueType t, ValueType dt);
+	void     (*prepare)           (void        *data,
+	                               ValueType    t);
 
-	void (*events_update) (ValueType *data);
+	void     (*init)              (void        *data,
+	                               ValueType    t);
 
-	uint8_t (*event_active) (ValueType *data,
-	                         uint32_t   i);
+	void     (*reset)             (void        *data,
+	                               ValueType    t);
 
-	void (*event_fire) (ValueType *data,
-	                    uint32_t   i);
+	void     (*pre)               (void        *data,
+	                               ValueType    t,
+	                               ValueType    dt);
 
-	CdnRawcEventValue * (*event_get_value) (ValueType *data,
-	                                        uint32_t   i);
+	void     (*prediff)           (void        *data);
+
+	void     (*diff)              (void        *data,
+	                               ValueType    t,
+	                               ValueType    dt);
+
+	void     (*post)              (void        *data,
+	                               ValueType    t,
+	                               ValueType    dt);
+
+	void    (*events_update)      (void        *data);
+	void    (*events_post_update) (void        *data);
+
+	void    (*events_fire)        (void        *data);
+
+	ValueType *(*get_data)        (void        *data);
+	ValueType *(*get_states)      (void        *data);
+	ValueType *(*get_derivatives) (void        *data);
+	void      *(*get_nth)         (void        *data,
+	                               uint32_t     nth);
+
+	uint32_t (*get_events_active_size) (void     *data);
+	uint32_t (*get_events_active)      (void     *data,
+	                                    uint32_t  i);
+
+	CdnRawcEventValue *(*get_events_value) (void     *data,
+	                                        uint32_t  i);
 
 	CdnRawcRange states;
 	CdnRawcRange derivatives;
 	CdnRawcRange event_values;
 
+	uint32_t size;
 	uint32_t data_size;
+
+	uint8_t event_refinement;
 	uint8_t type_size;
 
-	uint32_t events_size;
-	uint32_t events_size_all;
-
-	CdnRawcEvent const *events;
+	ValueType minimum_timestep;
 
 	CdnRawcNetworkMeta meta;
 } CdnRawcNetwork;
@@ -141,20 +150,22 @@ struct _CdnRawcIntegrator
 {
 	void (*step) (CdnRawcIntegrator *integrator,
 	              CdnRawcNetwork    *network,
-	              ValueType         *data,
+	              void              *data,
 	              ValueType          t,
 	              ValueType          dt);
 
 	void (*diff) (CdnRawcIntegrator *integrator,
 	              CdnRawcNetwork    *network,
-	              ValueType         *data,
+	              void              *data,
 	              ValueType          t,
 	              ValueType          dt);
 
-	uint32_t data_size;
+	uint32_t order;
 };
 
-CDN_RAWC_END_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CDN_RAWC_TYPES_H__ */
 
