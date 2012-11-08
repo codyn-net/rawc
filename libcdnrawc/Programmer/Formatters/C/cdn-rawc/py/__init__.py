@@ -20,25 +20,51 @@ class CdnRawcNetworkMeta(ctypes.Structure):
                 ('name', ctypes.c_char_p)]
 
 # Callback signatures
-NetworkFuncT = ctypes.CFUNCTYPE(None, valuetypeptr, valuetype)
-NetworkFuncTDT = ctypes.CFUNCTYPE(None, valuetypeptr, valuetype, valuetype)
+NetworkFuncT = ctypes.CFUNCTYPE(None, ctypes.c_void_p, valuetype)
+NetworkFuncTDT = ctypes.CFUNCTYPE(None, ctypes.c_void_p, valuetype, valuetype)
+NetworkFuncData = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+NetworkFuncValueGetter = ctypes.CFUNCTYPE(valuetypeptr, ctypes.c_void_p)
 
-IntegratorFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(CdnRawcIntegrator), ctypes.POINTER(CdnRawcNetwork), valuetypeptr, valuetype, valuetype)
+IntegratorFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(CdnRawcIntegrator), ctypes.POINTER(CdnRawcNetwork), ctypes.c_void_p, valuetype, valuetype)
 
 CdnRawcNetwork._fields_ = [('prepare', NetworkFuncT),
                            ('init', NetworkFuncT),
                            ('reset', NetworkFuncT),
                            ('pre', NetworkFuncTDT),
+                           ('prediff', NetworkFuncData),
                            ('diff', NetworkFuncTDT),
                            ('post', NetworkFuncTDT),
+
+                           ('events_update', NetworkFuncData),
+                           ('events_post_update', NetworkFuncData),
+                           ('events_fire', NetworkFuncData),
+
+                           ('get_data', NetworkFuncValueGetter),
+                           ('get_states', NetworkFuncValueGetter),
+                           ('get_derivatives', NetworkFuncValueGetter),
+                           ('get_nth', ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32)),
+
+                           ('get_events_active_size', ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p)),
+                           ('get_events_active', ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p, ctypes.c_uint32)),
+                           ('get_events_value', ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32)),
+
                            ('states', CdnRawcRange),
                            ('derivatives', CdnRawcRange),
+                           ('event_values', CdnRawcRange),
+
                            ('data_size', ctypes.c_uint32),
+                           ('size', ctypes.c_uint32),
+
+                           ('event_refinement', ctypes.c_uint8),
+                           ('type_size', ctypes.c_uint8),
+
+                           ('minimum_timestep', valuetype),
+
                            ('meta', CdnRawcNetworkMeta)]
 
 CdnRawcIntegrator._fields_ = [('step', IntegratorFunc),
                               ('diff', IntegratorFunc),
-                              ('data_size', ctypes.c_uint32)]
+                              ('order', ctypes.c_uint32)]
 
 class API:
     def __init__(self, lib, name):
@@ -61,43 +87,65 @@ class API:
         self.cdn_rawc_integrator_step = lib.cdn_rawc_integrator_step
         self.cdn_rawc_integrator_step.argtypes = [ctypes.POINTER(CdnRawcIntegrator),
                                                   ctypes.POINTER(CdnRawcNetwork),
-                                                  valuetypeptr,
+                                                  ctypes.c_void_p,
                                                   valuetype,
                                                   valuetype]
 
         # Raw CdnRawcNetwork API
         self.cdn_rawc_network_init = lib.cdn_rawc_network_init
         self.cdn_rawc_network_init.argtypes = [ctypes.POINTER(CdnRawcNetwork),
-                                               valuetypeptr,
+                                               ctypes.c_void_p,
                                                valuetype]
 
         self.cdn_rawc_network_prepare = lib.cdn_rawc_network_prepare
         self.cdn_rawc_network_prepare.argtypes = [ctypes.POINTER(CdnRawcNetwork),
-                                                  valuetypeptr,
+                                                  ctypes.c_void_p,
                                                   valuetype]
 
         self.cdn_rawc_network_reset = lib.cdn_rawc_network_reset
         self.cdn_rawc_network_reset.argtypes = [ctypes.POINTER(CdnRawcNetwork),
-                                                valuetypeptr,
+                                                ctypes.c_void_p,
                                                 valuetype]
 
         self.cdn_rawc_network_pre = lib.cdn_rawc_network_pre
         self.cdn_rawc_network_pre.argtypes = [ctypes.POINTER(CdnRawcNetwork),
-                                              valuetypeptr,
+                                              ctypes.c_void_p,
                                               valuetype,
                                               valuetype]
 
         self.cdn_rawc_network_post = lib.cdn_rawc_network_post
         self.cdn_rawc_network_post.argtypes = [ctypes.POINTER(CdnRawcNetwork),
-                                               valuetypeptr,
+                                               ctypes.c_void_p,
                                                valuetype,
                                                valuetype]
 
         self.cdn_rawc_network_diff = lib.cdn_rawc_network_diff
         self.cdn_rawc_network_diff.argtypes = [ctypes.POINTER(CdnRawcNetwork),
-                                               valuetypeptr,
+                                               ctypes.c_void_p,
                                                valuetype,
                                                valuetype]
+
+        self.cdn_rawc_network_get_data = lib.cdn_rawc_network_get_data
+        self.cdn_rawc_network_get_data.restype = valuetypeptr
+        self.cdn_rawc_network_get_data.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                   ctypes.c_void_p]
+
+        self.cdn_rawc_network_get_states = lib.cdn_rawc_network_get_states
+        self.cdn_rawc_network_get_states.restype = valuetypeptr
+        self.cdn_rawc_network_get_states.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                     ctypes.c_void_p]
+
+        self.cdn_rawc_network_get_derivatives = lib.cdn_rawc_network_get_derivatives
+        self.cdn_rawc_network_get_derivatives.restype = valuetypeptr
+        self.cdn_rawc_network_get_derivatives.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                          ctypes.c_void_p]
+
+        self.cdn_rawc_network_alloc = lib.cdn_rawc_network_alloc
+        self.cdn_rawc_network_alloc.restype = ctypes.c_void_p
+        self.cdn_rawc_network_alloc.argtypes = [ctypes.POINTER(CdnRawcNetwork), ctypes.c_uint32]
+
+        self.cdn_rawc_network_free = lib.cdn_rawc_network_free
+        self.cdn_rawc_network_alloc.argtypes = [ctypes.c_void_p]
 
         # Network specific API
         # Get the network spec for this network
@@ -134,11 +182,14 @@ def load(name, libname=None):
 
 # Pythonic bindings
 class Network:
-    def __init__(self, api):
-        self.api = api
+    def __init__(self, api, libname=None):
+        if isinstance(api, API):
+            self.api = api
+        else:
+            self.api = load(api, libname)
 
-        self.network = api.cdn_rawc_network()
-        self.set_integrator(Integrator(api.cdn_rawc_integrator()))
+        self.network = self.api.cdn_rawc_network()
+        self.set_integrator(Integrator(self.api.cdn_rawc_integrator()))
 
     class DataIter:
         def __init__(self, network, slic=None):
@@ -208,8 +259,16 @@ class Network:
                                        self.network.contents.derivatives.end))
 
     @property
+    def data(self):
+        return self.api.cdn_rawc_network_get_data(self.network, self.storage)
+
+    @property
     def data_size(self):
         return self.network.contents.data_size
+
+    @property
+    def size(self):
+        return self.network.contents.size
 
     @property
     def name(self):
@@ -227,38 +286,37 @@ class Network:
         self.integrator = integrator
 
         # Create enough data
-        self.data = (valuetype * (self.data_size * self.integrator.data_size))()
-        self.dataptr = ctypes.cast(self.data, valuetypeptr)
+        self.storage = self.api.cdn_rawc_network_alloc(self.network, self.integrator.order)
 
     def init(self, t):
-        self.api.cdn_rawc_network_init(self.network, self.dataptr, t)
+        self.api.cdn_rawc_network_init(self.network, self.storage, t)
 
     def prepare(self, t):
-        self.api.cdn_rawc_network_prepare(self.network, self.dataptr, t)
+        self.api.cdn_rawc_network_prepare(self.network, self.storage, t)
 
     def reset(self, t):
-        self.api.cdn_rawc_network_reset(self.network, self.dataptr, t)
+        self.api.cdn_rawc_network_reset(self.network, self.storage, t)
 
     def pre(self, t, dt):
-        self.api.cdn_rawc_network_pre(self.network, self.dataptr, t, dt)
+        self.api.cdn_rawc_network_pre(self.network, self.storage, t, dt)
 
     def post(self, t, dt):
-        self.api.cdn_rawc_network_post(self.network, self.dataptr, t, dt)
+        self.api.cdn_rawc_network_post(self.network, self.storage, t, dt)
 
     def diff(self, t, dt):
-        self.api.cdn_rawc_network_diff(self.network, self.dataptr, t, dt)
+        self.api.cdn_rawc_network_diff(self.network, self.storage, t, dt)
 
     def step(self, dt):
         self.api.cdn_rawc_integrator_step(self.integrator.integrator,
                                           self.network,
-                                          self.dataptr,
+                                          self.storage,
                                           self.t,
                                           dt)
 
     def step_diff(self, dt):
         self.api.cdn_rawc_integrator_step_diff(self.integrator.integrator,
                                                self.network,
-                                               self.dataptr,
+                                               self.storage,
                                                self.t,
                                                dt)
 
@@ -267,8 +325,8 @@ class Integrator:
         self.integrator = integrator
 
     @property
-    def data_size(self):
-        return self.integrator.contents.data_size
+    def order(self):
+        return self.integrator.contents.order
 
 __all__ = ['Network', 'Integrator', 'Euler', 'RungeKutta']
 
