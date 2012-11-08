@@ -52,5 +52,10 @@ void *cdn_rawc_network_get_nth              (CdnRawcNetwork *network,
                                              void           *data,
                                              uint32_t        nth);
 
+#ifndef ENABLE_MALLOC
+void *cdn_rawc_network_alloc                (CdnRawcNetwork *network, uint32_t order);
+void  cdn_rawc_network_free                 (void *ptr);
+#endif
+
 #endif /* __CDN_RAWC_NETWORK_H__ */
 

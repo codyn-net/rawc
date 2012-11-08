@@ -102,3 +102,18 @@ cdn_rawc_network_get_nth (CdnRawcNetwork *network,
 {
 	return network->get_nth (data, nth);
 }
+
+#ifdef ENABLE_MALLOC
+void *
+cdn_rawc_network_alloc (CdnRawcNetwork *network,
+                        uint32_t        order)
+{
+	return malloc (network->size * (network->event_refinement + order));
+}
+
+void
+cdn_rawc_network_free (void *ptr)
+{
+	free (ptr);
+}
+#endif

@@ -22,7 +22,8 @@ INTEGRATOR_HEADER_FILES = \
 	integrators/cdn-rawc-integrator-runge-kutta.h
 
 libcdnrawc_1_0_la_CFLAGS = \
-	-I $(srcdir)/../
+	-I $(srcdir)/../ \
+	-DENABLE_MALLOC
 
 libcdnrawc_1_0_la_SOURCES = \
 	$(SOURCE_FILES) \

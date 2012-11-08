@@ -16,7 +16,7 @@ WARNINGS = 				\
 	unused-function		\
 	unused-variable
 
-${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags}
+${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags} -DENABLE_MALLOC
 ${NAME}_LDFLAGS = -lm ${libs}
 
 # Enable debug symbols if defined
