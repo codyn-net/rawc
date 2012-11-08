@@ -1637,6 +1637,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						writer.WriteLine("\t{");
 						writer.WriteLine("\t\t{0} = {1};", dist, rdist);
 						writer.WriteLine("\t}");
+						writer.WriteLine("\telse");
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = -1;", dist);
+						writer.WriteLine("\t}");
 						writer.WriteLine();
 					}
 					else
