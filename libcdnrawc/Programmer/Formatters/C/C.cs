@@ -1917,6 +1917,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 
 				writer.WriteLine("\t\tcase {0}:", i - 1);
+				writer.WriteLine("\t\t\tif ({0}_event_active (data, {1}))", CPrefixDown, i - 1);
+				writer.WriteLine("\t\t\t{");
 
 				if (!String.IsNullOrEmpty(state))
 				{
@@ -1925,15 +1927,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					var idx = cont.Index;
 					var st = Knowledge.Instance.GetEventState(parent, state);
 
-					writer.WriteLine("\t\t\tnetwork->evstates[{0}] = {1};",
+					writer.WriteLine("\t\t\t\tnetwork->evstates[{0}] = {1};",
 					                 idx,
 					                 st.Index);
 				}
 
 				if (prg != null)
 				{
-					WriteComputationNode(writer, prg, "\t\t\t");
+					WriteComputationNode(writer, prg, "\t\t\t\t");
 				}
+
+				writer.WriteLine("\t\t\t}");
 
 				writer.WriteLine("\t\t\tbreak;");
 			}
