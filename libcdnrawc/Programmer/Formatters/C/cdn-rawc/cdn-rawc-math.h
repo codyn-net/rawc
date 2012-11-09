@@ -398,6 +398,8 @@ cdn_math_max_builtin (ValueType x0, ValueType x1)
 #define CDN_MATH_RAND_USE_BUILTIN
 #define CDN_MATH_RAND cdn_math_rand_builtin
 
+static ValueType cdn_math_rand_builtin (void) GNUC_INLINE;
+
 static ValueType
 cdn_math_rand_builtin ()
 {
