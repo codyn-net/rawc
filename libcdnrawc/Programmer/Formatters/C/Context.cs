@@ -180,11 +180,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
 			
-			if (Cdn.Math.FunctionIsVariable(type))
-			{
-				val = String.Format("{0}{1}", val, arguments);
-			}
-			
 			return val;
 		}
 		

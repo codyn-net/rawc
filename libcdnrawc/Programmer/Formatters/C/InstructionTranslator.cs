@@ -247,6 +247,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				args[i] = Translate(context, i);
 			}
+						
+			if (Math.FunctionIsVariable((Cdn.MathFunctionType)instruction.Id))
+			{
+				string ret = "";
+
+				// This does not work in the general case, but anyway
+				for (int i = args.Length - 2; i >= 0; --i)
+				{
+					if (i != args.Length - 2)
+					{
+						ret = String.Format("{0} ({1}, {2})", name, args[i], ret);
+					}
+					else
+					{
+						ret = String.Format("{0} ({1}, {2})", name, args[i], args[i + 1]);
+					}
+				}
+				
+				return ret;
+			}
 			
 			return String.Format("{0} ({1})", name, String.Join(", ", args));
 		}
