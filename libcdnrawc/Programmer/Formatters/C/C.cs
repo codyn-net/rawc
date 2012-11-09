@@ -709,6 +709,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					}
 				}
 			}
+			
+			foreach (var instr in d_program.CollectInstructions<Cdn.InstructionRand>())
+			{
+				string def = "CDN_MATH_RAND";
+				
+				if (generated.Add(def))
+				{
+					writer.WriteLine("#define {0}_REQUIRED", def);
+				}
+
+				break;
+			}
 
 			bool hasabs = generated.Contains("CDN_MATH_ABS");
 			bool hasmax = generated.Contains("CDN_MATH_MAX");
