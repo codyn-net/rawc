@@ -54,6 +54,9 @@ pkgconfig_DATA = \
 cdn-rawc-1.0.pc: cdn-rawc.pc
 	cp cdn-rawc.pc cdn-rawc-1.0.pc
 
+cdn-rawc-math.h: cdn-rawc-math.h.py
+	$(PYTHON) $^ > $@
+
 if ENABLE_PYTHON
 pkgpython_PYTHON = py/__init__.py
 endif
@@ -66,4 +69,5 @@ EXTRA_DIST =				\
 	$(pkgconfig_DATA)		\
 	$(matlabscripts_DATA)		\
 	$(srcdata_DATA)			\
-	$(srcintegratorsdata_DATA)
+	$(srcintegratorsdata_DATA)	\
+	cdn-rawc-math.h.py
