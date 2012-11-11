@@ -396,4 +396,6 @@ print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 print_index_v()
 print_transpose_v()
 
+print("#endif /* CDN_RAWC_MATH_PROTOS */")
+
 # vi:ts=4:et
