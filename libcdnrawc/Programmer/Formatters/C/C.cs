@@ -1007,11 +1007,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("{");
 
-			if (api.Body.Count != 0)
-			{
-				WriteNetworkVariable(writer);
-				WriteComputationNodes(writer, api.Body);
-			}
+			WriteNetworkVariable(writer);
+			WriteComputationNodes(writer, api.Body);
 
 			writer.WriteLine("}");
 			writer.WriteLine();
