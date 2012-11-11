@@ -1201,11 +1201,17 @@ namespace Cdn.RawC
 					
 					if (State(v) == null)
 					{
+						var sub = Inline(instmap, v.Expression);
+						
 						// Expand the instruction
-						foreach (var i in Inline(instmap, v.Expression).Instructions)
+						foreach (var i in sub.Instructions)
 						{
 							instructions.Add(i);
 						}
+					}
+					else
+					{
+						instructions.Add((Cdn.Instruction)inst.Copy());
 					}
 				}
 				else
