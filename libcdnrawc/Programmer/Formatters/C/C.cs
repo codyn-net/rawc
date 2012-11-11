@@ -837,11 +837,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine(";");
 			}
 
-			if (Knowledge.Instance.EventsCount != 0)
-			{
-				writer.WriteLine("static void {0}_events_update_distance (void *data);", CPrefixDown);
-			}
-
+			writer.WriteLine("static void {0}_events_update_distance (void *data);", CPrefixDown);
 			writer.WriteLine("static void {0}_events_post_update (void *data);", CPrefixDown);
 			writer.WriteLine("static uint32_t {0}_get_events_active_size (void *data);", CPrefixDown);
 			writer.WriteLine("static uint32_t {0}_get_events_active (void *data, uint32_t i);", CPrefixDown);
@@ -1606,11 +1602,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private void WriteEventsUpdateDistance(TextWriter writer)
 		{
-			if (Knowledge.Instance.EventsCount == 0)
-			{
-				return;
-			}
-
 			writer.WriteLine("static void");
 			writer.WriteLine("{0}_events_update_distance (void *data)",
 			                 CPrefixDown);
