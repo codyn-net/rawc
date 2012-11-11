@@ -168,7 +168,7 @@ namespace Cdn.RawC.Programmer
 			{
 				get
 				{
-					return d_alias != null ? d_alias : d_index.ToString();
+					return d_alias != null ? d_alias : d_dataindex.ToString();
 				}
 			}
 		}
