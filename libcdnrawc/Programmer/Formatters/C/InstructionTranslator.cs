@@ -386,7 +386,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				// Translate such that we compute the result of the child
 				// at the tmp + argi location
-				args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
+				if (argi == 0)
+				{
+					args[i] = TranslateAssign(context, child, String.Format("{0}", tmp));
+				}
+				else
+				{
+					args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
+				}	
 
 				argi += child.Dimension.Size();
 			}
@@ -467,8 +474,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				                     item.AliasOrIndex,
 				                     prop.Dimension.Size());
 			}
+			else if (item.DataIndex == 0)
+			{
+				return String.Format("{0}", context.Program.StateTable.Name);
+			}
 			else
 			{
+			
 				return String.Format("({0} + {1})", context.Program.StateTable.Name, item.AliasOrIndex);
 			}
 		}
