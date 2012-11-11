@@ -893,6 +893,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				writer.WriteLine("{0}}}", indent);
 			}
+			else
+			{
+				writer.WriteLine(ret);
+			}
 		}
 		
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
