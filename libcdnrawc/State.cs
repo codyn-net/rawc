@@ -194,6 +194,29 @@ namespace Cdn.RawC
 			get { return d_actions; }
 		}
 		
+		public virtual Cdn.Dimension Dimension
+		{
+			get
+			{
+				var v = Object as Cdn.Variable;
+				
+				if (v != null)
+				{
+					return v.Dimension;
+				}
+				
+				var i = Object as Cdn.Instruction;
+				
+				if (i != null)
+				{
+					var smanip = i.GetStackManipulation();
+					return smanip.Push.Dimension;
+				}
+				
+				return new Cdn.Dimension { Rows = 1, Columns = 1 };
+			}
+		}
+		
 		public Instruction[] Instructions
 		{
 			get

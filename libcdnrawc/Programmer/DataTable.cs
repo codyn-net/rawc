@@ -15,6 +15,7 @@ namespace Cdn.RawC.Programmer
 		private bool d_integertype;
 		private ulong d_maxSize;
 		private bool d_locked;
+		private int d_size;
 
 		public interface IKey
 		{
@@ -46,24 +47,44 @@ namespace Cdn.RawC.Programmer
 
 			private DataTable d_table;
 			private int d_index;
+			private int d_dataindex;
 			private object d_key;
 			private object d_object;
 			private string d_alias;
 			private Flags d_type;
+			private Cdn.Dimension d_dimension;
 			
-			public DataItem(DataTable table, object key, object obj, int index) : this(table, key, obj, index, Flags.None)
+			public DataItem(DataTable table, object key, object obj, int index, int dataindex) : this(table, key, obj, index, dataindex, Flags.None)
 			{
 			}
 
-			public DataItem(DataTable table, object key, object obj, int index, Flags type)
+			public DataItem(DataTable table, object key, object obj, int index, int dataindex, Flags type)
 			{
 				d_table = table;
 				d_index = index;
+				d_dataindex = dataindex;
 				d_key = key;
 				d_object = obj;
 				d_type = type;
+				
+				var st = obj as State;
+				
+				if (st != null)
+				{
+					d_dimension = st.Dimension;
+				}
+				else
+				{
+					d_dimension = new Cdn.Dimension { Rows = 1, Columns = 1 };
+				}
 			}
 			
+			public int DataIndex
+			{
+				get { return d_dataindex; }
+				set { d_dataindex = value; }
+			}
+
 			public bool HasType(Flags type)
 			{
 				return (d_type & type) != 0;
@@ -121,6 +142,12 @@ namespace Cdn.RawC.Programmer
 				set { d_index = value; }
 			}
 			
+			public Cdn.Dimension Dimension
+			{
+				get { return d_dimension; }
+				set { d_dimension = value; }
+			}
+			
 			public object Key
 			{
 				get { return d_key; }
@@ -169,18 +196,12 @@ namespace Cdn.RawC.Programmer
 		
 		public bool Locked
 		{
-			get
-			{
-				return d_locked;
-			}
+			get { return d_locked; }
 		}
 		
 		public ulong MaxSize
 		{
-			get
-			{
-				return d_maxSize;
-			}
+			get { return d_maxSize;	}
 			set
 			{
 				if (value > d_maxSize)
@@ -192,46 +213,25 @@ namespace Cdn.RawC.Programmer
 		
 		public bool IsConstant
 		{
-			get
-			{
-				return d_isconstant;
-			}
-			set
-			{
-				d_isconstant = value;
-			}
+			get { return d_isconstant; }
+			set { d_isconstant = value; }
 		}
 		
 		public bool IntegerType
 		{
-			get
-			{
-				return d_integertype;
-			}
-			set
-			{
-				d_integertype = value;
-			}
+			get { return d_integertype; }
+			set { d_integertype = value; }
 		}
 		
 		public int Columns
 		{
-			get
-			{
-				return d_columns;
-			}
-			set
-			{
-				d_columns = value;
-			}
+			get { return d_columns; }
+			set { d_columns = value; }
 		}
 		
 		public bool NeedsInitialization
 		{
-			get
-			{
-				return d_needsInitialization;
-			}
+			get { return d_needsInitialization; }
 		}
 		
 		IEnumerator IEnumerable.GetEnumerator()
@@ -282,12 +282,14 @@ namespace Cdn.RawC.Programmer
 		
 		public int Count
 		{
-			get
-			{
-				return d_list.Count;
-			}
+			get { return d_list.Count; }
 		}
-		
+
+		public int Size
+		{
+			get { return d_size; }
+		}
+
 		public DataItem Add(object key)
 		{
 			object b = BaseKey(key);
@@ -297,10 +299,12 @@ namespace Cdn.RawC.Programmer
 				return d_items[b];
 			}
 			
-			DataItem ret = new DataItem(this, b, key, d_list.Count);
+			DataItem ret = new DataItem(this, b, key, d_list.Count, d_size);
 			
 			d_items.Add(b, ret);
 			d_list.Add(ret);
+			
+			d_size += ret.Dimension.Size();
 
 			return ret;
 		}
@@ -349,9 +353,16 @@ namespace Cdn.RawC.Programmer
 				d_columns -= num / (cur / d_columns);
 			}
 			
+			int size = 0;
+			
 			for (int i = 0; i < d_list.Count; ++i)
 			{
-				d_list[i].Index = i;
+				var item = d_list[i];
+				
+				item.Index = i;
+				item.DataIndex = size;
+				
+				size += item.Dimension.Size();
 			}
 		}
 		

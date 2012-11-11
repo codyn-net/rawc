@@ -361,7 +361,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						ret.AppendFormat("{0}[{1}][{2}] = {3} + {4}[{5}];",
 						                 table.Name, r, c,
 						                 sidx.Value,
-						                 context.Program.DelayedCounters.Name, idx.Index);
+						                 context.Program.DelayedCounters.Name, idx.DataIndex);
 					}
 				}
 				
@@ -389,13 +389,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					node.Item.AliasOrIndex,
 					table.Name,
 					context.Program.DelayedCounters.Name,
-					counter.Index);
+					counter.DataIndex);
 
 				ret.AppendLine();
 				ret.AppendFormat("{0}[{1}[{2}]] = {3};",
 					table.Name,
 					context.Program.DelayedCounters.Name,
-					counter.Index,
+					counter.DataIndex,
 					eq);
 
 				return ret.ToString();

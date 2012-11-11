@@ -487,11 +487,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 				
 				names.Add(enumname);
-				values.Add(item.Index.ToString());
+				values.Add(item.DataIndex.ToString());
 				comments.Add(comment);
 				
 				maxname = System.Math.Max(maxname, enumname.Length);
-				maxval = System.Math.Max(maxval, item.Index.ToString().Length);
+				maxval = System.Math.Max(maxval, item.DataIndex.ToString().Length);
 
 				if (d_options.SymbolicNames)
 				{
@@ -1276,7 +1276,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ChildMeta cm = new ChildMeta {
 					Parent = parent,
 					IsNode = false,
-					Index = (uint)item.Index,
+					Index = (uint)item.DataIndex,
 					Next = 0
 				};
 
@@ -1778,7 +1778,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine("\tint i;");
 				writer.WriteLine();
 
-				writer.WriteLine("\tfor (i = {0}; i < {1}; i += 3)", idx, st.Index + Knowledge.Instance.EventNodeStatesCount);
+				writer.WriteLine("\tfor (i = {0}; i < {1}; i += 3)", idx, st.DataIndex + Knowledge.Instance.EventNodeStatesCount);
 				writer.WriteLine("\t{");
 				writer.WriteLine("\t\t{0}[i] = {0}[i + 1];",
 				                 d_program.StateTable.Name);

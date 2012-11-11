@@ -107,8 +107,8 @@ namespace Cdn.RawC.Programmer.Computation
 			d_items.Add(new Item(target, equation));
 			
 			// Add row to index table
-			d_indextable.Add(new Index((ulong)target.Index, target));
-			d_indextable.MaxSize = (ulong)target.Index;
+			d_indextable.Add(new Index((ulong)target.DataIndex, target));
+			d_indextable.MaxSize = (ulong)target.DataIndex;
 			
 			foreach (Tree.Embedding.Argument arg in d_function.OrderedArguments)
 			{
@@ -116,8 +116,8 @@ namespace Cdn.RawC.Programmer.Computation
 				
 				DataTable.DataItem it = d_program.StateTable[subnode];
 				
-				d_indextable.Add(new Index((ulong)it.Index, it)).Type = (it.Type | DataTable.DataItem.Flags.Index);
-				d_indextable.MaxSize = (ulong)it.Index;
+				d_indextable.Add(new Index((ulong)it.DataIndex, it)).Type = (it.Type | DataTable.DataItem.Flags.Index);
+				d_indextable.MaxSize = (ulong)it.DataIndex;
 			}
 		}
 		

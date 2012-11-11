@@ -31,7 +31,7 @@ namespace Cdn.RawC.Programmer.Computation
 				yield break;
 			}
 
-			int[] indices = Array.ConvertAll<State, int>(d_states.ToArray(), (a) => table[a].Index);
+			int[] indices = Array.ConvertAll<State, int>(d_states.ToArray(), (a) => table[a].DataIndex);
 
 			Array.Sort(indices);
 

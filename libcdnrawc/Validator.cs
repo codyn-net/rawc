@@ -143,7 +143,7 @@ namespace Cdn.RawC
 
 			dynnet.Reset(t);
 
-			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].Index);
+			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].DataIndex);
 
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
 
@@ -152,7 +152,7 @@ namespace Cdn.RawC
 				ReadAndCompare(dynnet, indices, i, t);
 
 				dynnet.Step(t, ts);
-				t += dynnet.Value((uint)dtstate.Index);
+				t += dynnet.Value((uint)dtstate.DataIndex);
 			}
 
 			Log.WriteLine("Network {0} successfully validated...", d_network.Filename);

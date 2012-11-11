@@ -114,13 +114,16 @@ namespace Cdn.RawC.Programmer
 			}
 			else
 			{
-				var start = d_statetable[enu.Current].Index;
-				var end = start + 1;
+				var cur = enu.Current;
+				var start = d_statetable[cur].DataIndex;
 
 				while (enu.MoveNext())
 				{
-					++end;
+					cur = enu.Current;
 				}
+				
+				var item = d_statetable[cur];
+				var end = item.DataIndex + item.Dimension.Size();
 
 				return new int[] {start, end};
 			}
