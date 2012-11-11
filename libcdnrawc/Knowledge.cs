@@ -28,6 +28,7 @@ namespace Cdn.RawC
 		private List<State> d_eventEquationStates;
 		private List<EventNodeState> d_eventNodeStates;
 		private Dictionary<Cdn.Event, List<EventSetState>> d_eventSetStates;
+		private List<Cdn.Variable> d_direct;
 		
 		public class EventState
 		{
@@ -105,6 +106,7 @@ namespace Cdn.RawC
 			d_eventEquationStates = new List<State>();
 			d_eventNodeStates = new List<EventNodeState>();
 			d_eventSetStates = new Dictionary<Event, List<EventSetState>>();
+			d_direct = new List<Variable>();
 
 			d_instructionMapping = new Dictionary<Instruction, Instruction>();
 
@@ -131,7 +133,14 @@ namespace Cdn.RawC
 
 		private State ExpandedState(Variable prop, StateCreator creator)
 		{
-			return creator(prop, prop.Actions);
+			if (prop.Integrated)
+			{
+				return creator(prop, prop.Actions);
+			}
+			else
+			{
+				return creator(prop, new Cdn.EdgeAction[] {});
+			}
 		}
 
 		public void UpdateInstructionMap(Dictionary<Instruction, Instruction> mapping)
@@ -352,7 +361,7 @@ namespace Cdn.RawC
 			}
 
 			// Add in variables
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.In))
+			foreach (var v in FlaggedVariables(VariableFlags.In))
 			{
 				if ((v.Flags & VariableFlags.FunctionArgument) == 0)
 				{
@@ -374,7 +383,7 @@ namespace Cdn.RawC
 			HashSet<object> auxset = new HashSet<object>();
 
 			// Add out variables
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
+			foreach (var v in FlaggedVariables(VariableFlags.Out))
 			{
 				if (!unique.Contains(v))
 				{
@@ -386,7 +395,17 @@ namespace Cdn.RawC
 			}
 
 			// Add once variables
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Once))
+			foreach (var v in FlaggedVariables(VariableFlags.Once))
+			{
+				if (!unique.Contains(v))
+				{
+					var s = ExpandedState(v);
+					AddState(unique, s);
+				}
+			}
+			
+			// Add direct variables
+			foreach (var v in d_direct)
 			{
 				if (!unique.Contains(v))
 				{
@@ -579,6 +598,7 @@ namespace Cdn.RawC
 			Scan(d_network.Integrator);
 			Scan(d_network);
 
+			PromoteDirectEdges();
 			PromoteConstraints();
 
 			ExtractStates();
@@ -587,6 +607,35 @@ namespace Cdn.RawC
 
 			ExtractInitialize();
 			ExtractRand();
+		}
+		
+		private void PromoteDirectEdges()
+		{
+			foreach (var variable in d_variables)
+			{
+				if (variable.Integrated)
+				{
+					continue;
+				}
+				
+				var actions = variable.Actions;
+				
+				if (actions.Length == 0)
+				{
+					continue;
+				}
+				
+				d_direct.Add(variable);
+				
+				List<Cdn.Expression> expressions = new List<Expression>();
+				
+				foreach (var action in actions)
+				{
+					expressions.Add(action.Equation);
+				}
+				
+				variable.Expression = Cdn.Expression.Sum(expressions.ToArray());
+			}
 		}
 
 		private Cdn.Variable PromoteConstraint(Cdn.Variable variable)
@@ -605,7 +654,7 @@ namespace Cdn.RawC
 			variable.Object.AddVariable(nv);
 
 			var instrs = variable.Constraint.Instructions;
-
+			
 			for (int i = 0; i < instrs.Length; ++i)
 			{
 				Cdn.InstructionVariable vinstr;
