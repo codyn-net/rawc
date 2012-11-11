@@ -1161,6 +1161,71 @@ namespace Cdn.RawC
 		{
 			get { return d_events.Count; }
 		}
+		
+		public Cdn.Expression ExpandExpression(params Cdn.Expression[] expressions)
+		{
+			return ExpandExpression(null, expressions);
+		}
+		
+		public Cdn.Expression ExpandExpression(Dictionary<Instruction, Instruction> instmap, params Cdn.Expression[] expressions)
+		{
+			if (expressions.Length == 0)
+			{
+				var ret = new Cdn.Expression("0");
+				ret.Compile(null, null);
+				return ret;
+			}
+			
+			List<Cdn.Expression> inlined = new List<Expression>();
+
+			for (int i = 0; i < expressions.Length; ++i)
+			{
+				inlined.Add(Inline(instmap, expressions[i]));
+			}
+			
+			return Cdn.Expression.Sum(inlined.ToArray());			
+		}
+		
+		private Cdn.Expression Inline(Dictionary<Instruction, Instruction> instmap, Cdn.Expression expr)
+		{
+			List<Cdn.Instruction> instructions = new List<Instruction>();
+
+			foreach (Instruction inst in expr.Instructions)
+			{
+				InstructionVariable variable = inst as InstructionVariable;
+				
+				if (variable != null)
+				{
+					// See if we need to expand it
+					Variable v = variable.Variable;
+					
+					if (State(v) == null)
+					{
+						// Expand the instruction
+						foreach (var i in Inline(instmap, v.Expression).Instructions)
+						{
+							instructions.Add(i);
+						}
+					}
+				}
+				else
+				{
+					var cp = inst.Copy() as Instruction;
+
+					if (instmap != null)
+					{
+						instmap.Add(inst, cp);
+					}
+
+					instructions.Add(cp);
+				}
+			}
+			
+			var e = new Cdn.Expression("");
+			e.SetInstructionsTake(instructions.ToArray());
+			
+			return e;
+		}
 	}
 }
 

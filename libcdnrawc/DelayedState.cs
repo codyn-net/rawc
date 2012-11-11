@@ -45,11 +45,22 @@ namespace Cdn.RawC
 		{
 			private OperatorDelayed d_delayed;
 			private double d_delay;
+			private int d_hash;
 			
 			public Key(OperatorDelayed delayed, double delay)
 			{
 				d_delayed = delayed;
 				d_delay = delay;
+				
+				var n = Tree.Node.Create(null, d_delayed.Expression);
+				string s = n.Serialize();
+				
+				if (d_delayed.InitialValue != null)
+				{
+					s += ", " + Tree.Node.Create(null, d_delayed.InitialValue).Serialize();
+				}
+
+				d_hash = s.GetHashCode();
 			}
 			
 			public OperatorDelayed Operator
@@ -70,17 +81,7 @@ namespace Cdn.RawC
 
 			public override int GetHashCode()
 			{
-				Tree.Expression val = new Tree.Expression(d_delayed.Expression, true);
-				string s = val.HashString;
-				
-				if (d_delayed.InitialValue != null)
-				{
-					val = new Cdn.RawC.Tree.Expression(d_delayed.InitialValue, true);
-	
-					s += ", " + val.HashString;
-				}
-				
-				return s.GetHashCode();
+				return d_hash;
 			}
 			
 			public override bool Equals(object obj)

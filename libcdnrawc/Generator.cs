@@ -360,7 +360,7 @@ namespace Cdn.RawC
 			{
 				if (node.ChildCount == 0)
 				{
-					uint code = Tree.Expression.InstructionCode(node.Instruction, true);
+					uint code = Tree.Node.InstructionCode(node.Instruction, true);
 					List<Tree.Node> clst;
 
 					if (!constnodes.TryGetValue(code, out clst))

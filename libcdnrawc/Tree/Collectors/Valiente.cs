@@ -58,7 +58,7 @@ namespace Cdn.RawC.Tree.Collectors
 				// Calculate the placeholder nodes
 				foreach (Node node in prototype.Descendants)
 				{
-					if (Expression.InstructionCode(node.Instruction) == Expression.PlaceholderCode)
+					if (Node.InstructionCode(node.Instruction) == Node.PlaceholderCode)
 					{
 						arguments.Add(node.Path);
 					}

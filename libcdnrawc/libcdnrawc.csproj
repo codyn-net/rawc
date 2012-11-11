@@ -43,7 +43,6 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Tree\Node.cs" />
     <Compile Include="Tree\Dot.cs" />
-    <Compile Include="Tree\Expression.cs" />
     <Compile Include="Tree\SortedList.cs" />
     <Compile Include="Tree\Collectors\ICollector.cs" />
     <Compile Include="Plugins\Plugins.cs" />

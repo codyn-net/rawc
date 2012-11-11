@@ -65,7 +65,6 @@ FILES = \
 	Tree/Collectors/ICollector.cs \
 	Tree/Collectors/Default.cs \
 	Tree/SortedList.cs \
-	Tree/Expression.cs \
 	Tree/Embedding.cs \
 	Tree/Filters/IFilter.cs \
 	Tree/Filters/Optimal.cs \

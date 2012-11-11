@@ -79,7 +79,7 @@ namespace Cdn.RawC
 
 			if (d_expressionUnexpanded != null)
 			{
-				d_expression = Tree.Expression.Expand(d_expressionUnexpanded);
+				d_expression = Knowledge.Instance.ExpandExpression(d_expressionUnexpanded);
 				return;
 			}
 			
@@ -124,7 +124,7 @@ namespace Cdn.RawC
 
 			Dictionary<Instruction, Instruction> instmap = new Dictionary<Instruction, Instruction>();
 
-			d_expression = RawC.Tree.Expression.Expand(instmap, exprs.ToArray());
+			d_expression = Knowledge.Instance.ExpandExpression(instmap, exprs.ToArray());
 			Knowledge.Instance.UpdateInstructionMap(instmap);
 		}
 

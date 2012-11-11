@@ -21,6 +21,11 @@ namespace Cdn.RawC.Tree
 		private uint d_descendants;
 		private bool d_isCommutative;
 		private ulong d_treeId;
+		
+		public static Node Create(State state, Cdn.Expression expression)
+		{
+			return Create(state, expression.Instructions);
+		}
 
 		public static Node Create(State state, Cdn.Instruction[] instructions)
 		{
@@ -102,7 +107,7 @@ namespace Cdn.RawC.Tree
 
 			if (instruction != null)
 			{
-				d_label = Expression.InstructionCode(instruction);
+				d_label = InstructionCode(instruction);
 
 				if (instruction.GetStackManipulation() != null)
 				{
@@ -651,6 +656,15 @@ namespace Cdn.RawC.Tree
 		{
 			StringBuilder ret = new StringBuilder();
 			ret.Append(Label);
+			
+			var smanip = d_instruction.GetStackManipulation();
+			var dim = smanip.Push.Dimension;
+			
+			if (!dim.IsOne)
+			{
+				ret.AppendFormat("[{0},{1}]", dim.Rows, dim.Columns);
+			}
+			
 			ret.Append("(");
 			
 			for (int i = 0; i < d_children.Count; ++i)
@@ -667,6 +681,169 @@ namespace Cdn.RawC.Tree
 			
 			return ret.ToString();
 		}
+
+		private static Dictionary<string, uint> s_hashMapping;
+		private static uint s_nextMap;
+		
+		static Node()
+		{
+			s_hashMapping = new Dictionary<string, uint>();
+			s_nextMap = (uint)MathFunctionType.Num + (uint)MathFunctionType.Num + 1;
+		}
+		
+		private static uint HashMap(string id)
+		{
+			uint ret;
+
+			if (!s_hashMapping.TryGetValue(id, out ret))
+			{
+				ret = s_nextMap++;
+				s_hashMapping[id] = ret;
+			}
+			
+			return ret;
+		}
+		
+		private static bool InstructionIs<T>(Instruction inst, out T t)
+		{
+			if (inst is T)
+			{
+				t = (T)(object)inst;
+				return true;
+			}
+			else
+			{
+				t = default(T);
+			}
+			
+			return false;
+		}
+
+		public static IEnumerable<uint> InstructionCodes(Instruction inst)
+		{
+			return InstructionCodes(inst, false);
+		}
+
+		public static uint InstructionCode(Instruction inst)
+		{
+			return InstructionCode(inst, false);
+		}
+
+		public static uint InstructionCode(Instruction inst, bool strict)
+		{
+			foreach (uint i in InstructionCodes(inst, strict))
+			{
+				return i;
+			}
+
+			return 0;
+		}
+		
+		public static IEnumerable<uint> InstructionCodes(Instruction inst, bool strict)
+		{
+			InstructionFunction ifunc;
+			InstructionCustomOperator icusop;
+			InstructionCustomFunction icusf;
+			InstructionVariable ivar;
+			InstructionNumber inum;
+			InstructionRand irand;
+
+			if (InstructionIs(inst, out icusf))
+			{
+				// Generate byte code for this function by name
+				yield return HashMap("f_" + icusf.Function.FullId);
+			}
+			else if (InstructionIs(inst, out icusop))
+			{
+				if (icusop.Operator is OperatorDelayed && !strict)
+				{
+					// These are actually part of the state table, so we use
+					// a placeholder code here
+					yield return PlaceholderCode;
+				}
+				else
+				{
+					bool ns = strict || icusop.Operator is OperatorDelayed;
+
+					yield return HashMap("co_" + icusop.Operator.Name);
+
+					Cdn.Function f = icusop.Operator.PrimaryFunction;
+
+					if (f != null && f.Expression != null)
+					{
+						foreach (Instruction i in f.Expression.Instructions)
+						{
+							foreach (uint id in InstructionCodes(i, ns))
+							{
+								yield return id;
+							}
+						}
+					}
+					else
+					{
+						foreach (Cdn.Expression[] exprs in icusop.Operator.AllExpressions())
+						{
+							foreach (Cdn.Expression e in exprs)
+							{
+								foreach (Instruction i in e.Instructions)
+								{
+									foreach (uint id in InstructionCodes(i, ns))
+									{
+										yield return id;
+									}
+								}
+							}
+						}
+
+						foreach (Cdn.Expression[] exprs in icusop.Operator.AllIndices())
+						{
+							foreach (Cdn.Expression e in exprs)
+							{
+								foreach (Instruction i in e.Instructions)
+								{
+									foreach (uint id in InstructionCodes(i, ns))
+									{
+										yield return id;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			else if (InstructionIs(inst, out ifunc))
+			{
+				// Functions just store the id
+				yield return (uint)ifunc.Id + 1;
+			}
+			else if (strict)
+			{
+				if (InstructionIs(inst, out ivar))
+				{
+					yield return HashMap(String.Format("var_{0}", ivar.Variable.FullName));
+				}
+				else if (InstructionIs(inst, out inum))
+				{
+					yield return HashMap(String.Format("num_{0}", inum.Value));
+				}
+				else if (InstructionIs(inst, out irand))
+				{
+					yield return HashMap(String.Format("rand_{0}", irand.Handle));
+				}
+				else
+				{
+					throw new NotImplementedException(String.Format("Unhandled strict instruction code: {0}", inst.GetType()));
+				}
+			}
+			else
+			{
+				// Placeholder for numbers, properties and rands
+				yield return PlaceholderCode;
+			}
+		}
+		
+		public const uint PlaceholderCode = 0;
+
 	}
 }
 
