@@ -56,13 +56,31 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                      System.Reflection.BindingFlags.Public |
 		                                      System.Reflection.BindingFlags.Instance |
 		                                      System.Reflection.BindingFlags.InvokeMethod,
-		                                      new Type[] {typeof(Instruction), typeof(Context)})
+		                                      a => a.Name == "Translate" || a.Name == "TranslateV",
+		                                      typeof(Instruction),
+		                                      typeof(Context))
 		{
 		}
 		
 		public static string QuickTranslate(Context context)
 		{
 			return (new InstructionTranslator()).Translate(context);
+		}
+		
+		private string TranslateAssign(Context context, Tree.Node node, string assignto)
+		{
+			if (node.Dimension.IsOne)
+			{
+				return String.Format("*({0}) = {1}", assignto, Translate(context, node));
+			}
+			else
+			{
+				context.PushRet(assignto);
+				var ret = Translate(context, node);
+				context.PopRet();
+				
+				return ret;
+			}
 		}
 		
 		private string Translate(Context context)
@@ -73,8 +91,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return ret;
 			}
-
-			return Invoke<string>(context.Node.Instruction, context);
+			
+			InvokeSelector sel;
+			
+			if (context.Node.Dimension.IsOne)
+			{
+				sel = a => a.Name == "Translate";
+			}
+			else
+			{
+				sel = a => a.Name == "TranslateV";
+			}
+			
+			return InvokeSelect<string>(sel, context.Node.Instruction, context);
 		}
 
 		public string Translate(Context context, Tree.Node child)
@@ -329,6 +358,119 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private string Translate(Instructions.Variable instruction, Context context)
 		{
 			return instruction.Name;
+		}
+		
+		private bool InstructionHasStorage(Cdn.Instruction instruction, Context context)
+		{
+			var v = instruction as Cdn.InstructionVariable;
+			
+			if (v != null)
+			{
+				return true;
+			}
+			
+			return context.Program.StateTable.Contains(instruction);
+		}
+		
+		/* Translators for multidimension values */
+		private string TranslateV(Cdn.InstructionMatrix instruction, Context context)
+		{
+			string[] args = new string[context.Node.Children.Count];
+			int argi = 0;
+			
+			var tmp = context.PeekRet();
+
+			for (int i = 0; i < context.Node.Children.Count; ++i)
+			{
+				var child = context.Node.Children[i];
+				
+				// Translate such that we compute the result of the child
+				// at the tmp + argi location
+				args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
+
+				argi += child.Dimension.Size();
+			}
+			
+			if (context.Root == context.Node)
+			{
+				return String.Format("({0})", String.Join(",\n ", args));
+			}
+			else
+			{
+				return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
+			}
+		}
+		
+		private string TranslateV(InstructionFunction instruction, Context context)
+		{
+			Cdn.MathFunctionType type;
+			
+			type = (Cdn.MathFunctionType)instruction.Id;
+			
+			var def = Context.MathFunctionDefineV(type, instruction.GetStackManipulation());
+			var ret = context.PeekRet();
+			
+			Context.MathDefines.Add(def);
+			
+			string[] args = new string[context.Node.Children.Count];
+			List<Tree.Node> pops = new List<Tree.Node>();
+			
+			int cnt = 0;
+			
+			for (int i = 0; i < context.Node.Children.Count; ++i)
+			{
+				var child = context.Node.Children[i];
+
+				if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
+				{
+					context.PushRet(null);
+					args[i] = Translate(context, child);
+					context.PopRet();
+				}
+				else
+				{
+					context.PushRet(context.AcquireTemporary(child));
+					args[i] = Translate(context, child);
+					context.PopRet();
+
+					pops.Add(child);
+					
+					cnt = child.Dimension.Size();
+				}
+			}
+			
+			foreach (var child in pops)
+			{
+				context.ReleaseTemporary(child);
+			}
+			
+			return String.Format("{0} ({1}, {2}, {3})", def, ret, String.Join(", ", args), cnt);
+		}
+		
+		private string TranslateV(InstructionVariable instruction, Context context)
+		{
+			Cdn.Variable prop = instruction.Variable;
+			
+			if (!context.Program.StateTable.Contains(prop))
+			{
+				throw new NotImplementedException(String.Format("The variable `{0}' is not implemented", prop.FullName));
+			}
+			
+			DataTable.DataItem item = context.Program.StateTable[prop];
+			var ret = context.PeekRet();
+			
+			if (ret != null)
+			{
+				return String.Format("(memcpy ({0}, {1} + {2}, sizeof(ValueType) * {3}), {0})",
+				                     ret,
+				                     context.Program.StateTable.Name,
+				                     item.AliasOrIndex,
+				                     prop.Dimension.Size());
+			}
+			else
+			{
+				return String.Format("({0} + {1})", context.Program.StateTable.Name, item.AliasOrIndex);
+			}
 		}
 	}
 }

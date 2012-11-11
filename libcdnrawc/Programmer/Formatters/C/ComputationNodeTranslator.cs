@@ -12,7 +12,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                          System.Reflection.BindingFlags.NonPublic |
 		                                          System.Reflection.BindingFlags.Instance |
 		                                          System.Reflection.BindingFlags.InvokeMethod,
-		                                          new Type[] {typeof(Computation.INode), typeof(Context)})
+		                                          a => a.Name == "Translate",
+		                                          typeof(Computation.INode),
+		                                          typeof(Context))
 		{
 		}
 
@@ -371,41 +373,63 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return ret.ToString();
 		}
 		
-		private string Translate(Computation.Assignment node, Context context)
+		private string TranslateDelayAssignment(Computation.Assignment node, Context context)
 		{
 			string eq = InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation));
 
+			StringBuilder ret = new StringBuilder();
+			
+			var ds = (DelayedState)node.State;
+
+			uint size = (uint)System.Math.Round(ds.Delay / Cdn.RawC.Options.Instance.DelayTimeStep);
+			DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
+			DataTable table = context.Program.DelayHistoryTable(ds);
+
+			ret.AppendFormat("{0}[{1}] = {2}[{3}[{4}]];",
+				node.Item.Table.Name,
+				node.Item.AliasOrIndex,
+				table.Name,
+				context.Program.DelayedCounters.Name,
+				counter.DataIndex);
+
+			ret.AppendLine();
+			ret.AppendFormat("{0}[{1}[{2}]] = {3};",
+				table.Name,
+				context.Program.DelayedCounters.Name,
+				counter.DataIndex,
+				eq);
+
+			return ret.ToString();
+		}
+		
+		private string Translate(Computation.Assignment node, Context context)
+		{
 			if (node.State is DelayedState)
 			{
-				DelayedState ds = (DelayedState)node.State;
-				StringBuilder ret = new StringBuilder();
+				return TranslateDelayAssignment(node, context);
+			}
+			
+			var ctx = context.Base();
+			ctx.Push(node.State, node.Equation);
+			
+			if (node.Equation.Dimension.IsOne)
+			{
+				string eq = InstructionTranslator.QuickTranslate(ctx);
 
-				uint size = (uint)System.Math.Round(ds.Delay / Cdn.RawC.Options.Instance.DelayTimeStep);
-				DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
-				DataTable table = context.Program.DelayHistoryTable(ds);
-
-				ret.AppendFormat("{0}[{1}] = {2}[{3}[{4}]];",
-					node.Item.Table.Name,
-					node.Item.AliasOrIndex,
-					table.Name,
-					context.Program.DelayedCounters.Name,
-					counter.DataIndex);
-
-				ret.AppendLine();
-				ret.AppendFormat("{0}[{1}[{2}]] = {3};",
-					table.Name,
-					context.Program.DelayedCounters.Name,
-					counter.DataIndex,
-					eq);
-
-				return ret.ToString();
+				return String.Format("{0}[{1}] = {2};",
+			                         node.Item.Table.Name,
+			                         node.Item.AliasOrIndex,
+			                         eq);
 			}
 			else
 			{
-				return String.Format("{0}[{1}] = {2};",
-				                     node.Item.Table.Name,
-				                     node.Item.AliasOrIndex,
-				                     eq);
+				var retval = String.Format("{0} + {1}", node.Item.Table.Name, node.Item.AliasOrIndex);
+				
+				ctx.PushRet(retval);
+				var ret = InstructionTranslator.QuickTranslate(ctx);
+				ctx.PopRet();
+				
+				return ret + ";";
 			}
 		}
 		
@@ -428,7 +452,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return String.Format("memset ({0}, 0, sizeof (ValueType) * {1});",
 				                     node.DataTable.Name,
-				                     node.DataTable.Count);
+				                     node.DataTable.Size);
 			}
 		}
 		

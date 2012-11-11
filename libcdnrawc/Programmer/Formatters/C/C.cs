@@ -873,7 +873,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteComputationNode(TextWriter writer, Computation.INode node, string indent)
 		{
 			Context context = new Context(d_program, d_options);
-			writer.WriteLine(ComputationNodeTranslator.Reindent(ComputationNodeTranslator.Translate(node, context), indent));
+			var ret = ComputationNodeTranslator.Reindent(ComputationNodeTranslator.Translate(node, context), indent);
+			
+			if (context.TemporaryStorage.Count != 0)
+			{
+				writer.WriteLine("{0}{{", indent);
+				
+				foreach (Context.Temporary tmp in context.TemporaryStorage)
+				{
+					writer.WriteLine("{0}ValueType {1}[{2}];", "\t" + indent, tmp.Name, tmp.Size);
+				}
+				
+				writer.WriteLine();
+				writer.WriteLine(ComputationNodeTranslator.Reindent(ret, "\t"));
+				
+				writer.WriteLine("{0}}}", indent);
+			}
 		}
 		
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
@@ -2079,7 +2094,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			writer.WriteLine();
 			WriteCustomMathRequired(writer);
-			writer.WriteLine();
+			
+			StringWriter source = new StringWriter();
 
 			if (d_options.CustomHeaders != null)
 			{
@@ -2094,24 +2110,32 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						path = Path.GetFullPath(Path.Combine(d_program.Options.OriginalOutput, header));
 					}
 
-					writer.WriteLine("#include \"{0}\"", path);
+					source.WriteLine("#include \"{0}\"", path);
 				}
 			}
 
-			writer.WriteLine("#include <cdn-rawc/cdn-rawc-math.h>");
-			writer.WriteLine();
+			source.WriteLine("#include <cdn-rawc/cdn-rawc-math.h>");
+			source.WriteLine();
 
-			WriteFunctionDefines(writer);
+			WriteFunctionDefines(source);
 			
-			WriteDataTables(writer);
+			WriteDataTables(source);
 
-			WriteFunctions(writer);
-			WriteAPISource(writer);
+			WriteFunctions(source);
+			WriteAPISource(source);
 
-			WriteEventsSource(writer);
-			WriteDataAccessors(writer);
+			WriteEventsSource(source);
+			WriteDataAccessors(source);
 
-			WriteNetwork(writer);
+			WriteNetwork(source);
+			
+			foreach (var def in Context.MathDefines)
+			{
+				writer.WriteLine("#define {0}_REQUIRED", def);
+			}
+			
+			writer.WriteLine();
+			writer.Write(source.ToString());
 
 			writer.Close();
 		}	

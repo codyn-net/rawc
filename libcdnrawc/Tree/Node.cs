@@ -179,6 +179,23 @@ namespace Cdn.RawC.Tree
 			PropagateTreeId(ref treeid);
 		}
 		
+		public Cdn.Dimension Dimension
+		{
+			get
+			{
+				var smanip = d_instruction.GetStackManipulation();
+				
+				if (smanip != null)
+				{
+					return smanip.Push.Dimension;
+				}
+				else
+				{
+					return new Cdn.Dimension { Rows = 1, Columns = 1 };
+				}
+			}
+		}
+		
 		private void PropagateTreeId(ref ulong treeid)
 		{
 			d_treeId = treeid++;
@@ -734,6 +751,12 @@ namespace Cdn.RawC.Tree
 		private static string InstructionIdentifier(uint label, Instruction inst)
 		{
 			var smanip = inst.GetStackManipulation();
+			
+			if (smanip == null)
+			{
+				return label.ToString() + "[0,0]";
+			}
+			
 			var dim = smanip.Push.Dimension;
 
 			return String.Format("{0}[{1},{2}]", label, dim.Rows, dim.Columns);

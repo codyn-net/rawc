@@ -20,20 +20,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private BindingFlags d_binding;
 		private System.Reflection.BindingFlags d_methodBinding;
 
-		private static Dictionary<Type, Dictionary<Type, MethodInfo>> s_cache;
+		private static Dictionary<Type, Dictionary<Type, List<MethodInfo>>> s_cache;
 
-		private Dictionary<Type, MethodInfo> d_methods;
+		private Dictionary<Type, List<MethodInfo>> d_methods;
 
 		static DynamicVisitor()
 		{
-			s_cache = new Dictionary<Type, Dictionary<Type, MethodInfo>>();
+			s_cache = new Dictionary<Type, Dictionary<Type, List<MethodInfo>>>();
 		}
 		
-		public DynamicVisitor(Type returnType, params Type[] parameterTypes) : this(returnType, BindingFlags.Default, System.Reflection.BindingFlags.Default, parameterTypes)
+		public DynamicVisitor(Type returnType, params Type[] parameterTypes) : this(returnType, BindingFlags.Default, System.Reflection.BindingFlags.Default, null, parameterTypes)
 		{
 		}
+		
+		public delegate bool MethodMatcher(MethodInfo info);
 
-		public DynamicVisitor(Type returnType, BindingFlags binding, System.Reflection.BindingFlags methodbinding, params Type[] parameterTypes)
+		public DynamicVisitor(Type returnType, BindingFlags binding, System.Reflection.BindingFlags methodbinding, MethodMatcher matcher, params Type[] parameterTypes)
 		{
 			if (parameterTypes.Length == 0)
 			{
@@ -45,16 +47,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			d_binding = binding;
 			d_methodBinding = methodbinding;
 			
-			Scan();
+			Scan(matcher);
 		}
 		
-		private MethodInfo Lookup(Type type)
+		private List<MethodInfo> Lookup(Type type)
 		{
 			Type orig = type;
 
 			while (true)
 			{
-				MethodInfo method;
+				List<MethodInfo> method;
 
 				if (d_methods.TryGetValue(type, out method))
 				{
@@ -70,24 +72,32 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				if (type == null || !TypeIsA(type, d_parameterTypes[0], false))
 				{
-					return null;
+					return new List<MethodInfo>();
 				}
 			}
 		}
 		
-		public T Invoke<T>(params object[] parameters)
+		public delegate bool InvokeSelector(MethodInfo method);
+		
+		public T InvokeSelect<T>(InvokeSelector selector, params object[] parameters)
 		{
 			Type type = parameters[0].GetType();
-			MethodInfo method = Lookup(type);
+			List<MethodInfo> method = Lookup(type);
 			
-			if (method != null)
+			foreach (var m in method)
 			{
-				return (T)method.Invoke(this, parameters);
+				if (selector(m))
+				{
+					return (T)m.Invoke(this, parameters);
+				}
 			}
-			else
-			{
-				throw new NotImplementedException(String.Format("The handler for `{0}' ({1}) is not yet implemented...", parameters[0].GetType(), parameters[0]));
-			}
+			
+			throw new NotImplementedException(String.Format("The handler for `{0}' ({1}) is not yet implemented...", parameters[0].GetType(), parameters[0]));
+		}
+		
+		public T Invoke<T>(params object[] parameters)
+		{
+			return InvokeSelect<T>(a => true, parameters);
 		}
 		
 		private bool TypeIsA(Type a, Type b)
@@ -117,14 +127,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		private void Scan()
+		private void Scan(MethodMatcher matcher)
 		{
 			if (s_cache.TryGetValue(GetType(), out d_methods))
 			{
 				return;
 			}
-			
-			d_methods = new Dictionary<Type, MethodInfo>();
+
+			d_methods = new Dictionary<Type, List<MethodInfo>>();
 
 			foreach (MethodInfo method in GetType().GetMethods(d_methodBinding))
 			{
@@ -156,13 +166,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					continue;
 				}
 				
+				if (matcher != null && !matcher(method))
+				{
+					continue;
+				}
+				
 				Add(method, parameters[0].ParameterType);
 			}
 		}
 		
 		private void Add(MethodInfo method, Type type)
 		{
-			d_methods[type] = method;
+			List<MethodInfo> lst;
+
+			if (!d_methods.TryGetValue(type, out lst))
+			{
+				lst = new List<MethodInfo>();
+				d_methods[type] = lst;
+			}
+			
+			lst.Add(method);
 		}
 	}
 }

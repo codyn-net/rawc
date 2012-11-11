@@ -10,7 +10,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                 System.Reflection.BindingFlags.NonPublic |
 		                                 System.Reflection.BindingFlags.Instance |
 		                                 System.Reflection.BindingFlags.InvokeMethod,
-		                                 new Type[] {typeof(object)})
+		                                 a => a.Name == "Translate",
+		                                 typeof(object))
 		{
 		}
 
