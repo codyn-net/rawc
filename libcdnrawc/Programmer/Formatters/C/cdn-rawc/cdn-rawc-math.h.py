@@ -91,7 +91,7 @@ static ValueType *cdn_math_{0}_v_{1}_builtin ({2}, uint32_t l)
 	return ret;
 }}""".format(f, name, ", ".join(args), f.upper(), ", ".join(cargs), reti))
 
-    print_guard_end('{0}_v_{1}'.format(f, name))
+        print_guard_end('{0}_v_{1}'.format(f, name))
 
 def print_func_v(f, combos):
     print_func_v_intern(f, combos, False)
@@ -289,7 +289,7 @@ static ValueType *cdn_math_{0}_v_{1}_builtin (ValueType *ret, {2}, uint32_t l)
 	return ret;
 }}""".format(f, name, ", ".join(args), f.upper(), op.join(cargs)))
 
-    print_guard_end('{0}_v_{1}'.format(f, name))
+        print_guard_end('{0}_v_{1}'.format(f, name))
 
 def print_index_v():
     print_guard('index_v')
