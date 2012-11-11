@@ -10,7 +10,7 @@ namespace Cdn.RawC.Tree
 	{
 		private State d_state;
 		private Instruction d_instruction;
-		private uint d_label;
+		private string d_label;
 		private List<Node> d_children;
 		private SortedList<Node> d_leafs;
 		private Node d_parent;
@@ -74,12 +74,12 @@ namespace Cdn.RawC.Tree
 			return Create(state, state.Instructions);
 		}
 
-		public Node(uint label) : this(null, null)
+		public Node(string label) : this(null, null)
 		{
 			d_label = label;
 		}
 		
-		public Node() : this(0)
+		public Node() : this("")
 		{
 		}
 		
@@ -99,7 +99,7 @@ namespace Cdn.RawC.Tree
 		{
 			uint size = 0;
 			
-			d_label = 0;
+			d_label = "";
 			
 			d_state = state;
 
@@ -333,7 +333,7 @@ namespace Cdn.RawC.Tree
 			set { d_childCount = value; }
 		}
 		
-		public uint Label
+		public string Label
 		{
 			get { return d_label; }
 		}
@@ -657,14 +657,6 @@ namespace Cdn.RawC.Tree
 			StringBuilder ret = new StringBuilder();
 			ret.Append(Label);
 			
-			var smanip = d_instruction.GetStackManipulation();
-			var dim = smanip.Push.Dimension;
-			
-			if (!dim.IsOne)
-			{
-				ret.AppendFormat("[{0},{1}]", dim.Rows, dim.Columns);
-			}
-			
 			ret.Append("(");
 			
 			for (int i = 0; i < d_children.Count; ++i)
@@ -719,27 +711,35 @@ namespace Cdn.RawC.Tree
 			return false;
 		}
 
-		public static IEnumerable<uint> InstructionCodes(Instruction inst)
+		public static IEnumerable<string> InstructionCodes(Instruction inst)
 		{
 			return InstructionCodes(inst, false);
 		}
 
-		public static uint InstructionCode(Instruction inst)
+		public static string InstructionCode(Instruction inst)
 		{
 			return InstructionCode(inst, false);
 		}
 
-		public static uint InstructionCode(Instruction inst, bool strict)
+		public static string InstructionCode(Instruction inst, bool strict)
 		{
-			foreach (uint i in InstructionCodes(inst, strict))
+			foreach (string i in InstructionCodes(inst, strict))
 			{
 				return i;
 			}
 
-			return 0;
+			return "";
 		}
 		
-		public static IEnumerable<uint> InstructionCodes(Instruction inst, bool strict)
+		private static string InstructionIdentifier(uint label, Instruction inst)
+		{
+			var smanip = inst.GetStackManipulation();
+			var dim = smanip.Push.Dimension;
+
+			return String.Format("{0}[{1},{2}]", label, dim.Rows, dim.Columns);
+		}
+		
+		public static IEnumerable<string> InstructionCodes(Instruction inst, bool strict)
 		{
 			InstructionFunction ifunc;
 			InstructionCustomOperator icusop;
@@ -751,7 +751,7 @@ namespace Cdn.RawC.Tree
 			if (InstructionIs(inst, out icusf))
 			{
 				// Generate byte code for this function by name
-				yield return HashMap("f_" + icusf.Function.FullId);
+				yield return InstructionIdentifier(HashMap("f_" + icusf.Function.FullId), inst);
 			}
 			else if (InstructionIs(inst, out icusop))
 			{
@@ -759,13 +759,13 @@ namespace Cdn.RawC.Tree
 				{
 					// These are actually part of the state table, so we use
 					// a placeholder code here
-					yield return PlaceholderCode;
+					yield return InstructionIdentifier(PlaceholderCodeLabel, inst);
 				}
 				else
 				{
 					bool ns = strict || icusop.Operator is OperatorDelayed;
 
-					yield return HashMap("co_" + icusop.Operator.Name);
+					yield return InstructionIdentifier(HashMap("co_" + icusop.Operator.Name), inst);
 
 					Cdn.Function f = icusop.Operator.PrimaryFunction;
 
@@ -773,7 +773,7 @@ namespace Cdn.RawC.Tree
 					{
 						foreach (Instruction i in f.Expression.Instructions)
 						{
-							foreach (uint id in InstructionCodes(i, ns))
+							foreach (string id in InstructionCodes(i, ns))
 							{
 								yield return id;
 							}
@@ -787,7 +787,7 @@ namespace Cdn.RawC.Tree
 							{
 								foreach (Instruction i in e.Instructions)
 								{
-									foreach (uint id in InstructionCodes(i, ns))
+									foreach (string id in InstructionCodes(i, ns))
 									{
 										yield return id;
 									}
@@ -801,7 +801,7 @@ namespace Cdn.RawC.Tree
 							{
 								foreach (Instruction i in e.Instructions)
 								{
-									foreach (uint id in InstructionCodes(i, ns))
+									foreach (string id in InstructionCodes(i, ns))
 									{
 										yield return id;
 									}
@@ -814,21 +814,21 @@ namespace Cdn.RawC.Tree
 			else if (InstructionIs(inst, out ifunc))
 			{
 				// Functions just store the id
-				yield return (uint)ifunc.Id + 1;
+				yield return InstructionIdentifier((uint)ifunc.Id + 1, inst);
 			}
 			else if (strict)
 			{
 				if (InstructionIs(inst, out ivar))
 				{
-					yield return HashMap(String.Format("var_{0}", ivar.Variable.FullName));
+					yield return InstructionIdentifier(HashMap(String.Format("var_{0}", ivar.Variable.FullName)), inst);
 				}
 				else if (InstructionIs(inst, out inum))
 				{
-					yield return HashMap(String.Format("num_{0}", inum.Value));
+					yield return InstructionIdentifier(HashMap(String.Format("num_{0}", inum.Value)), inst);
 				}
 				else if (InstructionIs(inst, out irand))
 				{
-					yield return HashMap(String.Format("rand_{0}", irand.Handle));
+					yield return InstructionIdentifier(HashMap(String.Format("rand_{0}", irand.Handle)), inst);
 				}
 				else
 				{
@@ -838,12 +838,17 @@ namespace Cdn.RawC.Tree
 			else
 			{
 				// Placeholder for numbers, properties and rands
-				yield return PlaceholderCode;
+				yield return InstructionIdentifier(PlaceholderCodeLabel, inst);
 			}
 		}
 		
-		public const uint PlaceholderCode = 0;
-
+		public static bool IsPlaceholder(Cdn.Instruction instruction)
+		{
+			return InstructionCode(instruction)[0] == PlaceholderCode;
+		}
+		
+		public const char PlaceholderCode = '0';
+		private const uint PlaceholderCodeLabel = 0;
 	}
 }
 

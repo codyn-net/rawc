@@ -58,7 +58,7 @@ namespace Cdn.RawC.Tree.Collectors
 				// Calculate the placeholder nodes
 				foreach (Node node in prototype.Descendants)
 				{
-					if (Node.InstructionCode(node.Instruction) == Node.PlaceholderCode)
+					if (Node.IsPlaceholder(node.Instruction))
 					{
 						arguments.Add(node.Path);
 					}
@@ -79,16 +79,16 @@ namespace Cdn.RawC.Tree.Collectors
 		
 		public void Calculate(Node[] forest)
 		{
-			Dictionary<uint, Node> lmap = new Dictionary<uint, Node>();
+			Dictionary<string, Node> lmap = new Dictionary<string, Node>();
 			Queue<Node> queue = new Queue<Node>();
 			
 			// Create initial mapping for leaves
 			if (!d_options.Labeled)
 			{
-				Node leaf = Add(0, 0);
+				Node leaf = Add("0", 0);
 				leaf.IsLeaf = true;
 
-				lmap[0] = leaf;
+				lmap[leaf.Label] = leaf;
 			}
 			
 			foreach (Node tree in forest)
@@ -111,7 +111,7 @@ namespace Cdn.RawC.Tree.Collectors
 				
 				if (node.IsLeaf)
 				{
-					Map(node, lmap[d_options.Labeled ? node.Label : 0]);
+					Map(node, lmap[d_options.Labeled ? node.Label : "0"]);
 				}
 				else
 				{
@@ -221,7 +221,7 @@ namespace Cdn.RawC.Tree.Collectors
 			}
 		}
 		
-		public Node Add(uint label, uint height)
+		public Node Add(string label, uint height)
 		{
 			Node n = new Node(label);
 			n.Height = height;
