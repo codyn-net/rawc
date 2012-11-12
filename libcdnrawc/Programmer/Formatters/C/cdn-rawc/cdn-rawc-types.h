@@ -25,6 +25,9 @@ typedef struct
 
 	// Index into network.meta.nodes
 	uint32_t parent;
+
+	// Index into data
+	uint32_t index;
 } CdnRawcStateMeta;
 
 typedef struct

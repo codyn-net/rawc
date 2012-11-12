@@ -1267,6 +1267,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			public string Name;
 			public uint Parent;
+			public uint Index;
 		}
 
 		private class Meta
@@ -1336,7 +1337,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ChildMeta cm = new ChildMeta {
 					Parent = parent,
 					IsNode = false,
-					Index = (uint)item.DataIndex,
+					Index = (uint)item.Index,
 					Next = 0
 				};
 
@@ -1401,7 +1402,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				StateMeta sm = new StateMeta {
 					Name = null,
-					Parent = 0
+					Parent = 0,
+					Index = 0,
 				};
 				
 				if (v != null)
@@ -1420,6 +1422,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					
 					sm.Name = v.Name;
 					sm.Parent = nid;
+					sm.Index = (uint)item.DataIndex;
 				}
 				else
 				{
@@ -1440,9 +1443,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			foreach (var state in meta.States)
 			{
-		 		writer.WriteLine("\t\t{{ {0}, {1} }},",
+				writer.WriteLine("\t\t{{ {0}, {1}, {2} }},",
 		 		                 state.Name == null ? "NULL" : "\"" + state.Name + "\"",
-		 		                 state.Parent);
+		 		                 state.Parent,
+				                 state.Index);
 			}
 			
 			writer.WriteLine("\t};");
