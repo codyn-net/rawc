@@ -1560,19 +1560,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine();
 
-			var range = d_program.StateRange(Knowledge.Instance.Integrated);
+			var range = d_program.StateRange(Knowledge.Instance.Integrated, new int[] {0, 0});
 
 			writer.WriteLine("\t\t.states = {{.start = {0}, .end = {1}, .stride = 1}},",
 			                 range[0],
 			                 range[1]);
 
-			range = d_program.StateRange(Knowledge.Instance.DerivativeStates);
+			range = d_program.StateRange(Knowledge.Instance.DerivativeStates, new int[] {0, 0});
 
 			writer.WriteLine("\t\t.derivatives = {{.start = {0}, .end = {1}, .stride = 1}},",
 			                 range[0],
 			                 range[1]);
 
-			range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
+			range = d_program.StateRange(Knowledge.Instance.EventNodeStates, new int[] {0, 0});
 
 			writer.WriteLine("\t\t.event_values = {{.start = {0}, .end = {1}, .stride = 3}},",
 			                 range[0],
