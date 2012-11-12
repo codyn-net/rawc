@@ -45,6 +45,7 @@ AM_CONDITIONAL(ENABLE_DEBUG, test x$enable_debug = xyes)
 if test "x$enable_debug" = "xyes" ; then
 	CONFIG_REQUESTED="yes"
 	CFLAGS="-O2 -g"
+	RUN_DEBUG="--debug "
 fi
 AC_ARG_ENABLE(release,
 	AC_HELP_STRING([--enable-release],
