@@ -2216,9 +2216,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			TextWriter writer = new StreamWriter(d_sourceFilename);
 			
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
-			writer.WriteLine("#include <stdint.h>");
-			writer.WriteLine("#include <float.h>");
-			writer.WriteLine("#include <string.h>");
+
+			foreach (var inc in new string[] {"stdint", "stddef", "float", "string"})
+			{
+				writer.WriteLine("#include <{0}.h>", inc);
+			}
+
 			writer.WriteLine("#include <cdn-rawc/cdn-rawc-macros.h>");
 			
 			writer.WriteLine();
