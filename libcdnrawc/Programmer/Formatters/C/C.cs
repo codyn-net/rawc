@@ -2070,8 +2070,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var range = d_program.StateRange(Knowledge.Instance.Integrated);
 
 			writer.WriteLine("{");
-			WriteNetworkVariable(writer);
-			writer.WriteLine("\treturn ss + {0};", range[0]);
+
+			if (range == null)
+			{
+				writer.WriteLine("\treturn NULL;");
+			}
+			else
+			{
+				WriteNetworkVariable(writer);
+				writer.WriteLine("\treturn ss + {0};", range[0]);
+			}
+
 			writer.WriteLine("}");
 			writer.WriteLine();
 
@@ -2083,8 +2092,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			range = d_program.StateRange(Knowledge.Instance.DerivativeStates);
 
 			writer.WriteLine("{");
-			WriteNetworkVariable(writer);
-			writer.WriteLine("\treturn ss + {0};", range[0]);
+
+			if (range == null)
+			{
+				writer.WriteLine("\treturn NULL;");
+			}
+			else
+			{
+				WriteNetworkVariable(writer);
+				writer.WriteLine("\treturn ss + {0};", range[0]);
+			}
+
 			writer.WriteLine("}");
 			writer.WriteLine();
 
@@ -2129,10 +2147,20 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
 
 			writer.WriteLine("{");
-			WriteNetworkVariable(writer);
-			writer.WriteLine("\treturn (CdnRawcEventValue *)({0} + {1} + i * 3);",
-			                 d_program.StateTable.Name,
-			                 range[0]);
+
+			if (range == null)
+			{
+				writer.WriteLine("\treturn NULL;");
+			}
+			else
+			{
+				WriteNetworkVariable(writer);
+				writer.WriteLine("\treturn (CdnRawcEventValue *)({0} + {1} + i * 3);",
+				                 d_program.StateTable.Name,
+				                 range[0]);
+			}
+
+			writer.WriteLine("}");
 			writer.WriteLine();
 
 			writer.WriteLine("static CdnRawcDimension const *");
