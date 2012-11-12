@@ -66,6 +66,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return (new InstructionTranslator()).Translate(context);
 		}
+
+		private bool NodeIsOne(Tree.Node node)
+		{
+			if (!node.Dimension.IsOne)
+			{
+				return false;
+			}
+			else
+			{
+				foreach (var child in node.Children)
+				{
+					if (!child.Dimension.IsOne)
+					{
+						return false;
+					}
+				}
+			}
+
+			return true;
+		}
 		
 		private string TranslateAssign(Context context, Tree.Node node, string assignto)
 		{
@@ -93,8 +113,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			InvokeSelector sel;
-			
-			if (context.Node.Dimension.IsOne)
+
+			if (NodeIsOne(context.Node))
 			{
 				sel = a => a.Name == "Translate";
 			}
@@ -102,7 +122,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				sel = a => a.Name == "TranslateV";
 			}
-			
+
 			return InvokeSelect<string>(sel, context.Node.Instruction, context);
 		}
 
