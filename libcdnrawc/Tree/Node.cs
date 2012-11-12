@@ -183,6 +183,13 @@ namespace Cdn.RawC.Tree
 		{
 			get
 			{
+				var i = d_instruction as Programmer.Instructions.IInstruction;
+
+				if (i != null)
+				{
+					return i.Dimension;
+				}
+
 				var smanip = d_instruction.GetStackManipulation();
 				
 				if (smanip != null)
@@ -191,7 +198,7 @@ namespace Cdn.RawC.Tree
 				}
 				else
 				{
-					return new Cdn.Dimension { Rows = 1, Columns = 1 };
+					throw new Exception("Failed to determine instruction dimension: [{0}] {1}", d_instruction.GetType(), d_instruction);
 				}
 			}
 		}

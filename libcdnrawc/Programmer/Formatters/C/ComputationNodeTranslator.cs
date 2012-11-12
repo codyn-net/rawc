@@ -18,17 +18,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 		}
 
-		public static string Reindent(string s, string indent)
-		{
-			if (String.IsNullOrEmpty(s))
-			{
-				return s;
-			}
-
-			string[] lines = s.Split('\n');
-			return indent + String.Join("\n" + indent, lines).Replace("\n" + indent + "\n", "\n\n");
-		}
-		
 		public static string Translate(Computation.INode node, Context context)
 		{
 			return (new ComputationNodeTranslator()).Invoke<string>(node, context);
@@ -92,7 +81,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				if (i != node.Body.Count - 1 || !(child is Computation.Empty))
 				{
-					ret.AppendLine(Reindent(Translate(child, context), "\t"));
+					ret.AppendLine(Context.Reindent(Translate(child, context), "\t"));
 				}
 			}
 
@@ -136,7 +125,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				if (i != node.Body.Count - 1 || !(child is Computation.Empty))
 				{
-					ret.AppendLine(Reindent(Translate(child, context), "\t\t"));
+					ret.AppendLine(Context.Reindent(Translate(child, context), "\t\t"));
 				}
 			}
 
@@ -277,7 +266,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			foreach (Computation.INode dep in node.Dependencies)
 			{
-				ret.AppendLine(Reindent(Translate(dep, context), "\t\t"));
+				ret.AppendLine(Context.Reindent(Translate(dep, context), "\t\t"));
 			}
 
 			ret.AppendLine();

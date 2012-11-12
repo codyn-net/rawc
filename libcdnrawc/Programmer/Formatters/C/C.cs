@@ -628,50 +628,36 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		private string GenerateArgsList(string prefix, int num)
+		private string GenerateArgsList(Programmer.Function function)
 		{
-			return GenerateArgsList(prefix, num, 0);
-		}
-		
-		private string GenerateArgsList(string prefix, int num, int numstart)
-		{
-			return GenerateArgsList(prefix, num, numstart, null);
-		}
-		
-		private string GenerateArgsList(string prefix, int num, int numstart, string type)
-		{
-			if (num == 0 && type == null)
+			List<string> ret = new List<string>(function.NumArguments + 2);
+
+			ret.Add(String.Format("ValueType *{0}", d_program.StateTable.Name));
+
+			if (!function.Expression.Dimension.IsOne)
 			{
-				return "void";
+				ret.Add("ValueType *ret");
 			}
 
-			List<string> ret = new List<string>(num);
+			int i = 0;
 
-			if (type != null)
+			foreach (var arg in function.OrderedArguments)
 			{
-				ret.Add(String.Format("ValueType *{0}", d_program.StateTable.Name));
-			}
+				var child = function.Expression.FromPath(arg.Path);
 
-			string extra = !String.IsNullOrEmpty(type) ? String.Format("{0} ", type) : "";
-			
-			for (int i = 0; i < num; ++i)
-			{
-				ret.Add(String.Format("{0}{1}{2}", extra, prefix, numstart + i));
+				if (child.Dimension.IsOne)
+				{
+					ret.Add(String.Format("ValueType x{0}", i));
+				}
+				else
+				{
+					ret.Add(String.Format("ValueType *x{0}", i));
+				}
+
+				++i;
 			}
 			
 			return String.Join(", ", ret.ToArray());
-		}
-		
-		private string NestedImplementation(string name, int arguments, string implementation)
-		{
-			if (arguments == 2)
-			{
-				return implementation;
-			}
-			else
-			{
-				return String.Format("{0}2 (x0, {0}{1} ({2}))", name, arguments - 1, GenerateArgsList("x", arguments - 1, 1));
-			}
 		}
 		
 		private void WriteDefine(TextWriter writer, string name, string args, string val, params object[] objs)
@@ -785,44 +771,113 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return mapping;
 		}
 		
-		private string FunctionToC(Function function)
+		private string FunctionToC(Function function, out Context context)
 		{
-			Context context = new Context(d_program, d_options, function.Expression, GenerateMapping("x{0}", function.Arguments));
-			
-			return InstructionTranslator.QuickTranslate(context);
+			context = new Context(d_program, d_options, function.Expression, GenerateMapping("x{0}", function.Arguments));
+
+			var ism = !function.Expression.Dimension.IsOne;
+
+			if (ism)
+			{
+				context.PushRet("ret");
+			}
+
+			var ret = InstructionTranslator.QuickTranslate(context);
+
+			if (ism)
+			{
+				context.PopRet();
+			}
+
+			return ret;
+		}
+
+		private void WriteFunction(TextWriter writer, Programmer.Function function)
+		{
+			var expr = function.Expression;
+			var isone = expr.Dimension.IsOne;
+
+			writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+
+			writer.Write("static ValueType ");
+
+			if (!isone)
+			{
+				writer.Write("*");
+			}
+
+			writer.WriteLine("{0} ({1})",
+			                 function.Name,
+			                 GenerateArgsList(function));
+			writer.WriteLine("{");
+
+			if (function.Inline)
+			{
+				writer.WriteLine("\t/* Hey! This function is strictly inlined, so don't panic! */");
+			}
+
+			Context context;
+			var retval = FunctionToC(function, out context);
+
+			foreach (var tmp in context.TemporaryStorage)
+			{
+				writer.WriteLine("\tValueType {0}[{1}] = {{0,}};", tmp.Name, tmp.Size);
+			}
+
+			if (context.TemporaryStorage.Count != 0)
+			{
+				writer.WriteLine();
+			}
+
+			writer.WriteLine("\treturn {0};", Context.Reindent(retval, "\t").Substring(1));
+			writer.WriteLine("}");
+			writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+			writer.WriteLine();
+		}
+
+		private void WriteFunctionDecl(TextWriter writer, Programmer.Function function)
+		{
+			writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+
+			writer.Write("static ");
+
+			if (function.Inline)
+			{
+				writer.Write("inline ");
+			}
+
+			writer.Write("ValueType ");
+
+			if (!function.Expression.Dimension.IsOne)
+			{
+				writer.Write("*");
+			}
+
+			writer.Write("{0} ({1})",
+			             function.Name,
+			             GenerateArgsList(function));
+
+			if (function.Inline)
+			{
+				writer.Write(" GNUC_INLINE");
+			}
+
+			if (function.Pure)
+			{
+				writer.Write(" GNUC_PURE");
+			}
+
+			writer.WriteLine(";");
+			writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+			writer.WriteLine();
 		}
 		
 		private void WriteFunctions(TextWriter writer)
 		{
 			// Write declarations
-			foreach (Programmer.Function function in d_program.Functions)
+			foreach (var function in d_program.Functions)
 			{
-				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-
-				writer.Write("static ");
-
-				if (function.Inline)
-				{
-					writer.Write("inline ");
-				}
-
-				writer.Write("ValueType {0} ({1})",
-				                 function.Name,
-				                 GenerateArgsList("x", function.NumArguments, 0, "ValueType"));
-
-				if (function.Inline)
-				{
-					writer.Write(" GNUC_INLINE");
-				}
-
-				if (function.Pure)
-				{
-					writer.Write(" GNUC_PURE");
-				}
-
-				writer.WriteLine(";");
-				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
-				writer.WriteLine();
+				WriteFunctionDecl(writer, function);
 			}
 
 			// API Function declarations
@@ -845,23 +900,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine();
 						
-			foreach (Programmer.Function function in d_program.Functions)
+			foreach (var function in d_program.Functions)
 			{
-				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
-				writer.WriteLine("static ValueType {0} ({1})",
-				                 function.Name,
-				                 GenerateArgsList("x", function.NumArguments, 0, "ValueType"));
-				writer.WriteLine("{");
-
-				if (function.Inline)
-				{
-					writer.WriteLine("\t/* Hey! This function is strictly inlined, so don't panic! */");
-				}
-
-				writer.WriteLine("\treturn {0};", FunctionToC(function));
-				writer.WriteLine("}");
-				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
-				writer.WriteLine();
+				WriteFunction(writer, function);
 			}
 		}
 
@@ -873,7 +914,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteComputationNode(TextWriter writer, Computation.INode node, string indent)
 		{
 			Context context = new Context(d_program, d_options);
-			var ret = ComputationNodeTranslator.Reindent(ComputationNodeTranslator.Translate(node, context), indent);
+			var ret = Context.Reindent(ComputationNodeTranslator.Translate(node, context), indent);
 			
 			if (context.TemporaryStorage.Count != 0)
 			{
@@ -881,11 +922,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				foreach (Context.Temporary tmp in context.TemporaryStorage)
 				{
-					writer.WriteLine("{0}ValueType {1}[{2}];", "\t" + indent, tmp.Name, tmp.Size);
+					writer.WriteLine("{0}ValueType {1}[{2}] = {{0,}};", "\t" + indent, tmp.Name, tmp.Size);
 				}
 				
 				writer.WriteLine();
-				writer.WriteLine(ComputationNodeTranslator.Reindent(ret, "\t"));
+				writer.WriteLine(Context.Reindent(ret, "\t"));
 				
 				writer.WriteLine("{0}}}", indent);
 			}

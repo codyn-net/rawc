@@ -91,7 +91,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return ret;
 			}
-			
+
 			InvokeSelector sel;
 			
 			if (context.Node.Dimension.IsOne)
@@ -407,6 +407,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
 			}
 		}
+
+		private string TranslateChildV(Tree.Node child, Context context)
+		{
+			string ret;
+
+			if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
+			{
+				context.PushRet(null);
+				ret = Translate(context, child);
+				context.PopRet();
+			}
+			else
+			{
+				context.PushRet(context.AcquireTemporary(child));
+				ret = Translate(context, child);
+				context.PopRet();
+			}
+
+			return ret;
+		}
 		
 		private string TranslateV(InstructionFunction instruction, Context context)
 		{
@@ -420,37 +440,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			Context.MathDefines.Add(def);
 			
 			string[] args = new string[context.Node.Children.Count];
-			List<Tree.Node> pops = new List<Tree.Node>();
-			
+
 			int cnt = 0;
+			context.SaveTemporaryStack();
 			
 			for (int i = 0; i < context.Node.Children.Count; ++i)
 			{
 				var child = context.Node.Children[i];
 
-				if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
-				{
-					context.PushRet(null);
-					args[i] = Translate(context, child);
-					context.PopRet();
-				}
-				else
-				{
-					context.PushRet(context.AcquireTemporary(child));
-					args[i] = Translate(context, child);
-					context.PopRet();
+				args[i] = TranslateChildV(child, context);
 
-					pops.Add(child);
-					
-					cnt = child.Dimension.Size();
+				// TODO: this does not work in the general case
+				var s = child.Dimension.Size();
+
+				if (s > cnt)
+				{
+					cnt = s;
 				}
 			}
-			
-			foreach (var child in pops)
-			{
-				context.ReleaseTemporary(child);
-			}
-			
+
+			context.RestoreTemporaryStack();
+
 			return String.Format("{0} ({1}, {2}, {3})", def, ret, String.Join(", ", args), cnt);
 		}
 		
@@ -483,6 +493,38 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 				return String.Format("({0} + {1})", context.Program.StateTable.Name, item.AliasOrIndex);
 			}
+		}
+
+		private string TranslateV(Instructions.Function instruction, Context context)
+		{
+			string name = instruction.FunctionCall.Name.ToUpper();
+			List<string > args = new List<string>();
+
+			var ret = context.PeekRet();
+
+			args.Add(context.Program.StateTable.Name);
+			args.Add(ret);
+
+			context.SaveTemporaryStack();
+
+			if (!instruction.FunctionCall.IsCustom)
+			{
+				foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
+				{
+					args.Add(TranslateChildV(context.Node.FromPath(argument.Path), context));
+				}
+			}
+			else
+			{
+				foreach (Tree.Node child in context.Node.Children)
+				{
+					args.Add(TranslateChildV(child, context));
+				}
+			}
+
+			context.RestoreTemporaryStack();
+
+			return String.Format("{0} ({1})", name, String.Join(", ", args.ToArray()));
 		}
 	}
 }

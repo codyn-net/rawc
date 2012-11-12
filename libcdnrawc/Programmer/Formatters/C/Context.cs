@@ -33,6 +33,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private Dictionary<Tree.Node, int> d_tempactive;
 		private Stack<string> d_ret;
 		private static HashSet<string> s_mathdefines;
+		private Stack<List<Temporary>> d_tempstack;
 		
 		public Context(Program program, Options options) : this(program, options, null, null)
 		{
@@ -57,8 +58,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			d_tempstorage = new List<Temporary>();
 			d_tempactive = new Dictionary<Tree.Node, int>();
+			d_tempstack = new Stack<List<Temporary>>();
 			
 			d_ret = new Stack<string>();
+		}
+
+		public void SaveTemporaryStack()
+		{
+			d_tempstack.Push(new List<Temporary>());
+		}
+
+		public void RestoreTemporaryStack()
+		{
+			var lst = d_tempstack.Pop();
+
+			foreach (var item in lst)
+			{
+				if (item != null)
+				{
+					ReleaseTemporary(item.Node);
+				}
+			}
 		}
 		
 		public string AcquireTemporary(Tree.Node node)
@@ -82,6 +102,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				tmp.Node = node;
 				
 				d_tempactive[node] = i;
+				d_tempstack.Peek().Add(tmp);
+
 				return String.Format("tmp{0}", i);
 			}
 
@@ -95,7 +117,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			d_tempstorage.Add(newtmp);
 			d_tempactive[node] = idx;
-			
+
+			d_tempstack.Peek().Add(newtmp);			
 			return newtmp.Name;
 		}
 		
@@ -371,6 +394,63 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return d_mapping;
 			}
+		}
+
+		private static int IndentCount(string s)
+		{
+			int i;
+
+			for (i = 0; i < s.Length; ++i)
+			{
+				if (s[i] != '\t')
+				{
+					return i;
+				}
+			}
+
+			return i;
+		}
+
+		public static string Reindent(string s, string indent)
+		{
+			if (String.IsNullOrEmpty(s))
+			{
+				return s;
+			}
+
+			string[] lines = s.Split('\n');
+			int cnt = -1;
+
+			for (int i = 0; i < lines.Length; ++i)
+			{
+				var line = lines[i];
+
+				if (line.Trim().Length == 0)
+				{
+					lines[i] = "";
+				}
+				else
+				{
+					var c = IndentCount(line);
+
+					if (cnt == -1 || c < cnt)
+					{
+						cnt = c;
+					}
+				}
+			}
+
+			for (int i = 0; i < lines.Length; ++i)
+			{
+				var line = lines[i];
+
+				if (line.Length != 0)
+				{
+					lines[i] = indent + line.Substring(cnt);
+				}
+			}
+
+			return String.Join("\n", lines);
 		}
 	}
 }

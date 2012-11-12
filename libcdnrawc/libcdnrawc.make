@@ -99,6 +99,7 @@ FILES = \
 	Programmer/Computation/InitializeDelayHistory.cs \
 	Programmer/Computation/Rand.cs \
 	Programmer/Program.cs \
+	Programmer/Instructions/IInstruction.cs \
 	Programmer/Instructions/Variable.cs \
 	Programmer/Instructions/Function.cs \
 	Programmer/Instructions/State.cs \

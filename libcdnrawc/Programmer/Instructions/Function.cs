@@ -2,7 +2,7 @@ using System;
 
 namespace Cdn.RawC.Programmer.Instructions
 {
-	public class Function : Instruction
+	public class Function : Instruction, IInstruction
 	{
 		private Programmer.Function d_function;
 
@@ -10,21 +10,20 @@ namespace Cdn.RawC.Programmer.Instructions
 		{
 			d_function = function;
 		}
+
+		public Cdn.Dimension Dimension
+		{
+			get { return d_function.Expression.Dimension; }
+		}
 		
 		public Programmer.Function FunctionCall
 		{
-			get
-			{
-				return d_function;
-			}
+			get { return d_function; }
 		}
 		
 		public static new GLib.GType GType
 		{
-			get
-			{
-				return Instruction.GType;
-			}
+			get { return Instruction.GType; }
 		}
 	}
 }

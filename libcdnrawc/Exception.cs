@@ -4,7 +4,7 @@ namespace Cdn.RawC
 {
 	public class Exception : System.Exception
 	{
-		public Exception(string format, params string[] args) : base(String.Format(format, args))
+		public Exception(string format, params object[] args) : base(String.Format(format, args))
 		{
 		}
 	}
