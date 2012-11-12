@@ -924,6 +924,7 @@ namespace Cdn.RawC.Programmer
 			modset.UnionWith(TDTModSet);
 			modset.UnionWith(delays);
 			modset.UnionWith(Knowledge.Instance.Integrated);
+			modset.UnionWith(Knowledge.Instance.FlaggedStates(VariableFlags.In));
 
 			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
 
