@@ -457,7 +457,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			Context.MathDefines.Add(def);
 			
-			string[] args = new string[context.Node.Children.Count];
+			List<string> args = new List<string>(context.Node.Children.Count + 1);
 
 			int cnt = 0;
 			context.SaveTemporaryStack();
@@ -466,9 +466,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				var child = context.Node.Children[i];
 
-				args[i] = TranslateChildV(child, context);
+				args.Add(TranslateChildV(child, context));
 
-				// TODO: this does not work in the general case
 				var s = child.Dimension.Size();
 
 				if (s > cnt)
@@ -479,7 +478,55 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			context.RestoreTemporaryStack();
 
-			return String.Format("{0} ({1}, {2}, {3})", def, ret, String.Join(", ", args), cnt);
+			switch (type)
+			{
+			case MathFunctionType.Transpose:
+			{
+				var dim = context.Node.Children[0].Dimension;
+
+				args.Add(dim.Rows.ToString());
+				args.Add(dim.Columns.ToString());
+			}
+				break;
+			case MathFunctionType.Hcat:
+			{
+				var dim1 = context.Node.Children[0].Dimension;
+				var dim2 = context.Node.Children[1].Dimension;
+
+				args.Add(dim1.Rows.ToString());
+				args.Add(dim1.Columns.ToString());
+				args.Add(dim2.Columns.ToString());
+			}
+				break;
+			case MathFunctionType.Multiply:
+				if (def == "CDN_MATH_MATRIX_MULTIPLY_V")
+				{
+					var first = context.Node.Children[0];
+					var dim = first.Dimension;
+
+					args.Add(dim.Rows.ToString());
+					args.Add(dim.Columns.ToString());
+				}
+				else
+				{
+					args.Add(cnt.ToString());
+				}
+				break;
+			case MathFunctionType.Index:
+				break;
+			default:
+				args.Add(cnt.ToString());
+				break;
+			}
+
+			if (ret != null)
+			{
+				return String.Format("{0} ({1}, {2})", def, ret, String.Join(", ", args));
+			}
+			else
+			{
+				return String.Format("{0} ({1})", def, String.Join(", ", args));
+			}
 		}
 		
 		private string TranslateV(InstructionVariable instruction, Context context)
