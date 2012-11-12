@@ -106,11 +106,16 @@ namespace Cdn.RawC.Programmer
 
 		public int[] StateRange(IEnumerable<State> states)
 		{
+			return StateRange(states, null);
+		}
+
+		public int[] StateRange(IEnumerable<State> states, int[] def)
+		{
 			var enu = states.GetEnumerator();
 
 			if (!enu.MoveNext())
 			{
-				return new int[] {0, 0};
+				return def;
 			}
 			else
 			{
