@@ -53,12 +53,15 @@ def print_func_v_intern(f, combos, ip):
     }
 
     for x in combos:
-        name = "_".join(list(x))
+        if len(x) == 1:
+            name = ''
+        else:
+            name = '_{0}'.format("_".join(list(x)))
 
         if ip:
             name += "_ip"
 
-        print_guard('{0}_v_{1}'.format(f, name))
+        print_guard('{0}_v{1}'.format(f, name))
 
         args = ['{0}x{1}'.format(tps[x[i]], i) for i in range(len(x))]
         reti = x.index('m')
@@ -67,7 +70,6 @@ def print_func_v_intern(f, combos, ip):
 
         if not ip:
             args.insert(0, 'ValueType *ret')
-            cargs.append('ret')
             reti = 'ret'
         else:
             reti = 'x{0}'.format(x.index('m'))
@@ -78,9 +80,9 @@ def print_func_v_intern(f, combos, ip):
             else:
                 cargs.append('x{0}'.format(i))
 
-        print("""static ValueType *cdn_math_{0}_v_{1}_builtin ({2}, uint32_t l);
+        print("""static ValueType *cdn_math_{0}_v{1}_builtin ({2}, uint32_t l);
 
-static ValueType *cdn_math_{0}_v_{1}_builtin ({2}, uint32_t l)
+static ValueType *cdn_math_{0}_v{1}_builtin ({2}, uint32_t l)
 {{
 	uint32_t i;
 
@@ -92,7 +94,7 @@ static ValueType *cdn_math_{0}_v_{1}_builtin ({2}, uint32_t l)
 	return ret;
 }}""".format(f, name, ", ".join(args), f.upper(), ", ".join(cargs), reti))
 
-        print_guard_end('{0}_v_{1}'.format(f, name))
+        print_guard_end('{0}_v{1}'.format(f, name))
 
 def print_func_v(f, combos):
     print_func_v_intern(f, combos, False)
@@ -107,11 +109,14 @@ def print_binary_v(f):
 def print_ternary_v(f):
     print_func_v(f, ('mmm', 'mm1', 'm1m', 'm11', '1mm', '1m1', '11m'))
 
-def print_accumulator_v(f, body, init=None):
+def print_accumulator_v(f, body, init=None, fini=None):
     print_guard(f + '_v')
 
     if not init:
-        init = 'x0[0]';
+        init = 'x0[0]'
+
+    if not fini:
+        fini = 'ret'
 
     print("""static ValueType cdn_math_{0}_v_builtin (ValueType *x0, uint32_t l);
 
@@ -125,8 +130,8 @@ static ValueType cdn_math_{0}_v_builtin (ValueType *x0, uint32_t l)
 		{2}
 	}}
 
-	return ret;
-}}""".format(f, init, body))
+	return {3};
+}}""".format(f, init, body, fini))
 
     print_guard_end(f + '_v')
 
@@ -150,7 +155,7 @@ unary = [
     'exp2',
 ]
 
-unary_all = unary + ['invsqrt', 'abs', 'ln', 'sign', 'csign']
+unary_all = unary + ['invsqrt', 'abs', 'ln', 'sign']
 
 binary = [
     'atan2',
@@ -158,7 +163,7 @@ binary = [
     'hypot',
 ]
 
-binary_all = binary + ['max', 'min', 'modulo']
+binary_all = binary + ['max', 'min', 'modulo', 'csign']
 ternary_all = ['lerp', 'clip', 'cycle']
 
 for f in unary_all:
@@ -169,23 +174,36 @@ for f in unary_all:
 
 for f in binary_all:
     print("""
-#if (defined(CDN_MATH_{0}_V_M_M_REQUIRED) && !defined(CDN_MATH_{0}_V_M_M)) || \
-   (defined(CDN_MATH_{0}_V_1_M_REQUIRED) && !defined(CDN_MATH_{0}_V_1_M)) || \
+#if (defined(CDN_MATH_{0}_V_M_M_REQUIRED) && !defined(CDN_MATH_{0}_V_M_M)) || \\
+   (defined(CDN_MATH_{0}_V_1_M_REQUIRED) && !defined(CDN_MATH_{0}_V_1_M)) || \\
    (defined(CDN_MATH_{0}_V_M_1_REQUIRED) && !defined(CDN_MATH_{0}_V_M_1))
 #define CDN_MATH_{0}_REQUIRED
 #endif""".format(f.upper()))
 
 for f in ternary_all:
     print("""
-#if (defined(CDN_MATH_{0}_V_M_M_M_REQUIRED) && !defined(CDN_MATH_{0}_V_M_M_M)) || \
-   (defined(CDN_MATH_{0}_V_M_M_1_REQUIRED) && !defined(CDN_MATH_{0}_V_M_M_1)) || \
-   (defined(CDN_MATH_{0}_V_M_1_M_REQUIRED) && !defined(CDN_MATH_{0}_V_M_1_M)) || \
-   (defined(CDN_MATH_{0}_V_M_1_1_REQUIRED) && !defined(CDN_MATH_{0}_V_M_1_1)) || \
-   (defined(CDN_MATH_{0}_V_1_M_M_REQUIRED) && !defined(CDN_MATH_{0}_V_1_M_M)) || \
-   (defined(CDN_MATH_{0}_V_1_M_1_REQUIRED) && !defined(CDN_MATH_{0}_V_1_M_1)) || \
+#if (defined(CDN_MATH_{0}_V_M_M_M_REQUIRED) && !defined(CDN_MATH_{0}_V_M_M_M)) || \\
+   (defined(CDN_MATH_{0}_V_M_M_1_REQUIRED) && !defined(CDN_MATH_{0}_V_M_M_1)) || \\
+   (defined(CDN_MATH_{0}_V_M_1_M_REQUIRED) && !defined(CDN_MATH_{0}_V_M_1_M)) || \\
+   (defined(CDN_MATH_{0}_V_M_1_1_REQUIRED) && !defined(CDN_MATH_{0}_V_M_1_1)) || \\
+   (defined(CDN_MATH_{0}_V_1_M_M_REQUIRED) && !defined(CDN_MATH_{0}_V_1_M_M)) || \\
+   (defined(CDN_MATH_{0}_V_1_M_1_REQUIRED) && !defined(CDN_MATH_{0}_V_1_M_1)) || \\
    (defined(CDN_MATH_{0}_V_1_1_M_REQUIRED) && !defined(CDN_MATH_{0}_V_1_1_M))
 #define CDN_MATH_{0}_REQUIRED
 #endif""".format(f.upper()))
+
+print("""
+#if (defined(CDN_MATH_MAX_V_REQUIRED) && !defined(CDN_MATH_MAX_V))
+#define CDN_MATH_MAX_REQUIRED
+#endif
+
+#if (defined(CDN_MATH_MIN_V_REQUIRED) && !defined(CDN_MATH_MIN_V))
+#define CDN_MATH_MIN_REQUIRED
+#endif
+
+#if (defined(CDN_MATH_HYPOT_V_REQUIRED) && !defined(CDN_MATH_HYPOT_V))
+#define CDN_MATH_SQRT_REQUIRED
+#endif""")
 
 for f in unary:
     print_func(f, 1)
@@ -229,6 +247,7 @@ print_func('cycle', 3, """if (x0 < x1)
 
 print_func('min', 2, 'return x0 < x1 ? x0 : x1;')
 print_func('max', 2, 'return x0 > x1 ? x0 : x1;')
+
 print_func('rand', 1, 'return (random () / (ValueType)RAND_MAX);')
 print_func('modulo', 2, """ValueType ans = CDN_MATH_VALUE_TYPE_FUNC(fmod) (x0, x1);
 
@@ -257,8 +276,12 @@ def print_operator_v(f, n, op):
         op = " " + op + " "
 
     for x in combos:
-        name = "_".join(list(x))
-        print_guard('{0}_v_{1}'.format(f, name))
+        if len(x) == 1:
+            name = ''
+        else:
+            name = '_{0}'.format("_".join(list(x)))
+
+        print_guard('{0}_v{1}'.format(f, name))
 
         args = ['{0}x{1}'.format(tps[x[i]], i) for i in range(len(x))]
         reti = x.index('m')
@@ -276,9 +299,9 @@ def print_operator_v(f, n, op):
 
             cargs.append(carg)
 
-        print("""static ValueType *cdn_math_{0}_v_{1}_builtin (ValueType *ret, {2}, uint32_t l);
+        print("""static ValueType *cdn_math_{0}_v{1}_builtin (ValueType *ret, {2}, uint32_t l);
 
-static ValueType *cdn_math_{0}_v_{1}_builtin (ValueType *ret, {2}, uint32_t l)
+static ValueType *cdn_math_{0}_v{1}_builtin (ValueType *ret, {2}, uint32_t l)
 {{
 	uint32_t i;
 
@@ -290,7 +313,7 @@ static ValueType *cdn_math_{0}_v_{1}_builtin (ValueType *ret, {2}, uint32_t l)
 	return ret;
 }}""".format(f, name, ", ".join(args), f.upper(), op.join(cargs)))
 
-        print_guard_end('{0}_v_{1}'.format(f, name))
+        print_guard_end('{0}_v{1}'.format(f, name))
 
 def print_index_v():
     print_guard('index_v')
@@ -401,30 +424,28 @@ cdn_math_hcat_builtin (ValueType *ret,
     print_guard_end('hcat')
 
 def print_matrix_multiply_v():
-    print_guard('multiply_v')
+    print_guard('matrix_multiply_v')
 
     print("""
-static ValueType *cdn_math_multiply_v_builtin (ValueType *ret,
-                                               ValueType *x0,
-                                               ValueType *x1,
-                                               uint32_t   rows,
-                                               uint32_t   columns);
+static ValueType *cdn_math_matrix_multiply_v_builtin (ValueType *ret,
+                                                      ValueType *x0,
+                                                      ValueType *x1,
+                                                      uint32_t   rows,
+                                                      uint32_t   columns);
 
 static ValueType *
-cdn_math_multiply_v_builtin (ValueType *ret,
-                             ValueType *x0,
-                             ValueType *x1,
-                             uint32_t   rows,
-                             uint32_t   columns)
+cdn_math_matrix_multiply_v_builtin (ValueType *ret,
+                                   ValueType *x0,
+                                   ValueType *x1,
+                                   uint32_t   rows,
+                                   uint32_t   columns)
 {{
 	uint32_t r;
-	uint32_t ret = 0;
+	uint32_t ptr = 0;
 
 	for (r = 0; r < rows; ++r)
 	{{
 		uint32_t c;
-
-		x1ptr r;
 
 		for (c = 0; c < columns; ++c)
 		{{
@@ -448,7 +469,7 @@ cdn_math_multiply_v_builtin (ValueType *ret,
 	return ret;
 }}""")
 
-    print_guard_end('multiply_v')
+    print_guard_end('matrix_multiply_v')
 
 # Element wise operators
 print_operator_v('uminus', 1, '-')
@@ -472,7 +493,12 @@ print_accumulator_v('sum', 'ret += x0[i];')
 print_accumulator_v('product', 'ret *= x0[i];')
 print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 
+print_accumulator_v('max', 'ret = CDN_MATH_MAX (ret, x0[i]);', 'x0[0]')
+print_accumulator_v('min', 'ret = CDN_MATH_MIN (ret, x0[i]);', 'x0[0]')
+print_accumulator_v('hypot', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]', 'CDN_MATH_SQRT (ret)')
+
 print_index_v()
+print_hcat()
 print_transpose_v()
 print_matrix_multiply_v()
 
