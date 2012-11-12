@@ -587,7 +587,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("typedef struct");
 			writer.WriteLine("{");
-			writer.WriteLine("\tValueType data[{0}];", d_program.StateTable.Count);
+			writer.WriteLine("\tValueType data[{0}];", d_program.StateTable.Size);
 			writer.WriteLine("\t{0} event_states[{1}];", EventStateType, Knowledge.Instance.EventContainersCount);
 			writer.WriteLine("\t{0} events_active[{1}];", EventType, Knowledge.Instance.EventsCount);
 			writer.WriteLine("\tuint32_t events_active_size;");
@@ -1553,7 +1553,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine();
 			writer.WriteLine("\t\t.size = CDN_RAWC_NETWORK_{0}_SIZE,", CPrefixUp);
-			writer.WriteLine("\t\t.data_size = sizeof (ValueType) * {0},", d_program.StateTable.Count);
+			writer.WriteLine("\t\t.data_size = sizeof (ValueType) * {0},", d_program.StateTable.Size);
 			writer.WriteLine("\t\t.event_refinement = {0},", NeedsSpaceForEvents() ? 1 : 0);
 			writer.WriteLine("\t\t.type_size = sizeof (ValueType),");
 			writer.WriteLine("\t\t.minimum_timestep = {0},", Knowledge.Instance.Network.Integrator.MinimumTimestep);

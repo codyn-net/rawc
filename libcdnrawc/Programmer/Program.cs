@@ -999,7 +999,7 @@ namespace Cdn.RawC.Programmer
 
 			// Initialize constants here
 			d_apiPrepare.Body.Add(new Computation.Comment("Copy constants"));
-			d_apiPrepare.Body.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Count, -1));
+			d_apiPrepare.Body.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Size, -1));
 			d_apiPrepare.Body.Add(new Computation.Empty());
 
 			// Initialize _IN_
