@@ -20,6 +20,12 @@ typedef struct
 
 typedef struct
 {
+	uint16_t rows;
+	uint16_t columns;
+} CdnRawcDimension;
+
+typedef struct
+{
 	// Name of the state
 	char const *name;
 
@@ -132,9 +138,14 @@ typedef struct
 	CdnRawcEventValue *(*get_events_value) (void     *data,
 	                                        uint32_t  i);
 
+	CdnRawcDimension const *(*get_dimension) (CdnRawcDimension const *dimensions,
+	                                          uint32_t                i);
+
 	CdnRawcRange states;
 	CdnRawcRange derivatives;
 	CdnRawcRange event_values;
+
+	CdnRawcDimension const *dimensions;
 
 	uint32_t size;
 	uint32_t data_size;

@@ -1501,6 +1501,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 
+		private void WriteNetworkDimensions(TextWriter writer)
+		{
+			writer.WriteLine("\tstatic CdnRawcDimension dimensions[] = {");
+
+			foreach (var item in d_program.StateTable)
+			{
+				var dim = item.Dimension;
+
+				if (!dim.IsOne)
+				{
+					writer.WriteLine("\t\t{{ {0}, {1} }},", dim.Rows, dim.Columns);
+				}
+			}
+
+			writer.WriteLine("\t};");
+			writer.WriteLine();
+		}
+
 		private void WriteNetwork(TextWriter writer)
 		{
 			var pref = CPrefixDown;
@@ -1510,6 +1528,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("{");
 			
 			WriteNetworkMeta(writer);
+			WriteNetworkDimensions(writer);
 
 			writer.WriteLine("\tstatic CdnRawcNetwork network = {");
 
@@ -1531,6 +1550,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				"get_events_active",
 				"get_events_active_size",
 				"get_events_value",
+				"get_dimension",
 			};
 
 			foreach (string name in funcs)
@@ -1558,6 +1578,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			                 range[0],
 			                 range[0] + (range[1] - range[0]) * 3);
 
+			writer.WriteLine();
+			writer.WriteLine("\t\t.dimensions = dimensions,");
 			writer.WriteLine();
 			writer.WriteLine("\t\t.size = CDN_RAWC_NETWORK_{0}_SIZE,", CPrefixUp);
 			writer.WriteLine("\t\t.data_size = sizeof (ValueType) * {0},", d_program.StateTable.Size);
@@ -2111,6 +2133,36 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("\treturn (CdnRawcEventValue *)({0} + {1} + i * 3);",
 			                 d_program.StateTable.Name,
 			                 range[0]);
+			writer.WriteLine();
+
+			writer.WriteLine("static CdnRawcDimension const *");
+			writer.WriteLine("{0}_get_dimension (CdnRawcDimension const *dimensions, uint32_t i)", CPrefixDown);
+			writer.WriteLine("{");
+
+			writer.WriteLine("\tswitch (i)");
+			writer.WriteLine("\t{");
+
+			int i = 0;
+
+			foreach (var item in d_program.StateTable)
+			{
+				var dim = item.Dimension;
+
+				if (!dim.IsOne)
+				{
+					writer.WriteLine("\tcase {0}:", item.AliasOrIndex);
+					writer.WriteLine("\t\treturn dimensions + {0};", i);
+					++i;
+				}
+			}
+
+			writer.WriteLine("\tdefault:");
+			writer.WriteLine("\t{");
+			writer.WriteLine("\t\tstatic CdnRawcDimension dimone = {1, 1};");
+			writer.WriteLine("\t\treturn &dimone;");
+			writer.WriteLine("\t}");
+			writer.WriteLine("\t}");
+
 			writer.WriteLine("}");
 			writer.WriteLine();
 		}
