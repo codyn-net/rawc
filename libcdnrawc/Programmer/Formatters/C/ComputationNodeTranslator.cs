@@ -107,14 +107,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var cond = String.Join(" || ", conditions);
 
 			ret.AppendLine("{");
-			ret.AppendFormat("\t{0} const *evstates = ({0} const *)({1} + {2});",
-			                 context.Options.EventStateType,
-			                 context.Program.StateTable.Name,
-			                 context.Program.StateTable.Count);
-
-			ret.AppendLine();
-			ret.AppendLine();
-
 			ret.AppendFormat("\tif ({0})", cond);
 			ret.AppendLine();
 			ret.AppendLine("\t{");
