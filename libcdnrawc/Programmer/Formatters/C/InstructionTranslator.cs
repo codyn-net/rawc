@@ -448,7 +448,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			type = (Cdn.MathFunctionType)instruction.Id;
 			
 			var def = Context.MathFunctionDefineV(type, instruction.GetStackManipulation());
-			var ret = context.PeekRet();
+			string ret = null;
+
+			if (!context.Node.Dimension.IsOne)
+			{
+				ret = context.PeekRet();
+			}
 			
 			Context.MathDefines.Add(def);
 			
