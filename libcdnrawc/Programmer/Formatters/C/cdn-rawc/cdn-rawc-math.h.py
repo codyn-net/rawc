@@ -400,6 +400,56 @@ cdn_math_hcat_builtin (ValueType *ret,
 
     print_guard_end('hcat')
 
+def print_matrix_multiply_v():
+    print_guard('multiply_v')
+
+    print("""
+static ValueType *cdn_math_multiply_v_builtin (ValueType *ret,
+                                               ValueType *x0,
+                                               ValueType *x1,
+                                               uint32_t   rows,
+                                               uint32_t   columns);
+
+static ValueType *
+cdn_math_multiply_v_builtin (ValueType *ret,
+                             ValueType *x0,
+                             ValueType *x1,
+                             uint32_t   rows,
+                             uint32_t   columns)
+{{
+	uint32_t r;
+	uint32_t ret = 0;
+
+	for (r = 0; r < rows; ++r)
+	{{
+		uint32_t c;
+
+		x1ptr r;
+
+		for (c = 0; c < columns; ++c)
+		{{
+			uint32_t i;
+			uint32_t x1ptr = c;
+
+			ret[ptr] = 0;
+
+			for (i = 0; i < columns; ++i)
+			{{
+				ret[ptr] += x0[i] * x1[x1ptr];
+				x1ptr += rows;
+			}}
+
+			++ptr;
+		}}
+
+		x0 += columns;
+	}}
+
+	return ret;
+}}""")
+
+    print_guard_end('multiply_v')
+
 # Element wise operators
 print_operator_v('uminus', 1, '-')
 print_operator_v('negate', 1, '!')
@@ -424,6 +474,7 @@ print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 
 print_index_v()
 print_transpose_v()
+print_matrix_multiply_v()
 
 print("#endif /* CDN_RAWC_MATH_PROTOS */")
 
