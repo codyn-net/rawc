@@ -418,14 +418,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				argi += child.Dimension.Size();
 			}
 			
-			if (context.Root == context.Node)
-			{
-				return String.Format("({0})", String.Join(",\n ", args));
-			}
-			else
-			{
-				return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
-			}
+			return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
 		}
 
 		private string TranslateChildV(Tree.Node child, Context context)
