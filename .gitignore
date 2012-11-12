@@ -15,7 +15,6 @@ install-sh
 Makefile
 Makefile.in
 missing
-cpgrawc
 m4
 cdnrawc.userprefs
 config.guess
@@ -28,3 +27,4 @@ ltmain.sh
 /cdn-rawc
 py-compile
 /cdnrawc
+libcdnrawc/Programmer/Formatters/C/cdn-rawc/cdn-rawc-math.h
