@@ -66,7 +66,8 @@ def print_func_v_intern(f, combos, ip):
         cargs = []
 
         if not ip:
-            cargs.append('ValueType *ret')
+            args.insert(0, 'ValueType *ret')
+            cargs.append('ret')
             reti = 'ret'
         else:
             reti = 'x{0}'.format(x.index('m'))
