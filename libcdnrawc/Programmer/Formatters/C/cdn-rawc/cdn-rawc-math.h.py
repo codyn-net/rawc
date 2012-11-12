@@ -295,9 +295,17 @@ static ValueType *cdn_math_{0}_v_{1}_builtin (ValueType *ret, {2}, uint32_t l)
 def print_index_v():
     print_guard('index_v')
 
-    print("""static ValueType *cdn_math_index_v_builtin (ValueType *ret, ValueType *x0, uint32_t *indices, uint32_t l);
+    print("""
+static ValueType *cdn_math_index_v_builtin (ValueType *ret,
+                                            ValueType *x0,
+                                            uint32_t  *indices,
+                                            uint32_t   l);
 
-static ValueType *cdn_math_index_v_builtin (ValueType *ret, ValueType *x0, uint32_t *indices, uint32_t l)
+static ValueType *
+cdn_math_index_v_builtin (ValueType *ret,
+                          ValueType *x0,
+                          uint32_t  *indices,
+                          uint32_t   l)
 {{
 	uint32_t i;
 
@@ -314,9 +322,17 @@ static ValueType *cdn_math_index_v_builtin (ValueType *ret, ValueType *x0, uint3
 def print_transpose_v():
     print_guard('transpose_v')
 
-    print("""static ValueType *cdn_math_transpose_v_builtin (ValueType *ret, ValueType *x0, uint32_t rows, uint32_t columns);
+    print("""
+static ValueType *cdn_math_transpose_v_builtin (ValueType *ret,
+                                                ValueType *x0,
+                                                uint32_t   rows,
+                                                uint32_t   columns);
 
-static ValueType *cdn_math_transpose_v_builtin (ValueType *ret, ValueType *x0, uint32_t rows, uint32_t columns)
+static ValueType *
+cdn_math_transpose_v_builtin (ValueType *ret,
+                              ValueType *x0,
+                              uint32_t   rows,
+                              uint32_t   columns)
 {{
 	uint32_t r;
 	uint32_t i = 0;
@@ -343,9 +359,21 @@ static ValueType *cdn_math_transpose_v_builtin (ValueType *ret, ValueType *x0, u
 def print_hcat():
     print_guard('hcat')
 
-    print("""static ValueType *cdn_math_hcat_builtin (ValueType *ret, ValueType *x0, ValueType *x1, uint32_t rows, uint32_t columns);
+    print("""
+static ValueType *cdn_math_hcat_builtin (ValueType *ret,
+                                         ValueType *x0,
+                                         ValueType *x1,
+                                         uint32_t   rows,
+                                         uint32_t   columns1,
+                                         uint32_t   columns2);
 
-static ValueType *cdn_math_hcat_builtin (ValueType *ret, ValueType *x0, ValueType *x1, uint32_t rows, uint32_t columns1, uint32_t columns2)
+static ValueType *
+cdn_math_hcat_builtin (ValueType *ret,
+                       ValueType *x0,
+                       ValueType *x1,
+                       uint32_t   rows,
+                       uint32_t   columns1,
+                       uint32_t   columns2)
 {{
 	uint32_t r;
 	uint32_t i1 = 0;
