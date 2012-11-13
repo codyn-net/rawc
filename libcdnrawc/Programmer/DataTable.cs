@@ -290,6 +290,14 @@ namespace Cdn.RawC.Programmer
 			get { return d_size; }
 		}
 
+		public DataItem AddAlias(object key, object other)
+		{
+			var item = this[other];
+			d_items.Add(BaseKey(key), item);
+			
+			return item;
+		}
+
 		public DataItem Add(object key)
 		{
 			object b = BaseKey(key);
@@ -327,8 +335,18 @@ namespace Cdn.RawC.Programmer
 		{
 			get
 			{
+				DataItem ret;
 				object basekey = BaseKey(key);
-				return d_items[basekey];
+				
+				if (!d_items.TryGetValue(basekey, out ret))
+				{
+					Console.Error.WriteLine("Failed to find state item: {0}, {1}", key, basekey);
+					throw new KeyNotFoundException();
+				}
+				else
+				{
+					return ret;
+				}
 			}
 		}
 		

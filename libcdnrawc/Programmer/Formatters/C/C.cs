@@ -1325,23 +1325,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				DataTable.DataItem item;
 
-				try
+				if (d_program.StateTable.TryGetValue(v, out item))
 				{
-					item = d_program.StateTable[v];
-				}
-				catch
-				{
-					continue;
-				}
+					ChildMeta cm = new ChildMeta {
+						Parent = parent,
+						IsNode = false,
+						Index = (uint)item.Index,
+						Next = 0
+					};
 
-				ChildMeta cm = new ChildMeta {
-					Parent = parent,
-					IsNode = false,
-					Index = (uint)item.Index,
-					Next = 0
-				};
-
-				prev = AddChild(meta, nm, cm, prev);
+					prev = AddChild(meta, nm, cm, prev);
+				}
 			}
 
 			Cdn.Node node = obj as Cdn.Node;
