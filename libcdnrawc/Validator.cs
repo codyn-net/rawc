@@ -163,8 +163,10 @@ namespace Cdn.RawC
 			var dimensions = d_monitors.ConvertAll<Cdn.Dimension>(a => a.Variable.Dimension);
 
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
+			
+			var len = d_data[0].Length;
 
-			for (int i = 0; i < d_data.Count; ++i)
+			for (int i = 0; i < len; ++i)
 			{
 				ReadAndCompare(dynnet, indices, dimensions, i, t);
 
