@@ -149,6 +149,7 @@ typedef struct
 
 	uint32_t size;
 	uint32_t data_size;
+	uint32_t data_count;
 
 	uint8_t event_refinement;
 	uint8_t type_size;
