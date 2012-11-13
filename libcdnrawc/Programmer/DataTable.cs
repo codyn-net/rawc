@@ -288,6 +288,14 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 		
+		public DataItem AddAlias(object key, object other)
+		{
+			var item = this[other];
+			d_items.Add(BaseKey(key), item);
+			
+			return item;
+		}
+		
 		public DataItem Add(object key)
 		{
 			object b = BaseKey(key);

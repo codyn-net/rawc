@@ -284,6 +284,11 @@ namespace Cdn.RawC.Programmer
 					}
 				}
 			}
+			
+			foreach (var st in Knowledge.Instance.ExternalConstraintStates)
+			{
+				d_statetable.AddAlias(st, st.Object);
+			}
 
 			if (Cdn.RawC.Options.Instance.Validate)
 			{
