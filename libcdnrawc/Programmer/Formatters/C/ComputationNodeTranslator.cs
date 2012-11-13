@@ -188,10 +188,37 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ret.AppendLine("); */");
 			}
 
-			ret.AppendFormat("\t\t{0}[{1}[i][0]] = {2};",
-			               context.Program.StateTable.Name,
-			               node.IndexTable.Name,
-			               InstructionTranslator.QuickTranslate(ctx));
+			if (node.Expression.Dimension.IsOne)
+			{
+				string eq = InstructionTranslator.QuickTranslate(ctx);
+
+				ret.AppendFormat("\t\t{0}[{1}[i][0]] = {2};",
+			                     context.Program.StateTable.Name,
+			                     node.IndexTable.Name,
+			                     eq);
+			}
+			else
+			{
+				var retval = String.Format("{0} + {1}[i][0]", context.Program.StateTable.Name, node.IndexTable.Name);
+				
+				ctx.PushRet(retval);
+				var eq = InstructionTranslator.QuickTranslate(ctx);
+				ctx.PopRet();
+				
+				foreach (var tmp in ctx.TemporaryStorage)
+				{
+					ret.AppendFormat("\t\tValueType {0}[{1}] = {{0,}};", tmp.Name, tmp.Size);
+					ret.AppendLine();
+				}
+				
+				if (ctx.TemporaryStorage.Count != 0)
+				{
+					ret.AppendLine();
+				}
+				
+				ret.AppendFormat("\t\t{0};", eq);
+			}
+
 			ret.AppendLine();
 			ret.AppendLine("\t}");
 			ret.Append("}");

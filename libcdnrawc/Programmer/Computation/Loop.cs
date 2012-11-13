@@ -212,10 +212,22 @@ namespace Cdn.RawC.Programmer.Computation
 			
 			foreach (Tree.Embedding.Argument arg in d_function.Arguments)
 			{
-				d_mapping[arg.Path] = String.Format("{0}[{1}[i][{2}]]",
-				                                    d_program.StateTable.Name,
-				                                    d_indextable.Name,
-				                                    FromMap(indexmap, (int)arg.Index + 1));
+				var node = d_function.Expression.FromPath(arg.Path);
+				
+				if (node.Dimension.IsOne)
+				{
+					d_mapping[arg.Path] = String.Format("{0}[{1}[i][{2}]]",
+					                                    d_program.StateTable.Name,
+					                                    d_indextable.Name,
+					                                    FromMap(indexmap, (int)arg.Index + 1));
+				}
+				else
+				{
+					d_mapping[arg.Path] = String.Format("({0} + {1}[i][{2}])",
+					                                    d_program.StateTable.Name,
+					                                    d_indextable.Name,
+					                                    FromMap(indexmap, (int)arg.Index + 1));
+				}
 			}
 		}
 	}
