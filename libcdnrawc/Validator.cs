@@ -165,12 +165,15 @@ namespace Cdn.RawC
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
 			var len = d_data[0].Length;
 
+			var shvals = dynnet.Values();
+
 			for (int i = 0; i < len; ++i)
 			{
-				var shvals = dynnet.Values();
 				ReadAndCompare(dynnet, indices, dimensions, i, shvals, t);
 
 				dynnet.Step(t, ts);
+				shvals = dynnet.Values();
+
 				t += shvals[dtstate.DataIndex];
 			}
 
