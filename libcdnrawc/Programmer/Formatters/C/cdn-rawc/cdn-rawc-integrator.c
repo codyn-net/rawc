@@ -86,8 +86,6 @@ cdn_rawc_integrator_process_events (CdnRawcIntegrator *integrator,
 	    event_value->distance >= (1 - 1e-9))
 	{
 		// Fire all events
-		uint32_t i;
-
 		network->events_fire (data);
 
 		network->events_post_update (data);
