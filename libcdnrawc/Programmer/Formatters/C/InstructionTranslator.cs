@@ -563,7 +563,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private string TranslateV(Instructions.Function instruction, Context context)
 		{
-			string name = instruction.FunctionCall.Name.ToUpper();
+			string name = instruction.FunctionCall.Name;
+			
+			if (instruction.FunctionCall.IsCustom)
+			{
+				name = name.ToUpper();
+			}
+
 			List<string > args = new List<string>();
 
 			var ret = context.PeekRet();

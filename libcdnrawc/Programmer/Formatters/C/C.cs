@@ -749,6 +749,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			foreach (Programmer.Function function in d_program.Functions)
 			{
+				if (!function.IsCustom)
+				{
+					continue;
+				}
+
 				string def = function.Name.ToUpper();
 				string impl = function.Name;
 				
@@ -794,7 +799,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var expr = function.Expression;
 			var isone = expr.Dimension.IsOne;
 
-			writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+			if (function.IsCustom)
+			{
+				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+			}
 
 			writer.Write("static ValueType ");
 
@@ -802,6 +810,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				writer.Write("*");
 			}
+			
+			writer.WriteLine();
 
 			writer.WriteLine("{0} ({1})",
 			                 function.Name,
@@ -828,13 +838,21 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("\treturn {0};", Context.Reindent(retval, "\t").Substring(1));
 			writer.WriteLine("}");
-			writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+			
+			if (function.IsCustom)
+			{
+				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+			}
+
 			writer.WriteLine();
 		}
 
 		private void WriteFunctionDecl(TextWriter writer, Programmer.Function function)
 		{
-			writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+			if (function.IsCustom)
+			{
+				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+			}
 
 			writer.Write("static ");
 
@@ -865,8 +883,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			writer.WriteLine(";");
-			writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
-			writer.WriteLine();
+			
+			if (function.IsCustom)
+			{
+				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+				writer.WriteLine();
+			}
 		}
 		
 		private void WriteFunctions(TextWriter writer)
@@ -876,6 +898,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				WriteFunctionDecl(writer, function);
 			}
+			
+			writer.WriteLine();
 
 			// API Function declarations
 			foreach (var api in d_program.APIFunctions)
@@ -888,6 +912,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				WriteAPIDecl(writer, api, false);
 				writer.WriteLine(";");
 			}
+			
+			writer.WriteLine();
 
 			writer.WriteLine("static void {0}_events_update_distance (void *data);", CPrefixDown);
 			writer.WriteLine("static void {0}_events_post_update (void *data);", CPrefixDown);
