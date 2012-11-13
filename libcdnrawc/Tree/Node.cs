@@ -503,6 +503,23 @@ namespace Cdn.RawC.Tree
 				child.Sort();
 			}
 			
+			InstructionCustomFunction icfunc = d_instruction as InstructionCustomFunction; 
+			
+			if (icfunc != null)
+			{
+				var args = icfunc.Function.Arguments;
+				int offset = 0;
+
+				for (int i = 0; i < args.Length; ++i)
+				{
+					if (args[i].Unused)
+					{
+						d_children.RemoveAt(i - offset);
+						++offset;
+					}
+				}
+			}
+			
 			if (!d_isCommutative)
 			{
 				return;
