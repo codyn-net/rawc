@@ -331,8 +331,18 @@ namespace Cdn.RawC.Programmer
 		{
 			get
 			{
+				DataItem ret;
 				object basekey = BaseKey(key);
-				return d_items[basekey];
+				
+				if (!d_items.TryGetValue(basekey, out ret))
+				{
+					Console.Error.WriteLine("Failed to find state item: {0}, {1}", key, basekey);
+					throw new KeyNotFoundException();
+				}
+				else
+				{
+					return ret;
+				}
 			}
 		}
 		
