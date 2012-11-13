@@ -89,6 +89,7 @@ libcdnrawc/Programmer/Formatters/C/cdn-rawc/Makefile
 libcdnrawc/Programmer/Formatters/C/cdn-rawc/cdn-rawc.pc
 completion/Makefile
 m4/Makefile
+tests/Makefile
 ])
 
 AC_OUTPUT
