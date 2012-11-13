@@ -428,6 +428,11 @@ namespace Cdn.RawC
 				{
 					yield return s;
 				}
+				
+				foreach (State s in d_externalConstraintStates)
+				{
+					yield return s;
+				}
 			}
 		}
 
@@ -652,7 +657,7 @@ namespace Cdn.RawC
 			// constraint expression.
 			var nv = new Cdn.Variable(String.Format("_{0}_unc", variable.Name), variable.Expression.Copy(), VariableFlags.None);
 			variable.Object.AddVariable(nv);
-
+			
 			var instrs = variable.Constraint.Instructions;
 			
 			for (int i = 0; i < instrs.Length; ++i)
