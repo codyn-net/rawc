@@ -147,7 +147,7 @@ namespace Cdn.RawC
 
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
 
-			for (int i = 0; i < d_data.Count; ++i)
+			for (int i = 0; i < d_data[0].Length; ++i)
 			{
 				ReadAndCompare(dynnet, indices, i, t);
 
