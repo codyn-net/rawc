@@ -99,22 +99,29 @@ namespace Cdn.RawC
 			d_monitors = ret;
 		}
 
-		private void ReadAndCompare(DynamicNetwork dynnet, List<uint> indices, int row, double t)
+		private void ReadAndCompare(DynamicNetwork dynnet, List<uint> indices, List<Cdn.Dimension> dimensions, int row, double t)
 		{
 			List<string> failures = new List<string>();
-
+			
 			for (int i = 0; i < indices.Count; ++i)
 			{
-				double rawcval = dynnet.Value(indices[i]);
-				double cdnval = d_data[i][row];
-
-				if (System.Math.Abs(cdnval - rawcval) > Options.Instance.ValidatePrecision ||
-				    double.IsNaN(cdnval) != double.IsNaN(rawcval))
+				var dim = dimensions[i];
+				var size = dim.Size();
+				
+				for (int j = 0; j < size; ++j)
 				{
-					failures.Add(String.Format("{0} (got {1} but expected {2})",
-						         d_monitors[i].Variable.FullName,
-						         rawcval,
-						         cdnval));
+					double rawcval = dynnet.Value(indices[i] + (uint)j);
+					double cdnval = d_data[i][row * size + j];
+				
+					if (System.Math.Abs(cdnval - rawcval) > Options.Instance.ValidatePrecision ||
+				        double.IsNaN(cdnval) != double.IsNaN(rawcval))
+					{
+						failures.Add(String.Format("{0}[{1}] (got {2} but expected {3})",
+							         d_monitors[i].Variable.FullNameForDisplay,
+							         j,
+						             rawcval,
+						             cdnval));
+					}
 				}
 			}
 
@@ -153,12 +160,13 @@ namespace Cdn.RawC
 			dynnet.Reset(t);
 
 			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].DataIndex);
+			var dimensions = d_monitors.ConvertAll<Cdn.Dimension>(a => a.Variable.Dimension);
 
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
 
 			for (int i = 0; i < d_data.Count; ++i)
 			{
-				ReadAndCompare(dynnet, indices, i, t);
+				ReadAndCompare(dynnet, indices, dimensions, i, t);
 
 				dynnet.Step(t, ts);
 				t += dynnet.Value((uint)dtstate.DataIndex);
