@@ -259,7 +259,23 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public static string MathFunctionDefine(Cdn.InstructionFunction instruction)
 		{
-			return MathFunctionDefine((Cdn.MathFunctionType)instruction.Id, (int)instruction.GetStackManipulation().Pop.Num);
+			var smanip = instruction.GetStackManipulation();
+			var type = (Cdn.MathFunctionType)instruction.Id;
+			
+			if (!smanip.Push.Dimension.IsOne)
+			{
+				return MathFunctionDefineV(type, smanip);
+			}
+			
+			for (int i = 0; i < smanip.Pop.Num; ++i)
+			{
+				if (!smanip.GetPopn(i).Dimension.IsOne)
+				{
+					return MathFunctionDefineV(type, smanip);
+				}
+			}
+			
+			return MathFunctionDefine(type, (int)smanip.Pop.Num);
 		}
 		
 		public static string MathFunctionDefine(Cdn.MathFunctionType type, int arguments)
@@ -298,6 +314,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Clip:
 			case MathFunctionType.Cycle:
 			case MathFunctionType.Modulo:
+			case MathFunctionType.Erf:
+			case MathFunctionType.Sign:
+			case MathFunctionType.Csign:
+			case MathFunctionType.Sum:
+			case MathFunctionType.Product:
 				val = String.Format("CDN_MATH_{0}", name.ToUpper());
 				break;
 			case MathFunctionType.Power:
@@ -327,6 +348,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Cosh:
 			case MathFunctionType.Exp:
 			case MathFunctionType.Exp2:
+			case MathFunctionType.Erf:
 			case MathFunctionType.Floor:
 			case MathFunctionType.Hypot:
 			case MathFunctionType.Invsqrt:
@@ -350,7 +372,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Emultiply:
 			case MathFunctionType.Divide:
 			case MathFunctionType.Minus:
-			case MathFunctionType.UnaryMinus:
 			case MathFunctionType.Negate:
 			case MathFunctionType.Less:
 			case MathFunctionType.LessOrEqual:
@@ -359,28 +380,50 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Equal:
 			case MathFunctionType.Nequal:
 			case MathFunctionType.Hcat:
+			case MathFunctionType.Csign:
+			case MathFunctionType.Sum:
+			case MathFunctionType.Product:
+			case MathFunctionType.Transpose:
+			case MathFunctionType.Sign:
 				val = String.Format("CDN_MATH_{0}_V", name.ToUpper());
 				break;
 			case MathFunctionType.Power:
 				val = "CDN_MATH_POW_V";
 				break;
-			
+			case MathFunctionType.UnaryMinus:
+				val = "CDN_MATH_UMINUS_V";
+				break;
+			case MathFunctionType.Multiply:
+			{
+				var d1 = smanip.GetPopn(1).Dimension;
+				var d2 = smanip.GetPopn(0).Dimension;
+				
+				if (d1.Rows == d2.Columns && d1.Columns == d2.Rows)
+				{
+					return "CDN_MATH_MATRIX_MULTIPLY_V";
+				}
+				else
+				{
+					val = "CDN_MATH_EMULTIPLY_V";
+				}
+				break;
+			}
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
 			
 			if (smanip.Pop.Num == 2)
 			{
-				var n1 = smanip.GetPopn(0).Dimension.IsOne;
-				var n2 = smanip.GetPopn(1).Dimension.IsOne;
+				var n1 = smanip.GetPopn(1).Dimension.IsOne;
+				var n2 = smanip.GetPopn(0).Dimension.IsOne;
 				
 				return String.Format("{0}_{1}_{2}", val, n1 ? "1" : "M", n2 ? "1" : "M");
 			}
 			else if (smanip.Pop.Num == 3)
 			{
-				var n1 = smanip.GetPopn(0).Dimension.IsOne;
+				var n1 = smanip.GetPopn(2).Dimension.IsOne;
 				var n2 = smanip.GetPopn(1).Dimension.IsOne;
-				var n3 = smanip.GetPopn(2).Dimension.IsOne;
+				var n3 = smanip.GetPopn(0).Dimension.IsOne;
 				
 				return String.Format("{0}_{1}_{2}_{3}", val, n1 ? "1" : "M", n2 ? "1" : "M", n3 ? "1" : "M");
 			}	
