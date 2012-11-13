@@ -680,19 +680,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			var generated = new HashSet<string>();
 
-			foreach (Cdn.InstructionFunction inst in d_program.CollectInstructions<Cdn.InstructionFunction>())
-			{
-				if (inst.Id > (uint)MathFunctionType.NumOperators || inst.Id == (uint)MathFunctionType.Power || inst.Id == (uint)MathFunctionType.Modulo)
-				{
-					string def = Context.MathFunctionDefine(inst);
-
-					if (generated.Add(def))
-					{
-						writer.WriteLine("#define {0}_REQUIRED", def);
-					}
-				}
-			}
-			
 			foreach (var instr in d_program.CollectInstructions<Cdn.InstructionRand>())
 			{
 				string def = "CDN_MATH_RAND";
@@ -949,7 +936,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 				
 				writer.WriteLine();
-				writer.WriteLine(Context.Reindent(ret, "\t"));
+				writer.WriteLine(Context.Reindent(ret, "\t" + indent));
 				
 				writer.WriteLine("{0}}}", indent);
 			}

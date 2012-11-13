@@ -152,6 +152,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public string PeekRet()
 		{
+			if (d_ret.Count == 0)
+			{
+				Log.WriteLine("Empty return value stack while processing: {0}", Node);
+			}
+
 			return d_ret.Peek();
 		}
 		

@@ -235,13 +235,23 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Plus:
 				return SimpleOperator(context, instruction, " + ");
 			case MathFunctionType.Modulo:
+			{
+				var def = Context.MathFunctionDefine(Cdn.MathFunctionType.Modulo, context.Node.Children.Count);
+				Context.MathDefines.Add(def);
+
 				return String.Format("{0}{1}",
-					                     Context.MathFunctionDefine(Cdn.MathFunctionType.Modulo, context.Node.Children.Count),
-					                     SimpleOperator(context, null, ", "));
+					                 def,
+					                 SimpleOperator(context, null, ", "));
+			}
 			case MathFunctionType.Power:
+			{
+				var def = Context.MathFunctionDefine(Cdn.MathFunctionType.Pow, context.Node.Children.Count);
+				Context.MathDefines.Add(def);
+
 				return String.Format("{0}{1}",
-					                     Context.MathFunctionDefine(Cdn.MathFunctionType.Pow, context.Node.Children.Count),
-					                     SimpleOperator(context, null, ", "));
+					                 def,
+					                 SimpleOperator(context, null, ", "));
+			}
 			case MathFunctionType.Ternary:
 				return String.Format("({0} ? {1} : {2})",
 					                     Translate(context, 0),
@@ -282,14 +292,159 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return val;
 		}
 		
+		private int LiteralIndex(Tree.Node node)
+		{
+			var i = node.Instruction as InstructionNumber;
+			
+			if (i == null)
+			{
+				throw new Exception("Non constant indices are not yet supported");
+			}
+			
+			return (int)(i.Value + 0.5);
+		}
+
+		private void LiteralIndices(Tree.Node node, List<int> ret)
+		{
+			var i = node.Instruction as InstructionNumber;
+			
+			if (i != null)
+			{
+				ret.Add((int)(i.Value + 0.5));
+				return;
+			}
+			
+			var m = node.Instruction as InstructionMatrix;
+			
+			if (m != null)
+			{
+				foreach (var child in node.Children)
+				{
+					LiteralIndices(child, ret);
+				}
+			}
+			else
+			{
+				throw new Exception("Non constant indices are not yet supported");
+			}
+		}
+		
+		private int IndexToLinear(Tree.Node node, int row, int col)
+		{
+			return row * node.Dimension.Columns + col;
+		}
+		
+		private bool IndicesAreContinuous(IEnumerable<int> indices)
+		{
+			int last = 0;
+			bool first = true;
+
+			foreach (var i in indices)
+			{
+				if (!first && i != last + 1)
+				{
+					return false;
+				}
+				
+				first = false;
+				last = i;
+			}
+			
+			return true;
+		}
+		
+		private string TranslateIndex(InstructionFunction instruction, Context context)
+		{
+			var last = context.Node.Children[context.Node.Children.Count - 1];
+							
+			context.SaveTemporaryStack();
+			
+			var toindex = TranslateChildV(last, context);
+			string ret;
+
+			if (last.Dimension.IsOne)
+			{
+				context.RestoreTemporaryStack();
+				return toindex;
+			}
+			
+			if (context.Node.Dimension.IsOne)
+			{
+				int idx;
+
+				if (context.Node.Children.Count == 3)
+				{
+					// First index is row, second is column
+					var row = LiteralIndex(context.Node.Children[0]);
+					var col = LiteralIndex(context.Node.Children[1]);
+					
+					idx = IndexToLinear(last, row, col);
+				}
+				else
+				{
+					// Linear index
+					idx = LiteralIndex(context.Node.Children[0]);
+				}
+				
+				ret = String.Format("({0})[{1}]", toindex, idx);
+			}
+			else
+			{
+				List<int> indices;
+
+				if (context.Node.Children.Count == 3)
+				{
+					// Set of linear indices
+					var rows = new List<int>();
+					LiteralIndices(context.Node.Children[0], rows);
+					
+					var cols = new List<int>(rows.Count);
+					LiteralIndices(context.Node.Children[1], cols);
+					
+					indices = new List<int>(rows.Count);
+					
+					for (int i = 0; i < rows.Count; ++i)
+					{
+						indices.Add(IndexToLinear(last, rows[i], cols[i]));
+					}
+				}
+				else
+				{
+					indices = new List<int>();
+					LiteralIndices(context.Node.Children[0], indices);
+				}
+				
+				if (IndicesAreContinuous(indices))
+				{
+					ret = String.Format("(({0}) + {1})", toindex, indices[0]);
+				}
+				else
+				{
+					// Too bad! Really just need to index here
+					throw new Exception("Not implemented yet");
+				}
+			}
+			
+			context.RestoreTemporaryStack();
+
+			return ret;
+		}
+		
 		private string Translate(InstructionFunction instruction, Context context)
 		{
 			if (instruction.Id < (uint)Cdn.MathFunctionType.NumOperators)
 			{
 				return TranslateOperator(instruction, context);
 			}
+			
+			if (instruction.Id == (uint)Cdn.MathFunctionType.Index)
+			{
+				return TranslateIndex(instruction, context);
+			}
 
 			string name = Context.MathFunctionDefine(instruction);
+			Context.MathDefines.Add(name);
+
 			string[] args = new string[instruction.GetStackManipulation().Pop.Num];
 			
 			for (int i = 0; i < instruction.GetStackManipulation().Pop.Num; ++i)
@@ -347,7 +502,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string Translate(Instructions.Function instruction, Context context)
 		{
-			string name = instruction.FunctionCall.Name.ToUpper();
+			string name = instruction.FunctionCall.Name;
+			
+			if (instruction.FunctionCall.IsCustom)
+			{
+				name = name.ToUpper();
+			}
+
 			List<string > args = new List<string>();
 
 			args.Add(context.Program.StateTable.Name);
@@ -446,6 +607,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			Cdn.MathFunctionType type;
 			
 			type = (Cdn.MathFunctionType)instruction.Id;
+			
+			if (type == MathFunctionType.Index)
+			{
+				return TranslateIndex(instruction, context);
+			}
 			
 			var def = Context.MathFunctionDefineV(type, instruction.GetStackManipulation());
 			string ret = null;
@@ -571,11 +737,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			List<string > args = new List<string>();
-
-			var ret = context.PeekRet();
-
 			args.Add(context.Program.StateTable.Name);
-			args.Add(ret);
+			
+			if (!context.Node.Dimension.IsOne)
+			{
+				var ret = context.PeekRet();
+				args.Add(ret);
+			}
 
 			context.SaveTemporaryStack();
 
