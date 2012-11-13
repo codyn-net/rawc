@@ -501,11 +501,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Multiply:
 				if (def == "CDN_MATH_MATRIX_MULTIPLY_V")
 				{
-					var first = context.Node.Children[0];
-					var dim = first.Dimension;
+					var d1 = context.Node.Children[0].Dimension;
+					var d2 = context.Node.Children[1].Dimension;
 
-					args.Add(dim.Rows.ToString());
-					args.Add(dim.Columns.ToString());
+					args.Add(d1.Rows.ToString());
+					args.Add(d1.Columns.ToString());
+					args.Add(d2.Columns.ToString());
 				}
 				else
 				{

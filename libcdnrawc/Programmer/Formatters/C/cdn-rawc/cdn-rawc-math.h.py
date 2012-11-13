@@ -430,40 +430,45 @@ def print_matrix_multiply_v():
 static ValueType *cdn_math_matrix_multiply_v_builtin (ValueType *ret,
                                                       ValueType *x0,
                                                       ValueType *x1,
-                                                      uint32_t   rows,
-                                                      uint32_t   columns);
+                                                      uint32_t   Rx0,
+                                                      uint32_t   Cx0,
+                                                      uint32_t   Cx1);
+
+#include <stdio.h>
 
 static ValueType *
 cdn_math_matrix_multiply_v_builtin (ValueType *ret,
-                                   ValueType *x0,
-                                   ValueType *x1,
-                                   uint32_t   rows,
-                                   uint32_t   columns)
+                                    ValueType *x0,
+                                    ValueType *x1,
+                                    uint32_t   Rx0,
+                                    uint32_t   Cx0,
+                                    uint32_t   Cx1)
 {{
 	uint32_t r;
 	uint32_t ptr = 0;
 
-	for (r = 0; r < rows; ++r)
+	for (r = 0; r < Rx0; ++r)
 	{{
 		uint32_t c;
 
-		for (c = 0; c < columns; ++c)
+		for (c = 0; c < Cx1; ++c)
 		{{
 			uint32_t i;
 			uint32_t x1ptr = c;
 
 			ret[ptr] = 0;
 
-			for (i = 0; i < columns; ++i)
+			for (i = 0; i < Cx0; ++i)
 			{{
 				ret[ptr] += x0[i] * x1[x1ptr];
-				x1ptr += rows;
+
+				x1ptr += Cx1;
 			}}
 
 			++ptr;
 		}}
 
-		x0 += columns;
+		x0 += Cx0;
 	}}
 
 	return ret;
