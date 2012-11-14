@@ -29,10 +29,13 @@ def print_guard_end(f):
 def print_func(f, n, body=None):
     print_guard(f)
 
-    args = ["x{0}".format(i) for i in range(0, n)]
+    if f != 'rand':
+        args = ["x{0}".format(i) for i in range(0, n)]
 
-    argdecl = ", ".join(["ValueType {0}".format(x) for x in args])
-    argcall = ", ".join(args)
+        argdecl = ", ".join(["ValueType {0}".format(x) for x in args])
+        argcall = ", ".join(args)
+    else:
+        argdecl = 'void'
 
     if not body:
         body = "return CDN_MATH_VALUE_TYPE_FUNC({0})({1});".format(f, argcall)
