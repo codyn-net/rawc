@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Cdn.RawC.Programmer.Formatters.C
 {
@@ -352,77 +353,82 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			return true;
 		}
-		
-		private string TranslateIndex(InstructionFunction instruction, Context context)
+
+		private string TranslateV(InstructionIndex instruction, Context context)
 		{
-			var last = context.Node.Children[context.Node.Children.Count - 1];
-							
+			return Translate(instruction, context);
+		}
+		
+		private string Translate(InstructionIndex instruction, Context context)
+		{
+			var child = context.Node.Children[0];
+			string tmp = null;
+			string toindex;
+
 			context.SaveTemporaryStack();
+
+			if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
+			{
+				context.PushRet(null);
+				toindex = Translate(context, child);
+				context.PopRet();
+			}
+			else
+			{
+				tmp = context.AcquireTemporary(child);
+				context.PushRet(tmp);
+				toindex = Translate(context, child);
+				context.PopRet();
+			}
 			
-			var toindex = TranslateChildV(last, context);
 			string ret;
 
-			if (last.Dimension.IsOne)
+			if (child.Dimension.IsOne)
 			{
 				context.RestoreTemporaryStack();
 				return toindex;
 			}
-			
+
 			if (context.Node.Dimension.IsOne)
 			{
-				int idx;
+				ret = String.Format("({0})[{1}]", toindex, instruction.Offset);
+			}
+			else if (instruction.IsOffset)
+			{
+				var retvar = context.PeekRet();
 
-				if (context.Node.Children.Count == 3)
+				if (retvar != null)
 				{
-					// First index is row, second is column
-					var row = LiteralIndex(context.Node.Children[0]);
-					var col = LiteralIndex(context.Node.Children[1]);
-					
-					idx = IndexToLinear(last, row, col);
+					ret = String.Format("((ValueType *)memcpy ({0}, (({1}) + {2}), sizeof (ValueType) * {3}))", retvar, toindex, instruction.Offset, context.Node.Dimension.Size());
 				}
 				else
 				{
-					// Linear index
-					idx = LiteralIndex(context.Node.Children[0]);
+					ret = String.Format("(({0}) + {1})", toindex, instruction.Offset);
 				}
-				
-				ret = String.Format("({0})[{1}]", toindex, idx);
 			}
 			else
 			{
-				List<int> indices;
+				// Too bad! Really just need to index here
+				var retvar = context.PeekRet();
+				var indices = instruction.Indices;
+				StringBuilder rets = new StringBuilder();
 
-				if (context.Node.Children.Count == 3)
+				if (tmp != null)
 				{
-					// Set of linear indices
-					var rows = new List<int>();
-					LiteralIndices(context.Node.Children[0], rows);
-					
-					var cols = new List<int>(rows.Count);
-					LiteralIndices(context.Node.Children[1], cols);
-					
-					indices = new List<int>(rows.Count);
-					
-					for (int i = 0; i < rows.Count; ++i)
+					rets.Append(toindex);
+				}
+
+				for (int i = 0; i < indices.Length; ++i)
+				{
+					if (i != 0 || tmp != null)
 					{
-						indices.Add(IndexToLinear(last, rows[i], cols[i]));
+						rets.Append(", ");
 					}
+
+					rets.AppendFormat("({0})[{1}] = ({2})[{3}]", retvar, i, tmp != null ? tmp : toindex, indices[i]);
 				}
-				else
-				{
-					indices = new List<int>();
-					LiteralIndices(context.Node.Children[0], indices);
-				}
-				
-				if (IndicesAreContinuous(indices))
-				{
-					ret = String.Format("(({0}) + {1})", toindex, indices[0]);
-				}
-				else
-				{
-					// Too bad! Really just need to index here
-					throw new Exception("Not implemented yet");
-				}
+
+				ret = String.Format("({0}, {1})", rets.ToString(), retvar);
 			}
 			
 			context.RestoreTemporaryStack();
@@ -437,11 +443,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return TranslateOperator(instruction, context);
 			}
 			
-			if (instruction.Id == (uint)Cdn.MathFunctionType.Index)
-			{
-				return TranslateIndex(instruction, context);
-			}
-
 			string name = Context.MathFunctionDefine(instruction);
 			Context.MathDefines.Add(name);
 
@@ -549,6 +550,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return true;
 			}
+
+			var i = instruction as Cdn.InstructionIndex;
+
+			if (i != null && i.IsOffset)
+			{
+				return true;
+			}
 			
 			return context.Program.StateTable.Contains(instruction);
 		}
@@ -607,11 +615,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			Cdn.MathFunctionType type;
 			
 			type = (Cdn.MathFunctionType)instruction.Id;
-			
-			if (type == MathFunctionType.Index)
-			{
-				return TranslateIndex(instruction, context);
-			}
 			
 			var def = Context.MathFunctionDefineV(type, instruction.GetStackManipulation());
 			string ret = null;

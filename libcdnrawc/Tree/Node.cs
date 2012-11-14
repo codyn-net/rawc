@@ -771,14 +771,19 @@ namespace Cdn.RawC.Tree
 
 			return "";
 		}
-		
+
 		private static string InstructionIdentifier(uint label, Instruction inst)
+		{
+			return InstructionIdentifier(label.ToString(), inst);
+		}
+		
+		private static string InstructionIdentifier(string label, Instruction inst)
 		{
 			var smanip = inst.GetStackManipulation();
 			
 			if (smanip == null)
 			{
-				return label.ToString() + "[0,0]";
+				return label + "[0,0]";
 			}
 			
 			var dim = smanip.Push.Dimension;
@@ -794,6 +799,7 @@ namespace Cdn.RawC.Tree
 			InstructionVariable ivar;
 			InstructionNumber inum;
 			InstructionRand irand;
+			InstructionIndex iindex;
 
 			if (InstructionIs(inst, out icusf))
 			{
@@ -862,6 +868,19 @@ namespace Cdn.RawC.Tree
 			{
 				// Functions just store the id
 				yield return InstructionIdentifier((uint)ifunc.Id + 1, inst);
+			}
+			else if (InstructionIs(inst, out iindex))
+			{
+				if (iindex.IsOffset)
+				{
+					yield return InstructionIdentifier(String.Format("index_o{0}", iindex.Offset), inst);
+				}
+				else
+				{
+					var indices = iindex.Indices;
+					var idx = Array.ConvertAll<int, string>(indices, a => a.ToString());
+					yield return InstructionIdentifier(String.Format("index_m[{0}]", String.Join(",", idx)), inst);
+				}
 			}
 			else if (strict)
 			{

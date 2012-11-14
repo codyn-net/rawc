@@ -1203,7 +1203,7 @@ namespace Cdn.RawC
 				{
 					// See if we need to expand it
 					Variable v = variable.Variable;
-					
+
 					if (State(v) == null)
 					{
 						var sub = Inline(instmap, v.Expression);
@@ -1213,23 +1213,19 @@ namespace Cdn.RawC
 						{
 							instructions.Add(i);
 						}
-					}
-					else
-					{
-						instructions.Add((Cdn.Instruction)inst.Copy());
+
+						continue;
 					}
 				}
-				else
+
+				var cp = inst.Copy() as Instruction;
+
+				if (instmap != null)
 				{
-					var cp = inst.Copy() as Instruction;
-
-					if (instmap != null)
-					{
-						instmap.Add(inst, cp);
-					}
-
-					instructions.Add(cp);
+					instmap.Add(inst, cp);
 				}
+
+				instructions.Add(cp);
 			}
 			
 			var e = new Cdn.Expression("");
