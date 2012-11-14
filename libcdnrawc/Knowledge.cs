@@ -413,6 +413,21 @@ namespace Cdn.RawC
 					AddState(unique, s);
 				}
 			}
+
+			// Add multidim variables which are used more than once
+			foreach (var v in d_variables)
+			{
+				if (unique.Contains(v))
+				{
+					continue;
+				}
+
+				if (!v.Dimension.IsOne && v.UseCount() > 1)
+				{
+					var s = ExpandedState(v);
+					AddState(unique, s);
+				}
+			}
 		}
 
 		private IEnumerable<State> AllStates
