@@ -3,6 +3,14 @@ CC = gcc
 AR = ar
 RANLIB = ranlib
 
+UNAME = $(shell uname)
+
+ifeq ($(UNAME),Darwin)
+SHARED_EXT = dylib
+else
+SHARED_EXT = so
+endif
+
 # Compiler flags
 CFLAGS =
 LDFLAGS =
@@ -18,6 +26,11 @@ WARNINGS = 				\
 
 ${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags} -DENABLE_MALLOC
 ${NAME}_LDFLAGS = -lm ${libs}
+
+ifeq ($(UNAME),Darwin)
+${NAME}_CFLAGS += -arch i386 -arch x86_64
+${NAME}_LDFLAGS += -arch i386 -arch x86_64
+endif
 
 # Enable debug symbols if defined
 DEBUG =
@@ -48,7 +61,7 @@ endif
 all: static shared
 
 static: lib${name}.a
-shared: lib${name}.so
+shared: lib${name}.$(SHARED_EXT)
 
 lib${name}.a: $(STATIC_OBJECTS)
 	$(call vecho,AR,$@) 							\
@@ -56,7 +69,7 @@ lib${name}.a: $(STATIC_OBJECTS)
 	$(AR) r $@ $^ 2>/dev/null && 					\
 	$(RANLIB) $@
 
-lib${name}.so: $(SHARED_OBJECTS)
+lib${name}.$(SHARED_EXT): $(SHARED_OBJECTS)
 	$(call vecho,CC,$@) $(CC) -shared -o $@ $^ $(SH_LIBS) $(${NAME}_LDFLAGS) $(LDFLAGS)
 
 .o/%_static.o: %.c
@@ -67,6 +80,6 @@ lib${name}.so: $(SHARED_OBJECTS)
 
 clean:
 	$(call vecho,RM,objects) rm -f $(SHARED_OBJECTS) $(STATIC_OBJECTS) && \
-	$(call veecho,RM,lib${name}) rm -f lib${name}.so lib${name}.a
+	$(call veecho,RM,lib${name}) rm -f lib${name}.$(SHARED_EXT) lib${name}.a
 
 .PHONY : static shared clean
