@@ -11,6 +11,8 @@ AM_MAINTAINER_MODE
 
 AC_PROG_CC
 
+PKG_PROG_PKG_CONFIG
+
 AM_PATH_PYTHON([2.6], [enable_python=yes], [enable_python=no])
 AM_CONDITIONAL([ENABLE_PYTHON], [test x$enable_python = xyes])
 
@@ -64,15 +66,30 @@ fi
 
 AC_SUBST(RUN_DEBUG)
 
+AC_ARG_WITH([framework],
+             AS_HELP_STRING([--with-framework=path],[Enable build for OS X framework (default: no)]),
+              [with_framework=$withval],
+              [with_framework=no])
+
+if test "x$with_framework" != "xno"; then
+OLDPKG_CONFIG="$PKG_CONFIG"
+PKG_CONFIG="$PKG_CONFIG --define-variable=prefix=$with_framework"
+fi
 
 dnl package checks, common for all configs
 PKG_CHECK_MODULES([CODYN_SHARP], [codyn-sharp-3.0])
-PKG_CHECK_MODULES([GLIB_SHARP], [glib-sharp-2.0])
 
 dnl find assembly paths for unstable installed assemblies that will be
 dnl copied into monoskel installation directory for local usage with the app
 UNSTABLE_INSTALL_ASSEMBLIES="codyn-sharp-3.0"
 INSTALLED_ASSEMBLIES="`$PKG_CONFIG --variable=Libraries $UNSTABLE_INSTALL_ASSEMBLIES`"
+
+if test "x$with_framework" != "xno"; then
+PKG_CONFIG="$OLDPKG_CONFIG"
+fi
+
+PKG_CHECK_MODULES([GLIB_SHARP], [glib-sharp-2.0])
+
 AC_SUBST(INSTALLED_ASSEMBLIES)
 
 dnl package checks, per config
