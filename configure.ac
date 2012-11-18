@@ -46,7 +46,7 @@ AC_ARG_ENABLE(debug,
 AM_CONDITIONAL(ENABLE_DEBUG, test x$enable_debug = xyes)
 if test "x$enable_debug" = "xyes" ; then
 	CONFIG_REQUESTED="yes"
-	CFLAGS="-O2 -g"
+	CFLAGS="$CFLAGS -O2 -g"
 fi
 AC_ARG_ENABLE(release,
 	AC_HELP_STRING([--enable-release],
@@ -55,13 +55,13 @@ AC_ARG_ENABLE(release,
 AM_CONDITIONAL(ENABLE_RELEASE, test x$enable_release = xyes)
 if test "x$enable_release" = "xyes" ; then
 	CONFIG_REQUESTED="yes"
-	CFLAGS="-O3"
+	CFLAGS="$CFLAGS -O3"
 fi
 if test -z "$CONFIG_REQUESTED" ; then
 	AM_CONDITIONAL(ENABLE_DEBUG, true)
 	enable_debug=yes
 	RUN_DEBUG="--debug "
-	CFLAGS="-O2 -g"
+	CFLAGS="$CFLAGS -O2 -g"
 fi
 
 AC_SUBST(RUN_DEBUG)
