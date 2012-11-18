@@ -80,10 +80,12 @@ install-data-hook:
 	for ASM in $(INSTALLED_ASSEMBLIES) $(PROJECT_REFERENCES); do \
 		$(INSTALL) -c -m 0755 $$ASM $(DESTDIR)$(pkglibdir); \
 		! test -f $$ASM.mdb || $(INSTALL) -c -m 0755 $$ASM.mdb $(DESTDIR)$(pkglibdir); \
+		! test -f $$ASM.config || $(INSTALL) -c -m 0644 $$ASM.config $(DESTDIR)$(pkglibdir); \
 	done;
 
 uninstall-hook:
 	for ASM in $(INSTALLED_ASSEMBLIES) $(PROJECT_REFERENCES); do \
 		rm -f $(DESTDIR)$(pkglibdir)/`basename $$ASM`; \
 		rm -f $(DESTDIR)$(pkglibdir)/`basename $$ASM`.mdb; \
+		rm -f $(DESTDIR)$(pkglibdir)/`basename $$ASM`.config; \
 	done;
