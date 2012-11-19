@@ -284,14 +284,14 @@ namespace Cdn.RawC
 			}
 			catch (GLib.GException e)
 			{
-				throw new Exception(String.Format("Failed to load network: {0}", e.Message));
+				throw new Exception("Failed to load network: {0}", e.Message);
 			}
 			
 			CompileError error = new CompileError();
 
 			if (!d_network.Compile(null, error))
 			{
-				throw new Exception(String.Format("Failed to compile network: {0}", error.FormattedString));
+				throw new Exception("Failed to compile network: {0}", error.FormattedString);
 			}
 		}
 		
