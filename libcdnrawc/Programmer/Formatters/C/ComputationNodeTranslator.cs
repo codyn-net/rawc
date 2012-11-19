@@ -423,19 +423,58 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			if (node.Equation.Dimension.IsOne)
 			{
 				string eq = InstructionTranslator.QuickTranslate(ctx);
+				int index = node.Item.DataIndex;
+				
+				if (node.Item.Slice != null)
+				{
+					index += node.Item.Slice[0];
+				}
 
 				return String.Format("{0}[{1}] = {2};",
 			                         node.Item.Table.Name,
-			                         node.Item.AliasOrIndex,
+			                         index,
 			                         eq);
 			}
 			else
 			{
-				var retval = String.Format("{0} + {1}", node.Item.Table.Name, node.Item.AliasOrIndex);
+				// Check for slice, slice, slice
+				var slice = node.Item.Slice;
+				string retval;
 				
+				if (slice != null)
+				{
+					// Make temporary first
+					retval = ctx.AcquireTemporary(node.Equation);
+				}
+				else
+				{
+					retval = String.Format("{0} + {1}",
+				                           node.Item.Table.Name,
+				                           node.Item.AliasOrIndex);
+				}
+
 				ctx.PushRet(retval);
 				var ret = InstructionTranslator.QuickTranslate(ctx);
 				ctx.PopRet();
+				
+				if (slice != null)
+				{
+					StringBuilder sret = new StringBuilder("(");
+					sret.Append(ret);
+					
+					// Copy temporary to slice
+					for (int i = 0; i < slice.Length; ++i)
+					{
+						sret.AppendFormat(", {0}[{1}] = {2}[{3}]",
+						                  node.Item.Table.Name,
+						                  node.Item.DataIndex + slice[i],
+						                  retval,
+						                  i);
+					}
+
+					sret.Append(")");
+					ret = sret.ToString();
+				}
 				
 				return ret + ";";
 			}

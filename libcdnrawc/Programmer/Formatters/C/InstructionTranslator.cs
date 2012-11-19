@@ -274,16 +274,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
 
-			Cdn.Dimension dim;
-			int[] slice = instruction.GetSlice(out dim);
-
-			if (slice == null)
+			if (instruction.HasSlice)
 			{
-				return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
+				Cdn.Dimension dim;
+				int[] slice = instruction.GetSlice(out dim);
+				
+				return String.Format("{0}[{1}][{2}]", context.Program.StateTable.Name, item.AliasOrIndex, slice[0]);
 			}
 			else
 			{
-				return String.Format("{0}[{1}][{2}]", context.Program.StateTable.Name, item.AliasOrIndex, slice[0]);
+				return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
 			}
 		}
 
@@ -559,7 +559,15 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			if (v != null)
 			{
-				return true;
+				// Check for slice
+				if (!v.HasSlice)
+				{
+					return true;
+				}
+				
+				// Only needs storage if indices are not continuous
+				Cdn.Dimension dim;
+				return !IndicesAreContinuous(v.GetSlice(out dim));
 			}
 
 			var i = instruction as Cdn.InstructionIndex;
@@ -722,22 +730,65 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			DataTable.DataItem item = context.Program.StateTable[prop];
 			var ret = context.PeekRet();
 			
+			int index = item.DataIndex;
+			int size = prop.Dimension.Size();
+			
+			if (instruction.HasSlice)
+			{
+				Cdn.Dimension dim;
+				var slice = instruction.GetSlice(out dim);
+				
+				// This is a multidim slice for sure, check if it's just linear
+				if (!IndicesAreContinuous(slice))
+				{
+					if (ret == null)
+					{
+						throw new Exception("Temporary storage needed to have been allocated!");
+					}
+					
+					StringBuilder sret = new StringBuilder("(");
+					
+					// Make single element assignments
+					for (int i = 0; i < slice.Length; ++i)
+					{
+						if (i != 0)
+						{
+							sret.Append(", ");
+						}
+						
+						sret.AppendFormat("({0})[{1}] = {2}[{3}]",
+						                  ret,
+						                  i,
+						                  context.Program.StateTable.Name,
+						                  item.DataIndex + slice[i]);
+					}
+					
+					sret.AppendFormat(", {0})", ret);
+					return sret.ToString();
+				}
+				else
+				{
+					index = item.DataIndex + slice[0];
+					size = slice.Length;
+				}
+			}
+			
 			if (ret != null)
 			{
 				return String.Format("(memcpy ({0}, {1} + {2}, sizeof(ValueType) * {3}), {0})",
 				                     ret,
 				                     context.Program.StateTable.Name,
-				                     item.AliasOrIndex,
-				                     prop.Dimension.Size());
+				                     index,
+				                     size);
 			}
-			else if (item.DataIndex == 0)
+			else if (index == 0)
 			{
 				return String.Format("{0}", context.Program.StateTable.Name);
 			}
 			else
 			{
 			
-				return String.Format("({0} + {1})", context.Program.StateTable.Name, item.AliasOrIndex);
+				return String.Format("({0} + {1})", context.Program.StateTable.Name, index);
 			}
 		}
 

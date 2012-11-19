@@ -886,7 +886,23 @@ namespace Cdn.RawC.Tree
 			{
 				if (InstructionIs(inst, out ivar))
 				{
-					yield return InstructionIdentifier(HashMap(String.Format("var_{0}", ivar.Variable.FullName)), inst);
+					string n;
+
+					if (ivar.HasSlice)
+					{
+						Cdn.Dimension dim;
+						int[] slice = ivar.GetSlice(out dim);
+
+						n = String.Format("var_{0}[{1}]",
+						                  ivar.Variable.FullName,
+						                  String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+					}
+					else
+					{
+						n = String.Format("var_{0}", ivar.Variable.FullName);
+					}
+
+					yield return InstructionIdentifier(HashMap(n), inst);
 				}
 				else if (InstructionIs(inst, out inum))
 				{

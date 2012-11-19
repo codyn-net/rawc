@@ -53,6 +53,7 @@ namespace Cdn.RawC.Programmer
 			private string d_alias;
 			private Flags d_type;
 			private Cdn.Dimension d_dimension;
+			private int[] d_slice;
 			
 			public DataItem(DataTable table, object key, object obj, int index, int dataindex) : this(table, key, obj, index, dataindex, Flags.None)
 			{
@@ -79,6 +80,12 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 			
+			public int[] Slice
+			{
+				get { return d_slice; }
+				set { d_slice = value; }
+			}
+
 			public int DataIndex
 			{
 				get { return d_dataindex; }
@@ -307,8 +314,25 @@ namespace Cdn.RawC.Programmer
 				return d_items[b];
 			}
 			
+			var st = key as State;
+						
 			DataItem ret = new DataItem(this, b, key, d_list.Count, d_size);
-			
+
+			if (st != null)
+			{
+				var actions = st.Actions;
+				
+				if (actions != null && actions.Length > 0)
+				{
+					int[] indices = actions[0].Indices;
+					
+					if (indices != null && indices.Length > 0)
+					{
+						ret.Slice = indices;
+					}
+				}
+			}
+
 			d_items.Add(b, ret);
 			d_list.Add(ret);
 			

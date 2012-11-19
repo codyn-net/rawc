@@ -61,6 +61,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			d_tempstack = new Stack<List<Temporary>>();
 			
 			d_ret = new Stack<string>();
+			d_tempstack.Push(new List<Temporary>());
 		}
 
 		public void SaveTemporaryStack()
@@ -118,7 +119,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			d_tempstorage.Add(newtmp);
 			d_tempactive[node] = idx;
 
-			d_tempstack.Peek().Add(newtmp);			
+			d_tempstack.Peek().Add(newtmp);
 			return newtmp.Name;
 		}
 		
