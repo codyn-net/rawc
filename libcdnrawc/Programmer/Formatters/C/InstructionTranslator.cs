@@ -273,7 +273,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
-			return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
+
+			Cdn.Dimension dim;
+			int[] slice = instruction.GetSlice(out dim);
+
+			if (slice == null)
+			{
+				return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
+			}
+			else
+			{
+				return String.Format("{0}[{1}][{2}]", context.Program.StateTable.Name, item.AliasOrIndex, slice[0]);
+			}
 		}
 
 		private string Translate(InstructionRand instruction, Context context)
