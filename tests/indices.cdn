@@ -9,4 +9,14 @@ rowcol         = "matrix[[0, 0], [1, 2]]" | out
 noncont        = "matrix[[0, 1], [1, 2]]" | out
 noncontrow     = "matrix[[0, 1], [0, 0]]" | out
 
+node "n{1,2}"
+{
+    a' = "[0, 0, 0]"
+}
+
+edge from "n1" to "n2"
+{
+    "a'[0, 2]" += "[1, 2]"
+}
+
 # vi:ts=4:et
