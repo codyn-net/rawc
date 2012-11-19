@@ -29,6 +29,7 @@ namespace Cdn.RawC
 		private List<EventNodeState> d_eventNodeStates;
 		private Dictionary<Cdn.Event, List<EventSetState>> d_eventSetStates;
 		private List<Cdn.Variable> d_direct;
+		private Dictionary<Cdn.Variable, Cdn.EdgeAction[]> d_actionedVariables;
 		
 		public class EventState
 		{
@@ -107,6 +108,7 @@ namespace Cdn.RawC
 			d_eventNodeStates = new List<EventNodeState>();
 			d_eventSetStates = new Dictionary<Event, List<EventSetState>>();
 			d_direct = new List<Variable>();
+			d_actionedVariables = new Dictionary<Variable, EdgeAction[]>();
 
 			d_instructionMapping = new Dictionary<Instruction, Instruction>();
 
@@ -135,7 +137,7 @@ namespace Cdn.RawC
 		{
 			if (prop.Integrated)
 			{
-				return creator(prop, prop.Actions);
+				return creator(prop, d_actionedVariables[prop]);
 			}
 			else
 			{
@@ -425,9 +427,26 @@ namespace Cdn.RawC
 				if (!v.Dimension.IsOne && v.UseCount() > 1)
 				{
 					var s = ExpandedState(v);
+
 					AddState(unique, s);
+					AddAux(s, auxset);
 				}
 			}
+
+			d_network.ForeachExpression((e) => {
+				foreach (var i in e.Instructions)
+				{
+					var v = i as InstructionVariable;
+
+					if (v != null && !unique.Contains(v.Variable) && v.HasSlice)
+					{
+						var s = ExpandedState(v.Variable);
+
+						AddState(unique, s);
+						AddAux(s, auxset);
+					}
+				}
+			});
 		}
 
 		private IEnumerable<State> AllStates
@@ -612,12 +631,145 @@ namespace Cdn.RawC
 			}
 		}
 
+		private string SliceKey(Cdn.EdgeAction action)
+		{
+			return String.Join(",", Array.ConvertAll<int, string>(action.Indices, a => a.ToString()));
+		}
+
+		private List<List<Cdn.EdgeAction>> SplitActionsPerSlice(IEnumerable<Cdn.EdgeAction> actions)
+		{
+			var ret = new List<List<Cdn.EdgeAction>>();
+			var map = new Dictionary<string, List<Cdn.EdgeAction>>();
+
+			foreach (var action in actions)
+			{
+				List<Cdn.EdgeAction> lst;
+				var key = SliceKey(action);
+
+				if (!map.TryGetValue(key, out lst))
+				{
+					lst = new List<EdgeAction>();
+					map[key] = lst;
+
+					ret.Add(lst);
+				}
+
+				lst.Add(action);
+			}
+
+			return ret;
+		}
+
+		private void PromoteEdgeSlices()
+		{
+			// This function splits all the edge actions on variables based
+			// on the slice on which the operate on the target variable.
+			var cp = d_actionedVariables;
+			d_actionedVariables = new Dictionary<Variable, EdgeAction[]>();
+
+			foreach (var pair in cp)
+			{
+				var variable = pair.Key;
+				var actions = pair.Value;
+
+				var split = SplitActionsPerSlice(actions);
+
+				if (split.Count == 1)
+				{
+					// That's ok, no diversity means we can just use the
+					// normal code path
+					d_actionedVariables[pair.Key] = pair.Value;
+					continue;
+				}
+
+				// Contains a set of instructions for each value in the matrix
+				// representing the final, new equation. Each value in the matrix
+				// is a set of instructions because it can be a sum
+				List<Cdn.Instruction>[] instructions = new List<Instruction>[variable.Dimension.Size()];
+
+				// Ai! Cool stuff needs to happen here. Split out new
+				// variables for these equations and setup a new edge action
+				// representing the fully combined set. Complex you say? Indeed!
+				foreach (var elem in split)
+				{
+					// Combine elements with the same indices by simply doing a sum
+					var eqs = Array.ConvertAll<Cdn.EdgeAction, Cdn.Expression>(elem.ToArray(), a => a.Equation);
+					Cdn.Expression sum = Cdn.Expression.Sum(eqs);
+
+					// Now make a variable for it
+					var nv = new Cdn.Variable(UniqueVariableName(variable.Object, String.Format("__d{0}", variable.Name)), sum, VariableFlags.None);
+					variable.Object.AddVariable(nv);
+
+					// Add relevant instructions as per slice
+					var slice = elem[0].Indices;
+
+					if (slice.Length == 0)
+					{
+						// Empty slice is just the full range
+						slice = new int[variable.Dimension.Size()];
+
+						for (int i = 0; i < slice.Length; ++i)
+						{
+							slice[i] = i;
+						}
+					}
+
+					for (int i = 0 ; i < slice.Length; ++i)
+					{
+						if (instructions[slice[i]] == null)
+						{
+							instructions[slice[i]] = new List<Instruction>();
+						}
+
+						var vinstr = new Cdn.InstructionVariable(nv);
+
+						vinstr.SetSlice(new int[] {i}, new Cdn.Dimension { Rows = 1, Columns = 1});
+						instructions[slice[i]].Add(vinstr);
+					}
+				}
+
+				List<Cdn.Instruction> ret = new List<Instruction>();
+
+				// Create substitute edge action
+				foreach (var i in instructions)
+				{
+					if (i == null)
+					{
+						ret.Add(new Cdn.InstructionNumber("0"));
+					}
+					else
+					{
+						// Add indexing instructions
+						ret.AddRange(i);
+
+						// Then add simple plus operators
+						for (int j = 0; j < i.Count - 1; ++j)
+						{
+							ret.Add(new Cdn.InstructionFunction((uint)Cdn.MathFunctionType.Plus, null, 2));
+						}
+					}
+				}
+
+				var minstr = new Cdn.InstructionMatrix(new Cdn.StackArgs(instructions.Length), variable.Dimension);
+				ret.Add(minstr);
+
+				var retex = new Cdn.Expression("");
+				retex.SetInstructionsTake(ret.ToArray());
+
+				var action = new Cdn.EdgeAction(variable.Name, retex);
+				((Cdn.Node)variable.Object).SelfEdge.AddAction(action);
+
+				d_actionedVariables[variable] = new EdgeAction[] {action};
+			}
+		}
+
 		private void Scan()
 		{
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
 			Scan(d_network.Integrator);
 			Scan(d_network);
 
+			PromoteEdgeSlices();
 			PromoteDirectEdges();
 			PromoteConstraints();
 
@@ -638,13 +790,13 @@ namespace Cdn.RawC
 					continue;
 				}
 				
-				var actions = variable.Actions;
-				
-				if (actions.Length == 0)
+				Cdn.EdgeAction[] actions;
+
+				if (!d_actionedVariables.TryGetValue(variable, out actions) || actions.Length == 0)
 				{
 					continue;
 				}
-				
+
 				d_direct.Add(variable);
 				
 				List<Cdn.Expression> expressions = new List<Expression>();
@@ -975,6 +1127,11 @@ namespace Cdn.RawC
 
 			foreach (Cdn.Variable prop in obj.Variables)
 			{
+				if (prop.Actions.Length != 0)
+				{
+					d_actionedVariables[prop] = prop.Actions;
+				}
+
 				AddFlaggedVariable(prop);
 			}
 			
@@ -1203,7 +1360,7 @@ namespace Cdn.RawC
 				inlined.Add(Inline(instmap, expressions[i]));
 			}
 			
-			return Cdn.Expression.Sum(inlined.ToArray());			
+			return Cdn.Expression.Sum(inlined.ToArray());
 		}
 		
 		private Cdn.Expression Inline(Dictionary<Instruction, Instruction> instmap, Cdn.Expression expr)
