@@ -49,25 +49,13 @@ namespace Cdn.RawC
 		{
 			// Run the network now
 			var ret = new List<Cdn.Monitor>();
-			var uniq = new HashSet<Cdn.Variable>();
-			
+
 			var t = d_network.Integrator.Variable("t");
 			ret.Add(new Cdn.Monitor(d_network, t));
-			uniq.Add(t);
-			
-			Knowledge.Initialize(d_network);
-			
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
+
+			foreach (var v in d_network.Integrator.State.AllVariables())
 			{
-				if (uniq.Add(v))
-				{
-					ret.Add(new Cdn.Monitor(d_network, v));
-				}
-			}
-			
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
-			{
-				if (uniq.Add(v))
+				if (v != t && (v.Integrated || (v.Flags & Cdn.VariableFlags.InOut) != 0))
 				{
 					ret.Add(new Cdn.Monitor(d_network, v));
 				}
