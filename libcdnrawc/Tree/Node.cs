@@ -704,6 +704,15 @@ namespace Cdn.RawC.Tree
 		{
 			StringBuilder ret = new StringBuilder();
 			ret.Append(Label);
+
+			int[] slice = Slice;
+
+			if (slice != null)
+			{
+				ret.Append("[");
+				ret.Append(String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+				ret.Append("]");
+			}
 			
 			ret.Append("(");
 			
