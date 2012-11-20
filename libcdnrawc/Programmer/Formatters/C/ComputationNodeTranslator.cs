@@ -447,8 +447,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				if (slice != null)
 				{
-					// Make temporary first
-					retval = ctx.AcquireTemporary(node.Equation);
+					if (Context.IndicesAreContinuous(slice))
+					{
+						retval = String.Format("{0} + {1}", node.Item.Table.Name, context.AddedIndex(node.Item, slice[0]));
+						slice = null;
+					}
+					else
+					{
+						// Make temporary first 
+						retval = ctx.AcquireTemporary(node.Equation);
+					}
 				}
 				else
 				{
