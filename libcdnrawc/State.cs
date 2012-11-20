@@ -128,6 +128,19 @@ namespace Cdn.RawC
 			Knowledge.Instance.UpdateInstructionMap(instmap);
 		}
 
+		public int[] Slice
+		{
+			get
+			{
+				if (d_actions != null && d_actions.Length > 0)
+				{
+					return d_actions[0].Indices;
+				}
+
+				return null;
+			}
+		}
+
 		private string TypeToString(Flags type)
 		{
 			if ((type & Flags.Initialization) != 0 && (type & Flags.Integrated) != 0)

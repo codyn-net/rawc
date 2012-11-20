@@ -320,17 +320,7 @@ namespace Cdn.RawC.Programmer
 
 			if (st != null)
 			{
-				var actions = st.Actions;
-				
-				if (actions != null && actions.Length > 0)
-				{
-					int[] indices = actions[0].Indices;
-					
-					if (indices != null && indices.Length > 0)
-					{
-						ret.Slice = indices;
-					}
-				}
+				ret.Slice = st.Slice;
 			}
 
 			d_items.Add(b, ret);
