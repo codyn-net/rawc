@@ -501,6 +501,42 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return String.Join("\n", lines);
 		}
+
+		public string AddedIndex(DataTable.DataItem item, int added)
+		{
+			if (added == 0)
+			{
+				return item.AliasOrIndex;
+			}
+
+			if (d_options.SymbolicNames)
+			{
+				return String.Format("{0} + {1}", item.AliasOrIndex, added);
+			}
+			else
+			{
+				return (item.DataIndex + added).ToString();
+			}
+		}
+
+		public static bool IndicesAreContinuous(IEnumerable<int> indices)
+		{
+			int last = 0;
+			bool first = true;
+
+			foreach (var i in indices)
+			{
+				if (!first && i != last + 1)
+				{
+					return false;
+				}
+				
+				first = false;
+				last = i;
+			}
+			
+			return true;
+		}
 	}
 }
 

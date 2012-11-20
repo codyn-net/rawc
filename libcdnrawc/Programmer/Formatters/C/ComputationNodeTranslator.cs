@@ -423,11 +423,15 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			if (node.Equation.Dimension.IsOne)
 			{
 				string eq = InstructionTranslator.QuickTranslate(ctx);
-				int index = node.Item.DataIndex;
-				
+				string index;
+
 				if (node.Item.Slice != null)
 				{
-					index += node.Item.Slice[0];
+					index = context.AddedIndex(node.Item, node.Item.Slice[0]);
+				}
+				else
+				{
+					index = node.Item.AliasOrIndex;
 				}
 
 				return String.Format("{0}[{1}] = {2};",
@@ -467,7 +471,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					{
 						sret.AppendFormat(", {0}[{1}] = {2}[{3}]",
 						                  node.Item.Table.Name,
-						                  node.Item.DataIndex + slice[i],
+						                  context.AddedIndex(node.Item, slice[i]),
 						                  retval,
 						                  i);
 					}

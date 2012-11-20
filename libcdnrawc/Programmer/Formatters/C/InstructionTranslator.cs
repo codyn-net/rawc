@@ -279,7 +279,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				Cdn.Dimension dim;
 				int[] slice = instruction.GetSlice(out dim);
 				
-				return String.Format("{0}[{1}][{2}]", context.Program.StateTable.Name, item.AliasOrIndex, slice[0]);
+				return String.Format("{0}[{1}]", context.Program.StateTable.Name, context.AddedIndex(item, slice[0]));
 			}
 			else
 			{
@@ -346,25 +346,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return row * node.Dimension.Columns + col;
 		}
 		
-		private bool IndicesAreContinuous(IEnumerable<int> indices)
-		{
-			int last = 0;
-			bool first = true;
-
-			foreach (var i in indices)
-			{
-				if (!first && i != last + 1)
-				{
-					return false;
-				}
-				
-				first = false;
-				last = i;
-			}
-			
-			return true;
-		}
-
 		private string TranslateV(InstructionIndex instruction, Context context)
 		{
 			return Translate(instruction, context);
@@ -567,7 +548,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				// Only needs storage if indices are not continuous
 				Cdn.Dimension dim;
-				return !IndicesAreContinuous(v.GetSlice(out dim));
+				return !Context.IndicesAreContinuous(v.GetSlice(out dim));
 			}
 
 			var i = instruction as Cdn.InstructionIndex;
@@ -730,7 +711,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			DataTable.DataItem item = context.Program.StateTable[prop];
 			var ret = context.PeekRet();
 			
-			int index = item.DataIndex;
+			string index = item.AliasOrIndex;
 			int size = prop.Dimension.Size();
 			
 			if (instruction.HasSlice)
@@ -739,7 +720,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				var slice = instruction.GetSlice(out dim);
 				
 				// This is a multidim slice for sure, check if it's just linear
-				if (!IndicesAreContinuous(slice))
+				if (!Context.IndicesAreContinuous(slice))
 				{
 					if (ret == null)
 					{
@@ -760,7 +741,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						                  ret,
 						                  i,
 						                  context.Program.StateTable.Name,
-						                  item.DataIndex + slice[i]);
+						                  context.AddedIndex(item, slice[i]));
 					}
 					
 					sret.AppendFormat(", {0})", ret);
@@ -768,7 +749,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 				else
 				{
-					index = item.DataIndex + slice[0];
+					index = context.AddedIndex(item, slice[0]);
 					size = slice.Length;
 				}
 			}
@@ -781,7 +762,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				                     index,
 				                     size);
 			}
-			else if (index == 0)
+			else if (index == "0")
 			{
 				return String.Format("{0}", context.Program.StateTable.Name);
 			}
