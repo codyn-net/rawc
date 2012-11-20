@@ -78,7 +78,7 @@ namespace Cdn.RawC
 			
 			// Extract the validation data
 			d_data = new List<double[]>();
-			
+
 			for (int i = 0; i < ret.Count; ++i)
 			{
 				d_data.Add(ret[i].GetData());
@@ -151,7 +151,7 @@ namespace Cdn.RawC
 			var dimensions = d_monitors.ConvertAll<Cdn.Dimension>(a => a.Variable.Dimension);
 
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
-			var len = d_data[0].Length;
+			var len = d_data[0].Length - 1;
 
 			var shvals = dynnet.Values();
 
