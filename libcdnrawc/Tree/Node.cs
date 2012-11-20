@@ -21,7 +21,7 @@ namespace Cdn.RawC.Tree
 		private uint d_descendants;
 		private bool d_isCommutative;
 		private ulong d_treeId;
-		
+
 		public static Node Create(State state, Cdn.Expression expression)
 		{
 			return Create(state, expression.Instructions);
@@ -99,17 +99,24 @@ namespace Cdn.RawC.Tree
 		public Node() : this("")
 		{
 		}
-		
-		public ulong TreeId
+
+		public int[] Slice
 		{
 			get
 			{
-				return d_treeId;
+				if (d_parent == null && d_state != null)
+				{
+					return d_state.Slice;
+				}
+
+				return null;
 			}
-			set
-			{
-				d_treeId = value;
-			}			
+		}
+		
+		public ulong TreeId
+		{
+			get { return d_treeId; }
+			set { d_treeId = value; }			
 		}
 		
 		public Node(State state, Instruction instruction)
