@@ -135,9 +135,11 @@ namespace Cdn.RawC
 
 		private State ExpandedState(Variable prop, StateCreator creator)
 		{
-			if (prop.Integrated)
+			Cdn.EdgeAction[] actions;
+
+			if (d_actionedVariables.TryGetValue(prop, out actions))
 			{
-				return creator(prop, d_actionedVariables[prop]);
+				return creator(prop, actions);
 			}
 			else
 			{
@@ -779,7 +781,6 @@ namespace Cdn.RawC
 			Scan(d_network);
 
 			PromoteEdgeSlices();
-			PromoteDirectEdges();
 			PromoteConstraints();
 
 			ExtractStates();
@@ -790,35 +791,6 @@ namespace Cdn.RawC
 			ExtractRand();
 		}
 		
-		private void PromoteDirectEdges()
-		{
-			foreach (var variable in d_variables)
-			{
-				if (variable.Integrated)
-				{
-					continue;
-				}
-				
-				Cdn.EdgeAction[] actions;
-
-				if (!d_actionedVariables.TryGetValue(variable, out actions) || actions.Length == 0)
-				{
-					continue;
-				}
-
-				d_direct.Add(variable);
-				
-				List<Cdn.Expression> expressions = new List<Expression>();
-				
-				foreach (var action in actions)
-				{
-					expressions.Add(action.Equation);
-				}
-				
-				variable.Expression = Cdn.Expression.Sum(expressions.ToArray());
-			}
-		}
-
 		private Cdn.Variable PromoteConstraint(Cdn.Variable variable)
 		{
 			var c = variable.Constraint;
@@ -854,9 +826,11 @@ namespace Cdn.RawC
 
 			variable.Expression = expr;
 
-			if (!variable.Integrated)
+			Cdn.EdgeAction[] actions;
+
+			if (!variable.Integrated && d_actionedVariables.TryGetValue(variable, out actions))
 			{
-				foreach (var action in variable.Actions)
+				foreach (var action in actions)
 				{
 					// Redirect edge to the unconstraint variable for direct edges
 					action.Target = nv.Name;
@@ -911,17 +885,19 @@ namespace Cdn.RawC
 				{
 					var v = state.Object as Variable;
 					Instruction[] instrs;
+					Cdn.EdgeAction[] actions = null;
 
-					if (v == null || state.Actions.Length == 0)
+					if (v == null || !v.Integrated || state.Actions.Length == 0)
 					{
 						instrs = state.Instructions;
+						actions = state.Actions;
 					}
 					else
 					{
 						instrs = v.Expression.Instructions;
 					}
 
-					AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization));
+					AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization, actions));
 				}
 			}
 		}

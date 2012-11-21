@@ -433,7 +433,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			else
 			{
 				string retval;
-				
+
 				if (slice != null)
 				{
 					if (Context.IndicesAreContinuous(slice))
