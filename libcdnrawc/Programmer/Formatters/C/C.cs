@@ -924,26 +924,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteComputationNode(TextWriter writer, Computation.INode node, string indent)
 		{
 			Context context = new Context(d_program, d_options);
-			var ret = Context.Reindent(ComputationNodeTranslator.Translate(node, context), indent);
-			
-			if (context.TemporaryStorage.Count != 0)
-			{
-				writer.WriteLine("{0}{{", indent);
-				
-				foreach (Context.Temporary tmp in context.TemporaryStorage)
-				{
-					writer.WriteLine("{0}ValueType {1}[{2}] = {{0,}};", "\t" + indent, tmp.Name, tmp.Size);
-				}
-				
-				writer.WriteLine();
-				writer.WriteLine(Context.Reindent(ret, "\t" + indent));
-				
-				writer.WriteLine("{0}}}", indent);
-			}
-			else
-			{
-				writer.WriteLine(ret);
-			}
+			writer.WriteLine(Context.Reindent(ComputationNodeTranslator.Translate(node, context), indent));
 		}
 		
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)

@@ -188,38 +188,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ret.AppendLine("); */");
 			}
 
-			if (node.Expression.Dimension.IsOne)
-			{
-				string eq = InstructionTranslator.QuickTranslate(ctx);
-
-				ret.AppendFormat("\t\t{0}[{1}[i][0]] = {2};",
-			                     context.Program.StateTable.Name,
-			                     node.IndexTable.Name,
-			                     eq);
-			}
-			else
-			{
-				var retval = String.Format("{0} + {1}[i][0]", context.Program.StateTable.Name, node.IndexTable.Name);
-				
-				ctx.PushRet(retval);
-				var eq = InstructionTranslator.QuickTranslate(ctx);
-				ctx.PopRet();
-				
-				foreach (var tmp in ctx.TemporaryStorage)
-				{
-					ret.AppendFormat("\t\tValueType {0}[{1}] = {{0,}};", tmp.Name, tmp.Size);
-					ret.AppendLine();
-				}
-				
-				if (ctx.TemporaryStorage.Count != 0)
-				{
-					ret.AppendLine();
-				}
-				
-				ret.AppendFormat("\t\t{0};", eq);
-			}
-
-			ret.AppendLine();
+			ret.AppendLine(Context.Reindent(TranslateAssignment(String.Format("{0}[i][0]", node.IndexTable.Name), ctx), "\t\t"));
 			ret.AppendLine("\t}");
 			ret.Append("}");
 			
@@ -409,6 +378,113 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return ret.ToString();
 		}
+
+		private string WriteWithTemporaryStorage(Context ctx, string ret)
+		{
+			if (ctx.TemporaryStorage.Count == 0)
+			{
+				return ret;
+			}
+
+			StringBuilder s = new StringBuilder();
+
+			s.AppendLine("{");
+
+			foreach (var tmp in ctx.TemporaryStorage)
+			{
+				s.AppendFormat("\tValueType {0}[{1}] = {{0,}};", tmp.Name, tmp.Size);
+				s.AppendLine();
+			}
+
+			s.AppendLine(Context.Reindent(ret, "\t"));
+			s.AppendLine("}");
+
+			return s.ToString();
+		}
+
+		private string TranslateAssignment(string index, Context ctx)
+		{
+			string eq;
+			string ret;
+
+			var slice = ctx.Node.Slice;
+
+			// Compute the equation
+			if (ctx.Node.Dimension.IsOne)
+			{
+				eq = InstructionTranslator.QuickTranslate(ctx);
+
+				if (slice != null && slice[0] != 0)
+				{
+					ret = String.Format("{0}[{1} + {2}] = {3};",
+					                    ctx.Program.StateTable.Name,
+					                    index,
+					                    slice[0],
+					                    eq);
+				}
+				else
+				{
+					ret = String.Format("{0}[{1}] = {2};",
+					                    ctx.Program.StateTable.Name,
+					                    index,
+					                    eq);
+				}
+			}
+			else
+			{
+				string retval;
+				
+				if (slice != null)
+				{
+					if (Context.IndicesAreContinuous(slice))
+					{
+						retval = String.Format("{0} + {1} + {2}", ctx.Program.StateTable.Name, index, slice[0]);
+						slice = null;
+					}
+					else
+					{
+						// Make temporary first 
+						retval = ctx.AcquireTemporary(ctx.Node);
+					}
+				}
+				else
+				{
+					retval = String.Format("{0} + {1}",
+				                           ctx.Program.StateTable.Name,
+				                           index);
+				}
+
+				ctx.PushRet(retval);
+				ret = InstructionTranslator.QuickTranslate(ctx);
+				ctx.PopRet();
+
+				if (slice != null)
+				{
+					StringBuilder sret = new StringBuilder("(");
+					sret.Append(ret);
+					
+					// Copy temporary to slice
+					for (int i = 0; i < slice.Length; ++i)
+					{
+						sret.AppendFormat(", {0}[{1} + {2}] = {3}[{4}]",
+						                  ctx.Program.StateTable.Name,
+						                  index,
+						                  slice[i],
+						                  retval,
+						                  i);
+					}
+
+					sret.Append(");");
+					ret = sret.ToString();
+				}
+				else
+				{
+					ret = String.Format("{0};", ret);
+				}
+			}
+
+			return WriteWithTemporaryStorage(ctx, ret.ToString());
+		}
 		
 		private string Translate(Computation.Assignment node, Context context)
 		{
@@ -419,77 +495,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			var ctx = context.Base();
 			ctx.Push(node.State, node.Equation);
-			
-			if (node.Equation.Dimension.IsOne)
-			{
-				string eq = InstructionTranslator.QuickTranslate(ctx);
-				string index;
 
-				if (node.Item.Slice != null)
-				{
-					index = context.AddedIndex(node.Item, node.Item.Slice[0]);
-				}
-				else
-				{
-					index = node.Item.AliasOrIndex;
-				}
-
-				return String.Format("{0}[{1}] = {2};",
-			                         node.Item.Table.Name,
-			                         index,
-			                         eq);
-			}
-			else
-			{
-				// Check for slice, slice, slice
-				var slice = node.Item.Slice;
-				string retval;
-				
-				if (slice != null)
-				{
-					if (Context.IndicesAreContinuous(slice))
-					{
-						retval = String.Format("{0} + {1}", node.Item.Table.Name, context.AddedIndex(node.Item, slice[0]));
-						slice = null;
-					}
-					else
-					{
-						// Make temporary first 
-						retval = ctx.AcquireTemporary(node.Equation);
-					}
-				}
-				else
-				{
-					retval = String.Format("{0} + {1}",
-				                           node.Item.Table.Name,
-				                           node.Item.AliasOrIndex);
-				}
-
-				ctx.PushRet(retval);
-				var ret = InstructionTranslator.QuickTranslate(ctx);
-				ctx.PopRet();
-				
-				if (slice != null)
-				{
-					StringBuilder sret = new StringBuilder("(");
-					sret.Append(ret);
-					
-					// Copy temporary to slice
-					for (int i = 0; i < slice.Length; ++i)
-					{
-						sret.AppendFormat(", {0}[{1}] = {2}[{3}]",
-						                  node.Item.Table.Name,
-						                  context.AddedIndex(node.Item, slice[i]),
-						                  retval,
-						                  i);
-					}
-
-					sret.Append(")");
-					ret = sret.ToString();
-				}
-				
-				return ret + ";";
-			}
+			return TranslateAssignment(node.Item.AliasOrIndex, ctx);
 		}
 		
 		private string Translate(Computation.ZeroMemory node, Context context)
