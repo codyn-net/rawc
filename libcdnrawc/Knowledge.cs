@@ -633,7 +633,16 @@ namespace Cdn.RawC
 
 		private string SliceKey(Cdn.EdgeAction action)
 		{
-			return String.Join(",", Array.ConvertAll<int, string>(action.Indices, a => a.ToString()));
+			var indices = action.Indices;
+
+			if (indices == null)
+			{
+				return "";
+			}
+			else
+			{
+				return String.Join(",", Array.ConvertAll<int, string>(indices, a => a.ToString()));
+			}
 		}
 
 		private List<List<Cdn.EdgeAction>> SplitActionsPerSlice(IEnumerable<Cdn.EdgeAction> actions)
@@ -703,7 +712,7 @@ namespace Cdn.RawC
 					// Add relevant instructions as per slice
 					var slice = elem[0].Indices;
 
-					if (slice.Length == 0)
+					if (slice == null || slice.Length == 0)
 					{
 						// Empty slice is just the full range
 						slice = new int[variable.Dimension.Size()];
