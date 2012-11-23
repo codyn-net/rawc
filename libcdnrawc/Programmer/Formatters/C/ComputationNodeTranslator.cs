@@ -12,21 +12,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                          System.Reflection.BindingFlags.NonPublic |
 		                                          System.Reflection.BindingFlags.Instance |
 		                                          System.Reflection.BindingFlags.InvokeMethod,
-		                                          new Type[] {typeof(Computation.INode), typeof(Context)})
+		                                          a => a.Name == "Translate",
+		                                          typeof(Computation.INode),
+		                                          typeof(Context))
 		{
 		}
 
-		public static string Reindent(string s, string indent)
-		{
-			if (String.IsNullOrEmpty(s))
-			{
-				return s;
-			}
-
-			string[] lines = s.Split('\n');
-			return indent + String.Join("\n" + indent, lines).Replace("\n" + indent + "\n", "\n\n");
-		}
-		
 		public static string Translate(Computation.INode node, Context context)
 		{
 			return (new ComputationNodeTranslator()).Invoke<string>(node, context);
@@ -90,7 +81,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				if (i != node.Body.Count - 1 || !(child is Computation.Empty))
 				{
-					ret.AppendLine(Reindent(Translate(child, context), "\t"));
+					ret.AppendLine(Context.Reindent(Translate(child, context), "\t"));
 				}
 			}
 
@@ -116,14 +107,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var cond = String.Join(" || ", conditions);
 
 			ret.AppendLine("{");
-			ret.AppendFormat("\t{0} const *evstates = ({0} const *)({1} + {2});",
-			                 context.Options.EventStateType,
-			                 context.Program.StateTable.Name,
-			                 context.Program.StateTable.Count);
-
-			ret.AppendLine();
-			ret.AppendLine();
-
 			ret.AppendFormat("\tif ({0})", cond);
 			ret.AppendLine();
 			ret.AppendLine("\t{");
@@ -134,7 +117,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				if (i != node.Body.Count - 1 || !(child is Computation.Empty))
 				{
-					ret.AppendLine(Reindent(Translate(child, context), "\t\t"));
+					ret.AppendLine(Context.Reindent(Translate(child, context), "\t\t"));
 				}
 			}
 
@@ -205,11 +188,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ret.AppendLine("); */");
 			}
 
-			ret.AppendFormat("\t\t{0}[{1}[i][0]] = {2};",
-			               context.Program.StateTable.Name,
-			               node.IndexTable.Name,
-			               InstructionTranslator.QuickTranslate(ctx));
-			ret.AppendLine();
+			ret.AppendLine(Context.Reindent(TranslateAssignment(String.Format("{0}[i][0]", node.IndexTable.Name), ctx), "\t\t"));
 			ret.AppendLine("\t}");
 			ret.Append("}");
 			
@@ -275,7 +254,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			foreach (Computation.INode dep in node.Dependencies)
 			{
-				ret.AppendLine(Reindent(Translate(dep, context), "\t\t"));
+				ret.AppendLine(Context.Reindent(Translate(dep, context), "\t\t"));
 			}
 
 			ret.AppendLine();
@@ -361,7 +340,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						ret.AppendFormat("{0}[{1}][{2}] = {3} + {4}[{5}];",
 						                 table.Name, r, c,
 						                 sidx.Value,
-						                 context.Program.DelayedCounters.Name, idx.Index);
+						                 context.Program.DelayedCounters.Name, idx.DataIndex);
 					}
 				}
 				
@@ -371,42 +350,153 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return ret.ToString();
 		}
 		
-		private string Translate(Computation.Assignment node, Context context)
+		private string TranslateDelayAssignment(Computation.Assignment node, Context context)
 		{
 			string eq = InstructionTranslator.QuickTranslate(context.Base().Push(node.State, node.Equation));
 
-			if (node.State is DelayedState)
+			StringBuilder ret = new StringBuilder();
+			
+			var ds = (DelayedState)node.State;
+
+			uint size = (uint)System.Math.Round(ds.Delay / Cdn.RawC.Options.Instance.DelayTimeStep);
+			DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
+			DataTable table = context.Program.DelayHistoryTable(ds);
+
+			ret.AppendFormat("{0}[{1}] = {2}[{3}[{4}]];",
+				node.Item.Table.Name,
+				node.Item.AliasOrIndex,
+				table.Name,
+				context.Program.DelayedCounters.Name,
+				counter.DataIndex);
+
+			ret.AppendLine();
+			ret.AppendFormat("{0}[{1}[{2}]] = {3};",
+				table.Name,
+				context.Program.DelayedCounters.Name,
+				counter.DataIndex,
+				eq);
+
+			return ret.ToString();
+		}
+
+		private string WriteWithTemporaryStorage(Context ctx, string ret)
+		{
+			if (ctx.TemporaryStorage.Count == 0)
 			{
-				DelayedState ds = (DelayedState)node.State;
-				StringBuilder ret = new StringBuilder();
+				return ret;
+			}
 
-				uint size = (uint)System.Math.Round(ds.Delay / Cdn.RawC.Options.Instance.DelayTimeStep);
-				DataTable.DataItem counter = context.Program.DelayedCounters[new DelayedState.Size(size)];
-				DataTable table = context.Program.DelayHistoryTable(ds);
+			StringBuilder s = new StringBuilder();
 
-				ret.AppendFormat("{0}[{1}] = {2}[{3}[{4}]];",
-					node.Item.Table.Name,
-					node.Item.AliasOrIndex,
-					table.Name,
-					context.Program.DelayedCounters.Name,
-					counter.Index);
+			s.AppendLine("{");
 
-				ret.AppendLine();
-				ret.AppendFormat("{0}[{1}[{2}]] = {3};",
-					table.Name,
-					context.Program.DelayedCounters.Name,
-					counter.Index,
-					eq);
+			foreach (var tmp in ctx.TemporaryStorage)
+			{
+				s.AppendFormat("\tValueType {0}[{1}] = {{0,}};", tmp.Name, tmp.Size);
+				s.AppendLine();
+			}
 
-				return ret.ToString();
+			s.AppendLine(Context.Reindent(ret, "\t"));
+			s.AppendLine("}");
+
+			return s.ToString();
+		}
+
+		private string TranslateAssignment(string index, Context ctx)
+		{
+			string eq;
+			string ret;
+
+			var slice = ctx.Node.Slice;
+
+			// Compute the equation
+			if (ctx.Node.Dimension.IsOne)
+			{
+				eq = InstructionTranslator.QuickTranslate(ctx);
+
+				if (slice != null && slice[0] != 0)
+				{
+					ret = String.Format("{0}[{1} + {2}] = {3};",
+					                    ctx.Program.StateTable.Name,
+					                    index,
+					                    slice[0],
+					                    eq);
+				}
+				else
+				{
+					ret = String.Format("{0}[{1}] = {2};",
+					                    ctx.Program.StateTable.Name,
+					                    index,
+					                    eq);
+				}
 			}
 			else
 			{
-				return String.Format("{0}[{1}] = {2};",
-				                     node.Item.Table.Name,
-				                     node.Item.AliasOrIndex,
-				                     eq);
+				string retval;
+
+				if (slice != null)
+				{
+					if (Context.IndicesAreContinuous(slice))
+					{
+						retval = String.Format("{0} + {1} + {2}", ctx.Program.StateTable.Name, index, slice[0]);
+						slice = null;
+					}
+					else
+					{
+						// Make temporary first 
+						retval = ctx.AcquireTemporary(ctx.Node);
+					}
+				}
+				else
+				{
+					retval = String.Format("{0} + {1}",
+				                           ctx.Program.StateTable.Name,
+				                           index);
+				}
+
+				ctx.PushRet(retval);
+				ret = InstructionTranslator.QuickTranslate(ctx);
+				ctx.PopRet();
+
+				if (slice != null)
+				{
+					StringBuilder sret = new StringBuilder("(");
+					sret.Append(ret);
+					
+					// Copy temporary to slice
+					for (int i = 0; i < slice.Length; ++i)
+					{
+						sret.AppendFormat(", {0}[{1} + {2}] = {3}[{4}]",
+						                  ctx.Program.StateTable.Name,
+						                  index,
+						                  slice[i],
+						                  retval,
+						                  i);
+					}
+
+					sret.Append(");");
+					ret = sret.ToString();
+				}
+				else
+				{
+					ret = String.Format("{0};", ret);
+				}
 			}
+
+			return WriteWithTemporaryStorage(ctx, ret.ToString());
+		}
+		
+		private string Translate(Computation.Assignment node, Context context)
+		{
+			if (node.State is DelayedState)
+			{
+				return TranslateDelayAssignment(node, context);
+			}
+			
+			var ctx = context.Base();
+			ctx.Push(node.State, node.Equation);
+
+			return TranslateAssignment(node.Item.AliasOrIndex, ctx);
 		}
 		
 		private string Translate(Computation.ZeroMemory node, Context context)
@@ -428,7 +518,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return String.Format("memset ({0}, 0, sizeof (ValueType) * {1});",
 				                     node.DataTable.Name,
-				                     node.DataTable.Count);
+				                     node.DataTable.Size);
 			}
 		}
 		

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+files="matrix.cdn indices.cdn"
+
+binary=$srcdir/../bin/Debug/cdn-rawc.exe
+
+if [ ! -f "$binary" ];
+then
+	binary=$srcdir/../bin/Release/cdn-rawc.exe
+fi
+
+if [ ! -f "$binary" ];
+then
+	echo "Could not find cdnrawc.exe binary to run tests"
+	exit 1
+fi
+
+for f in $files; do
+	echo "Running test $f"
+	mono "$binary" --validate -q "$srcdir/$f"
+done

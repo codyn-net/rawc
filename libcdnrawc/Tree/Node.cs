@@ -10,7 +10,7 @@ namespace Cdn.RawC.Tree
 	{
 		private State d_state;
 		private Instruction d_instruction;
-		private uint d_label;
+		private string d_label;
 		private List<Node> d_children;
 		private SortedList<Node> d_leafs;
 		private Node d_parent;
@@ -21,6 +21,11 @@ namespace Cdn.RawC.Tree
 		private uint d_descendants;
 		private bool d_isCommutative;
 		private ulong d_treeId;
+
+		public static Node Create(State state, Cdn.Expression expression)
+		{
+			return Create(state, expression.Instructions);
+		}
 
 		public static Node Create(State state, Cdn.Instruction[] instructions)
 		{
@@ -86,32 +91,39 @@ namespace Cdn.RawC.Tree
 			return Create(state, state.Instructions);
 		}
 
-		public Node(uint label) : this(null, null)
+		public Node(string label) : this(null, null)
 		{
 			d_label = label;
 		}
 		
-		public Node() : this(0)
+		public Node() : this("")
 		{
+		}
+
+		public int[] Slice
+		{
+			get
+			{
+				if (d_parent == null && d_state != null)
+				{
+					return d_state.Slice;
+				}
+
+				return null;
+			}
 		}
 		
 		public ulong TreeId
 		{
-			get
-			{
-				return d_treeId;
-			}
-			set
-			{
-				d_treeId = value;
-			}			
+			get { return d_treeId; }
+			set { d_treeId = value; }			
 		}
 		
 		public Node(State state, Instruction instruction)
 		{
 			uint size = 0;
 			
-			d_label = 0;
+			d_label = "";
 			
 			d_state = state;
 
@@ -119,7 +131,7 @@ namespace Cdn.RawC.Tree
 
 			if (instruction != null)
 			{
-				d_label = Expression.InstructionCode(instruction);
+				d_label = InstructionCode(instruction);
 
 				if (instruction.GetStackManipulation() != null)
 				{
@@ -189,6 +201,30 @@ namespace Cdn.RawC.Tree
 		{
 			ulong treeid = 0;
 			PropagateTreeId(ref treeid);
+		}
+		
+		public Cdn.Dimension Dimension
+		{
+			get
+			{
+				var i = d_instruction as Programmer.Instructions.IInstruction;
+
+				if (i != null)
+				{
+					return i.Dimension;
+				}
+
+				var smanip = d_instruction.GetStackManipulation();
+				
+				if (smanip != null)
+				{
+					return smanip.Push.Dimension;
+				}
+				else
+				{
+					throw new Exception("Failed to determine instruction dimension: [{0}] {1}", d_instruction.GetType(), d_instruction);
+				}
+			}
 		}
 		
 		private void PropagateTreeId(ref ulong treeid)
@@ -345,7 +381,7 @@ namespace Cdn.RawC.Tree
 			set { d_childCount = value; }
 		}
 		
-		public uint Label
+		public string Label
 		{
 			get { return d_label; }
 		}
@@ -668,6 +704,16 @@ namespace Cdn.RawC.Tree
 		{
 			StringBuilder ret = new StringBuilder();
 			ret.Append(Label);
+
+			int[] slice = Slice;
+
+			if (slice != null)
+			{
+				ret.Append("[");
+				ret.Append(String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+				ret.Append("]");
+			}
+			
 			ret.Append("(");
 			
 			for (int i = 0; i < d_children.Count; ++i)
@@ -684,6 +730,223 @@ namespace Cdn.RawC.Tree
 			
 			return ret.ToString();
 		}
+
+		private static Dictionary<string, uint> s_hashMapping;
+		private static uint s_nextMap;
+		
+		static Node()
+		{
+			s_hashMapping = new Dictionary<string, uint>();
+			s_nextMap = (uint)MathFunctionType.Num + (uint)MathFunctionType.Num + 1;
+		}
+		
+		private static uint HashMap(string id)
+		{
+			uint ret;
+
+			if (!s_hashMapping.TryGetValue(id, out ret))
+			{
+				ret = s_nextMap++;
+				s_hashMapping[id] = ret;
+			}
+			
+			return ret;
+		}
+		
+		private static bool InstructionIs<T>(Instruction inst, out T t)
+		{
+			if (inst is T)
+			{
+				t = (T)(object)inst;
+				return true;
+			}
+			else
+			{
+				t = default(T);
+			}
+			
+			return false;
+		}
+
+		public static IEnumerable<string> InstructionCodes(Instruction inst)
+		{
+			return InstructionCodes(inst, false);
+		}
+
+		public static string InstructionCode(Instruction inst)
+		{
+			return InstructionCode(inst, false);
+		}
+
+		public static string InstructionCode(Instruction inst, bool strict)
+		{
+			foreach (string i in InstructionCodes(inst, strict))
+			{
+				return i;
+			}
+
+			return "";
+		}
+
+		private static string InstructionIdentifier(uint label, Instruction inst)
+		{
+			return InstructionIdentifier(label.ToString(), inst);
+		}
+		
+		private static string InstructionIdentifier(string label, Instruction inst)
+		{
+			var smanip = inst.GetStackManipulation();
+			
+			if (smanip == null)
+			{
+				return label + "[0,0]";
+			}
+			
+			var dim = smanip.Push.Dimension;
+
+			return String.Format("{0}[{1},{2}]", label, dim.Rows, dim.Columns);
+		}
+		
+		public static IEnumerable<string> InstructionCodes(Instruction inst, bool strict)
+		{
+			InstructionFunction ifunc;
+			InstructionCustomOperator icusop;
+			InstructionCustomFunction icusf;
+			InstructionVariable ivar;
+			InstructionNumber inum;
+			InstructionRand irand;
+			InstructionIndex iindex;
+
+			if (InstructionIs(inst, out icusf))
+			{
+				// Generate byte code for this function by name
+				yield return InstructionIdentifier(HashMap("f_" + icusf.Function.FullId), inst);
+			}
+			else if (InstructionIs(inst, out icusop))
+			{
+				if (icusop.Operator is OperatorDelayed && !strict)
+				{
+					// These are actually part of the state table, so we use
+					// a placeholder code here
+					yield return InstructionIdentifier(PlaceholderCodeLabel, inst);
+				}
+				else
+				{
+					bool ns = strict || icusop.Operator is OperatorDelayed;
+
+					yield return InstructionIdentifier(HashMap("co_" + icusop.Operator.Name), inst);
+
+					Cdn.Function f = icusop.Operator.PrimaryFunction;
+
+					if (f != null && f.Expression != null)
+					{
+						foreach (Instruction i in f.Expression.Instructions)
+						{
+							foreach (string id in InstructionCodes(i, ns))
+							{
+								yield return id;
+							}
+						}
+					}
+					else
+					{
+						foreach (Cdn.Expression[] exprs in icusop.Operator.AllExpressions())
+						{
+							foreach (Cdn.Expression e in exprs)
+							{
+								foreach (Instruction i in e.Instructions)
+								{
+									foreach (string id in InstructionCodes(i, ns))
+									{
+										yield return id;
+									}
+								}
+							}
+						}
+
+						foreach (Cdn.Expression[] exprs in icusop.Operator.AllIndices())
+						{
+							foreach (Cdn.Expression e in exprs)
+							{
+								foreach (Instruction i in e.Instructions)
+								{
+									foreach (string id in InstructionCodes(i, ns))
+									{
+										yield return id;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			else if (InstructionIs(inst, out ifunc))
+			{
+				// Functions just store the id
+				yield return InstructionIdentifier((uint)ifunc.Id + 1, inst);
+			}
+			else if (InstructionIs(inst, out iindex))
+			{
+				if (iindex.IsOffset)
+				{
+					yield return InstructionIdentifier(String.Format("index_o{0}", iindex.Offset), inst);
+				}
+				else
+				{
+					var indices = iindex.Indices;
+					var idx = Array.ConvertAll<int, string>(indices, a => a.ToString());
+					yield return InstructionIdentifier(String.Format("index_m[{0}]", String.Join(",", idx)), inst);
+				}
+			}
+			else if (strict)
+			{
+				if (InstructionIs(inst, out ivar))
+				{
+					string n;
+
+					if (ivar.HasSlice)
+					{
+						Cdn.Dimension dim;
+						int[] slice = ivar.GetSlice(out dim);
+
+						n = String.Format("var_{0}[{1}]",
+						                  ivar.Variable.FullName,
+						                  String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+					}
+					else
+					{
+						n = String.Format("var_{0}", ivar.Variable.FullName);
+					}
+
+					yield return InstructionIdentifier(HashMap(n), inst);
+				}
+				else if (InstructionIs(inst, out inum))
+				{
+					yield return InstructionIdentifier(HashMap(String.Format("num_{0}", inum.Value)), inst);
+				}
+				else if (InstructionIs(inst, out irand))
+				{
+					yield return InstructionIdentifier(HashMap(String.Format("rand_{0}", irand.Handle)), inst);
+				}
+				else
+				{
+					throw new NotImplementedException(String.Format("Unhandled strict instruction code: {0}", inst.GetType()));
+				}
+			}
+			else
+			{
+				// Placeholder for numbers, properties and rands
+				yield return InstructionIdentifier(PlaceholderCodeLabel, inst);
+			}
+		}
+		
+		public static bool IsPlaceholder(Cdn.Instruction instruction)
+		{
+			return InstructionCode(instruction)[0] == PlaceholderCode;
+		}
+		
+		public const char PlaceholderCode = '0';
+		private const uint PlaceholderCodeLabel = 0;
 	}
 }
 

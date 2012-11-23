@@ -74,3 +74,13 @@ cdn_rawc_${name}_data (void)
 {
 	return data[0].data;
 }
+
+CdnRawcDimension const *
+cdn_rawc_${name}_get_dimension (uint32_t i)
+{
+	CdnRawcNetwork *network;
+	
+	network = cdn_rawc_${name}_network ();
+	
+	return network->get_dimension (network->dimensions, i);
+}

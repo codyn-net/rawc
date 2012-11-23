@@ -65,7 +65,6 @@ FILES = \
 	Tree/Collectors/ICollector.cs \
 	Tree/Collectors/Default.cs \
 	Tree/SortedList.cs \
-	Tree/Expression.cs \
 	Tree/Embedding.cs \
 	Tree/Filters/IFilter.cs \
 	Tree/Filters/Optimal.cs \
@@ -100,6 +99,7 @@ FILES = \
 	Programmer/Computation/InitializeDelayHistory.cs \
 	Programmer/Computation/Rand.cs \
 	Programmer/Program.cs \
+	Programmer/Instructions/IInstruction.cs \
 	Programmer/Instructions/Variable.cs \
 	Programmer/Instructions/Function.cs \
 	Programmer/Instructions/State.cs \
@@ -159,3 +159,5 @@ $(build_xamlg_list): %.xaml.g.cs: %.xaml
 $(ASSEMBLY) $(ASSEMBLY_MDB): $(build_sources) $(build_resources) $(build_datafiles) $(DLL_REFERENCES) $(PROJECT_REFERENCES) $(build_xamlg_list) $(build_satellite_assembly_list)
 	mkdir -p $(shell dirname $(ASSEMBLY))
 	$(ASSEMBLY_COMPILER_COMMAND) $(ASSEMBLY_COMPILER_FLAGS) -out:$(ASSEMBLY) -target:$(COMPILE_TARGET) $(build_sources_embed) $(build_resources_embed) $(build_references_ref)
+
+.NOTPARALLEL:

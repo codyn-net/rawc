@@ -106,21 +106,29 @@ namespace Cdn.RawC.Programmer
 
 		public int[] StateRange(IEnumerable<State> states)
 		{
+			return StateRange(states, null);
+		}
+
+		public int[] StateRange(IEnumerable<State> states, int[] def)
+		{
 			var enu = states.GetEnumerator();
 
 			if (!enu.MoveNext())
 			{
-				return new int[] {0, 0};
+				return def;
 			}
 			else
 			{
-				var start = d_statetable[enu.Current].Index;
-				var end = start + 1;
+				var cur = enu.Current;
+				var start = d_statetable[cur].DataIndex;
 
 				while (enu.MoveNext())
 				{
-					++end;
+					cur = enu.Current;
 				}
+				
+				var item = d_statetable[cur];
+				var end = item.DataIndex + item.Dimension.Size();
 
 				return new int[] {start, end};
 			}
@@ -921,6 +929,7 @@ namespace Cdn.RawC.Programmer
 			modset.UnionWith(TDTModSet);
 			modset.UnionWith(delays);
 			modset.UnionWith(Knowledge.Instance.Integrated);
+			modset.UnionWith(Knowledge.Instance.FlaggedStates(VariableFlags.In));
 
 			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
 
@@ -1001,7 +1010,7 @@ namespace Cdn.RawC.Programmer
 
 			// Initialize constants here
 			d_apiPrepare.Body.Add(new Computation.Comment("Copy constants"));
-			d_apiPrepare.Body.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Count, -1));
+			d_apiPrepare.Body.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Size, -1));
 			d_apiPrepare.Body.Add(new Computation.Empty());
 
 			// Initialize _IN_

@@ -284,14 +284,14 @@ namespace Cdn.RawC
 			}
 			catch (GLib.GException e)
 			{
-				throw new Exception(String.Format("Failed to load network: {0}", e.Message));
+				throw new Exception("Failed to load network: {0}", e.Message);
 			}
 			
 			CompileError error = new CompileError();
 
 			if (!d_network.Compile(null, error))
 			{
-				throw new Exception(String.Format("Failed to compile network: {0}", error.FormattedString));
+				throw new Exception("Failed to compile network: {0}", error.FormattedString);
 			}
 		}
 		
@@ -353,14 +353,14 @@ namespace Cdn.RawC
 		{
 			// Special case for single instructions. Generate embeddings for
 			// those, but separate them strictly.
-			Dictionary<uint, List<Tree.Node>> constnodes = new Dictionary<uint, List<Tree.Node>>();
-			List<uint> morethanoneconst = new List<uint>();
+			Dictionary<string, List<Tree.Node>> constnodes = new Dictionary<string, List<Tree.Node>>();
+			List<string> morethanoneconst = new List<string>();
 
 			foreach (Tree.Node node in forest)
 			{
 				if (node.ChildCount == 0)
 				{
-					uint code = Tree.Expression.InstructionCode(node.Instruction, true);
+					var code = Tree.Node.InstructionCode(node.Instruction, true);
 					List<Tree.Node> clst;
 
 					if (!constnodes.TryGetValue(code, out clst))
@@ -378,7 +378,7 @@ namespace Cdn.RawC
 				}
 			}
 
-			foreach (uint code in morethanoneconst)
+			foreach (var code in morethanoneconst)
 			{
 				var lst = constnodes[code];
 				var proto = (Tree.Node)lst[0].Clone();

@@ -1,0 +1,59 @@
+matrix = "[-0.1, 0.2, 0.3; -0.4, 0.5, 0.6]"
+matrix_pos = "[0.1, 0.2, 0.3; 0.4, 0.5, 0.6]" | out
+
+defines
+{
+    unary_function           = "{abs,sin,cos,tan,asin,acos,atan,sinh,
+                                 cosh,tanh,floor,ceil,round,exp,erf,
+                                 sign,exp2,max,min,sum,product,sqsum,
+                                 transpose}"
+
+    unary_function_positive  = "{sqrt,invsqrt,log10,ln}"
+
+    unary_operator           = "{uminus}"
+
+    binary_function          = "{atan2,hypot}"
+    binary_function_positive = "{pow}"
+
+    binary_operator          = "{plus,minus,multiply,divide,emultiply,
+                                 modulo}"
+    binary_operator_positive = "{power}"
+
+    "op_{uminus,plus,minus,multiply,divide,emultiply,modulo,power}" = "{-,+,-,*,/,.*,%,^}"
+
+}
+
+"@unary_function"          = "@1(matrix)"        | out
+"@unary_function_positive" = "@1(matrix_pos)"    | out
+"@unary_operator"          = "@[op_@1](matrix)"     | out
+
+"@[binary_function]_m_m"   = "@1(matrix,  matrix)"  | out
+"@[binary_function]_1_m_p" = "@1(4.4,     matrix)"  | out
+"@[binary_function]_1_m_n" = "@1(-2.2,    matrix)"  | out
+"@[binary_function]_m_1_p" = "@1(matrix,  5.2)"     | out
+"@[binary_function]_m_1_n" = "@1(matrix, -2.5)"     | out
+
+"@[binary_function_positive]_m_m" = "@1(matrix_pos,  matrix_pos)"  | out
+"@[binary_function_positive]_1_m" = "@1(4.4,         matrix_pos)"  | out
+"@[binary_function_positive]_m_1" = "@1(matrix_pos,  5.2)"         | out
+
+"@[binary_operator]_m_m"   = "matrix @[op_@1] matrix"  | out
+"@[binary_operator]_1_m_p" = "4.4    @[op_@1] matrix"  | out
+"@[binary_operator]_1_m_n" = "-2.2   @[op_@1] matrix"  | out
+"@[binary_operator]_m_1_p" = "matrix @[op_@1] 5.2"     | out
+"@[binary_operator]_m_1_n" = "matrix @[op_@1] -2.5"    | out
+
+"@[binary_operator_positive]_m_m"   = "matrix @[op_@1] matrix"  | out
+"@[binary_operator_positive]_1_m"   = "4.4    @[op_@1] matrix"  | out
+"@[binary_operator_positive]_m_1"   = "matrix @[op_@1] 5.2"     | out
+
+"matrix_multiply" = "matrix * transpose(matrix)" | out
+
+# test csign with some more interesting arguments than the general ones
+"csign_m_m"   = "csign(matrix,  [2, -3, -4; -2, 4, -4])" | out
+"csign_1_m_p" = "csign(2,       matrix)"                 | out
+"csign_1_m_n" = "csign(-2,      matrix)"                 | out
+"csign_m_1_p" = "csign(matrix,  3)"                      | out
+"csign_m_1_n" = "csign(matrix, -3)"                      | out
+
+# vi:ts=4:et

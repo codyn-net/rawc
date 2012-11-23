@@ -56,7 +56,7 @@ namespace Cdn.RawC.Tree.Collectors
 			// Find anonymous labels
 			foreach (Node node in proto.Descendants)
 			{
-				if (node.Label == Expression.PlaceholderCode)
+				if (node.Label[0] == Node.PlaceholderCode)
 				{
 					arguments.Add(node.Path);
 				}

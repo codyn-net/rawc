@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = libcdnrawc completion m4
+SUBDIRS = libcdnrawc completion m4 tests
 
 EXTRA_DIST =
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Cdn.RawC.Programmer.Formatters.C
 {
@@ -56,13 +57,51 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                      System.Reflection.BindingFlags.Public |
 		                                      System.Reflection.BindingFlags.Instance |
 		                                      System.Reflection.BindingFlags.InvokeMethod,
-		                                      new Type[] {typeof(Instruction), typeof(Context)})
+		                                      a => a.Name == "Translate" || a.Name == "TranslateV",
+		                                      typeof(Instruction),
+		                                      typeof(Context))
 		{
 		}
 		
 		public static string QuickTranslate(Context context)
 		{
 			return (new InstructionTranslator()).Translate(context);
+		}
+
+		private bool NodeIsOne(Tree.Node node)
+		{
+			if (!node.Dimension.IsOne)
+			{
+				return false;
+			}
+			else
+			{
+				foreach (var child in node.Children)
+				{
+					if (!child.Dimension.IsOne)
+					{
+						return false;
+					}
+				}
+			}
+
+			return true;
+		}
+		
+		private string TranslateAssign(Context context, Tree.Node node, string assignto)
+		{
+			if (node.Dimension.IsOne)
+			{
+				return String.Format("*({0}) = {1}", assignto, Translate(context, node));
+			}
+			else
+			{
+				context.PushRet(assignto);
+				var ret = Translate(context, node);
+				context.PopRet();
+				
+				return ret;
+			}
 		}
 		
 		private string Translate(Context context)
@@ -74,7 +113,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return ret;
 			}
 
-			return Invoke<string>(context.Node.Instruction, context);
+			InvokeSelector sel;
+
+			if (NodeIsOne(context.Node))
+			{
+				sel = a => a.Name == "Translate";
+			}
+			else
+			{
+				sel = a => a.Name == "TranslateV";
+			}
+
+			return InvokeSelect<string>(sel, context.Node.Instruction, context);
 		}
 
 		public string Translate(Context context, Tree.Node child)
@@ -186,13 +236,23 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Plus:
 				return SimpleOperator(context, instruction, " + ");
 			case MathFunctionType.Modulo:
+			{
+				var def = Context.MathFunctionDefine(Cdn.MathFunctionType.Modulo, context.Node.Children.Count);
+				Context.MathDefines.Add(def);
+
 				return String.Format("{0}{1}",
-					                     Context.MathFunctionDefine(Cdn.MathFunctionType.Modulo, context.Node.Children.Count),
-					                     SimpleOperator(context, null, ", "));
+					                 def,
+					                 SimpleOperator(context, null, ", "));
+			}
 			case MathFunctionType.Power:
+			{
+				var def = Context.MathFunctionDefine(Cdn.MathFunctionType.Pow, context.Node.Children.Count);
+				Context.MathDefines.Add(def);
+
 				return String.Format("{0}{1}",
-					                     Context.MathFunctionDefine(Cdn.MathFunctionType.Pow, context.Node.Children.Count),
-					                     SimpleOperator(context, null, ", "));
+					                 def,
+					                 SimpleOperator(context, null, ", "));
+			}
 			case MathFunctionType.Ternary:
 				return String.Format("({0} ? {1} : {2})",
 					                     Translate(context, 0),
@@ -213,7 +273,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
-			return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
+
+			if (instruction.HasSlice)
+			{
+				Cdn.Dimension dim;
+				int[] slice = instruction.GetSlice(out dim);
+				
+				return String.Format("{0}[{1}]", context.Program.StateTable.Name, context.AddedIndex(item, slice[0]));
+			}
+			else
+			{
+				return String.Format("{0}[{1}]", context.Program.StateTable.Name, item.AliasOrIndex);
+			}
 		}
 
 		private string Translate(InstructionRand instruction, Context context)
@@ -233,14 +304,140 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return val;
 		}
 		
+		private int LiteralIndex(Tree.Node node)
+		{
+			var i = node.Instruction as InstructionNumber;
+			
+			if (i == null)
+			{
+				throw new Exception("Non constant indices are not yet supported");
+			}
+			
+			return (int)(i.Value + 0.5);
+		}
+
+		private void LiteralIndices(Tree.Node node, List<int> ret)
+		{
+			var i = node.Instruction as InstructionNumber;
+			
+			if (i != null)
+			{
+				ret.Add((int)(i.Value + 0.5));
+				return;
+			}
+			
+			var m = node.Instruction as InstructionMatrix;
+			
+			if (m != null)
+			{
+				foreach (var child in node.Children)
+				{
+					LiteralIndices(child, ret);
+				}
+			}
+			else
+			{
+				throw new Exception("Non constant indices are not yet supported");
+			}
+		}
+		
+		private int IndexToLinear(Tree.Node node, int row, int col)
+		{
+			return row * node.Dimension.Columns + col;
+		}
+		
+		private string TranslateV(InstructionIndex instruction, Context context)
+		{
+			return Translate(instruction, context);
+		}
+		
+		private string Translate(InstructionIndex instruction, Context context)
+		{
+			var child = context.Node.Children[0];
+			string tmp = null;
+			string toindex;
+
+			context.SaveTemporaryStack();
+
+			if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
+			{
+				context.PushRet(null);
+				toindex = Translate(context, child);
+				context.PopRet();
+			}
+			else
+			{
+				tmp = context.AcquireTemporary(child);
+				context.PushRet(tmp);
+				toindex = Translate(context, child);
+				context.PopRet();
+			}
+			
+			string ret;
+
+			if (child.Dimension.IsOne)
+			{
+				context.RestoreTemporaryStack();
+				return toindex;
+			}
+
+			if (context.Node.Dimension.IsOne)
+			{
+				ret = String.Format("({0})[{1}]", toindex, instruction.Offset);
+			}
+			else if (instruction.IsOffset)
+			{
+				var retvar = context.PeekRet();
+
+				if (retvar != null)
+				{
+					ret = String.Format("((ValueType *)memcpy ({0}, (({1}) + {2}), sizeof (ValueType) * {3}))", retvar, toindex, instruction.Offset, context.Node.Dimension.Size());
+				}
+				else
+				{
+					ret = String.Format("(({0}) + {1})", toindex, instruction.Offset);
+				}
+			}
+			else
+			{
+				// Too bad! Really just need to index here
+				var retvar = context.PeekRet();
+				var indices = instruction.Indices;
+				StringBuilder rets = new StringBuilder();
+
+				if (tmp != null)
+				{
+					rets.Append(toindex);
+				}
+
+				for (int i = 0; i < indices.Length; ++i)
+				{
+					if (i != 0 || tmp != null)
+					{
+						rets.Append(", ");
+					}
+
+					rets.AppendFormat("({0})[{1}] = ({2})[{3}]", retvar, i, tmp != null ? tmp : toindex, indices[i]);
+				}
+
+				ret = String.Format("({0}, {1})", rets.ToString(), retvar);
+			}
+			
+			context.RestoreTemporaryStack();
+
+			return ret;
+		}
+		
 		private string Translate(InstructionFunction instruction, Context context)
 		{
 			if (instruction.Id < (uint)Cdn.MathFunctionType.NumOperators)
 			{
 				return TranslateOperator(instruction, context);
 			}
-
+			
 			string name = Context.MathFunctionDefine(instruction);
+			Context.MathDefines.Add(name);
+
 			string[] args = new string[instruction.GetStackManipulation().Pop.Num];
 			
 			for (int i = 0; i < instruction.GetStackManipulation().Pop.Num; ++i)
@@ -298,7 +495,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string Translate(Instructions.Function instruction, Context context)
 		{
-			string name = instruction.FunctionCall.Name.ToUpper();
+			string name = instruction.FunctionCall.Name;
+			
+			if (instruction.FunctionCall.IsCustom)
+			{
+				name = name.ToUpper();
+			}
+
 			List<string > args = new List<string>();
 
 			args.Add(context.Program.StateTable.Name);
@@ -329,6 +532,285 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private string Translate(Instructions.Variable instruction, Context context)
 		{
 			return instruction.Name;
+		}
+		
+		private bool InstructionHasStorage(Cdn.Instruction instruction, Context context)
+		{
+			var v = instruction as Cdn.InstructionVariable;
+			
+			if (v != null)
+			{
+				// Check for slice
+				if (!v.HasSlice)
+				{
+					return true;
+				}
+				
+				// Only needs storage if indices are not continuous
+				Cdn.Dimension dim;
+				return !Context.IndicesAreContinuous(v.GetSlice(out dim));
+			}
+
+			var i = instruction as Cdn.InstructionIndex;
+
+			if (i != null && i.IsOffset)
+			{
+				return true;
+			}
+			
+			return context.Program.StateTable.Contains(instruction);
+		}
+		
+		/* Translators for multidimension values */
+		private string TranslateV(Cdn.InstructionMatrix instruction, Context context)
+		{
+			string[] args = new string[context.Node.Children.Count];
+			int argi = 0;
+			
+			var tmp = context.PeekRet();
+
+			for (int i = 0; i < context.Node.Children.Count; ++i)
+			{
+				var child = context.Node.Children[i];
+				
+				// Translate such that we compute the result of the child
+				// at the tmp + argi location
+				if (argi == 0)
+				{
+					args[i] = TranslateAssign(context, child, String.Format("{0}", tmp));
+				}
+				else
+				{
+					args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
+				}	
+
+				argi += child.Dimension.Size();
+			}
+			
+			return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
+		}
+
+		private string TranslateChildV(Tree.Node child, Context context)
+		{
+			string ret;
+
+			if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
+			{
+				context.PushRet(null);
+				ret = Translate(context, child);
+				context.PopRet();
+			}
+			else
+			{
+				context.PushRet(context.AcquireTemporary(child));
+				ret = Translate(context, child);
+				context.PopRet();
+			}
+
+			return ret;
+		}
+		
+		private string TranslateV(InstructionFunction instruction, Context context)
+		{
+			Cdn.MathFunctionType type;
+			
+			type = (Cdn.MathFunctionType)instruction.Id;
+			
+			var def = Context.MathFunctionDefineV(type, instruction.GetStackManipulation());
+			string ret = null;
+
+			if (!context.Node.Dimension.IsOne)
+			{
+				ret = context.PeekRet();
+			}
+			
+			Context.MathDefines.Add(def);
+			
+			List<string> args = new List<string>(context.Node.Children.Count + 1);
+
+			int cnt = 0;
+			context.SaveTemporaryStack();
+			
+			for (int i = 0; i < context.Node.Children.Count; ++i)
+			{
+				var child = context.Node.Children[i];
+
+				args.Add(TranslateChildV(child, context));
+
+				var s = child.Dimension.Size();
+
+				if (s > cnt)
+				{
+					cnt = s;
+				}
+			}
+
+			context.RestoreTemporaryStack();
+
+			switch (type)
+			{
+			case MathFunctionType.Transpose:
+			{
+				var dim = context.Node.Children[0].Dimension;
+
+				args.Add(dim.Rows.ToString());
+				args.Add(dim.Columns.ToString());
+			}
+				break;
+			case MathFunctionType.Hcat:
+			{
+				var dim1 = context.Node.Children[0].Dimension;
+				var dim2 = context.Node.Children[1].Dimension;
+
+				args.Add(dim1.Rows.ToString());
+				args.Add(dim1.Columns.ToString());
+				args.Add(dim2.Columns.ToString());
+			}
+				break;
+			case MathFunctionType.Multiply:
+				if (def == "CDN_MATH_MATRIX_MULTIPLY_V")
+				{
+					var d1 = context.Node.Children[0].Dimension;
+					var d2 = context.Node.Children[1].Dimension;
+
+					args.Add(d1.Rows.ToString());
+					args.Add(d1.Columns.ToString());
+					args.Add(d2.Columns.ToString());
+				}
+				else
+				{
+					args.Add(cnt.ToString());
+				}
+				break;
+			case MathFunctionType.Index:
+				break;
+			default:
+				args.Add(cnt.ToString());
+				break;
+			}
+
+			if (ret != null)
+			{
+				return String.Format("{0} ({1}, {2})", def, ret, String.Join(", ", args));
+			}
+			else
+			{
+				return String.Format("{0} ({1})", def, String.Join(", ", args));
+			}
+		}
+		
+		private string TranslateV(InstructionVariable instruction, Context context)
+		{
+			Cdn.Variable prop = instruction.Variable;
+			
+			if (!context.Program.StateTable.Contains(prop))
+			{
+				throw new NotImplementedException(String.Format("The variable `{0}' is not implemented", prop.FullName));
+			}
+			
+			DataTable.DataItem item = context.Program.StateTable[prop];
+			var ret = context.PeekRet();
+			
+			string index = item.AliasOrIndex;
+			int size = prop.Dimension.Size();
+			
+			if (instruction.HasSlice)
+			{
+				Cdn.Dimension dim;
+				var slice = instruction.GetSlice(out dim);
+				
+				// This is a multidim slice for sure, check if it's just linear
+				if (!Context.IndicesAreContinuous(slice))
+				{
+					if (ret == null)
+					{
+						throw new Exception("Temporary storage needed to have been allocated!");
+					}
+					
+					StringBuilder sret = new StringBuilder("(");
+					
+					// Make single element assignments
+					for (int i = 0; i < slice.Length; ++i)
+					{
+						if (i != 0)
+						{
+							sret.Append(", ");
+						}
+						
+						sret.AppendFormat("({0})[{1}] = {2}[{3}]",
+						                  ret,
+						                  i,
+						                  context.Program.StateTable.Name,
+						                  context.AddedIndex(item, slice[i]));
+					}
+					
+					sret.AppendFormat(", {0})", ret);
+					return sret.ToString();
+				}
+				else
+				{
+					index = context.AddedIndex(item, slice[0]);
+					size = slice.Length;
+				}
+			}
+			
+			if (ret != null)
+			{
+				return String.Format("(memcpy ({0}, {1} + {2}, sizeof(ValueType) * {3}), {0})",
+				                     ret,
+				                     context.Program.StateTable.Name,
+				                     index,
+				                     size);
+			}
+			else if (index == "0")
+			{
+				return String.Format("{0}", context.Program.StateTable.Name);
+			}
+			else
+			{
+			
+				return String.Format("({0} + {1})", context.Program.StateTable.Name, index);
+			}
+		}
+
+		private string TranslateV(Instructions.Function instruction, Context context)
+		{
+			string name = instruction.FunctionCall.Name;
+			
+			if (instruction.FunctionCall.IsCustom)
+			{
+				name = name.ToUpper();
+			}
+
+			List<string > args = new List<string>();
+			args.Add(context.Program.StateTable.Name);
+			
+			if (!context.Node.Dimension.IsOne)
+			{
+				var ret = context.PeekRet();
+				args.Add(ret);
+			}
+
+			context.SaveTemporaryStack();
+
+			if (!instruction.FunctionCall.IsCustom)
+			{
+				foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
+				{
+					args.Add(TranslateChildV(context.Node.FromPath(argument.Path), context));
+				}
+			}
+			else
+			{
+				foreach (Tree.Node child in context.Node.Children)
+				{
+					args.Add(TranslateChildV(child, context));
+				}
+			}
+
+			context.RestoreTemporaryStack();
+
+			return String.Format("{0} ({1})", name, String.Join(", ", args.ToArray()));
 		}
 	}
 }

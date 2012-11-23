@@ -47,6 +47,7 @@ AM_CONDITIONAL(ENABLE_DEBUG, test x$enable_debug = xyes)
 if test "x$enable_debug" = "xyes" ; then
 	CONFIG_REQUESTED="yes"
 	CFLAGS="$CFLAGS -O2 -g"
+	RUN_DEBUG="--debug "
 fi
 AC_ARG_ENABLE(release,
 	AC_HELP_STRING([--enable-release],
@@ -105,6 +106,7 @@ libcdnrawc/Programmer/Formatters/C/cdn-rawc/Makefile
 libcdnrawc/Programmer/Formatters/C/cdn-rawc/cdn-rawc.pc
 completion/Makefile
 m4/Makefile
+tests/Makefile
 ])
 
 AC_OUTPUT

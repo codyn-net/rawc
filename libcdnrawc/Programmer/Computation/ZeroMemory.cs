@@ -11,7 +11,7 @@ namespace Cdn.RawC.Programmer.Computation
 		public ZeroMemory(DataTable datatable)
 		{
 			d_name = datatable.Name;
-			d_size = datatable.Count.ToString();
+			d_size = datatable.Size.ToString();
 
 			d_datatable = datatable;
 		}

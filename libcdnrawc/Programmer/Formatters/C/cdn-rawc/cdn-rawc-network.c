@@ -103,6 +103,32 @@ cdn_rawc_network_get_nth (CdnRawcNetwork *network,
 	return network->get_nth (data, nth);
 }
 
+CdnRawcDimension const *
+cdn_rawc_network_get_dimension (CdnRawcNetwork *network,
+                                void           *data,
+                                uint32_t        i)
+{
+	return network->get_dimension (network->dimensions, i);
+}
+
+uint32_t
+cdn_rawc_network_get_data_size (CdnRawcNetwork *network)
+{
+	return network->data_size;
+}
+
+uint32_t
+cdn_rawc_network_get_data_count (CdnRawcNetwork *network)
+{
+	return network->data_count;
+}
+
+uint8_t
+cdn_rawc_network_get_type_size (CdnRawcNetwork *network)
+{
+	return network->type_size;
+}
+
 #ifdef ENABLE_MALLOC
 void *
 cdn_rawc_network_alloc (CdnRawcNetwork *network,

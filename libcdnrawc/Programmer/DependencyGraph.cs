@@ -280,7 +280,7 @@ namespace Cdn.RawC.Programmer
 					}
 					else
 					{
-						return d_states[a].Index.CompareTo(d_states[b].Index);
+						return d_states[a].DataIndex.CompareTo(d_states[b].DataIndex);
 					}
 				});
 			}

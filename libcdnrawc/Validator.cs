@@ -49,19 +49,16 @@ namespace Cdn.RawC
 		{
 			// Run the network now
 			var ret = new List<Cdn.Monitor>();
-			
-			ret.Add(new Cdn.Monitor(d_network, d_network.Integrator.Variable("t")));
-			
-			Knowledge.Initialize(d_network);
-			
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated))
+
+			var t = d_network.Integrator.Variable("t");
+			ret.Add(new Cdn.Monitor(d_network, t));
+
+			foreach (var v in d_network.Integrator.State.AllVariables())
 			{
-				ret.Add(new Cdn.Monitor(d_network, v));
-			}
-			
-			foreach (var v in Knowledge.Instance.FlaggedVariables(VariableFlags.Out))
-			{
-				ret.Add(new Cdn.Monitor(d_network, v));
+				if (v != t && (v.Integrated || (v.Flags & Cdn.VariableFlags.InOut) != 0))
+				{
+					ret.Add(new Cdn.Monitor(d_network, v));
+				}
 			}
 			
 			double ts;
@@ -81,7 +78,7 @@ namespace Cdn.RawC
 			
 			// Extract the validation data
 			d_data = new List<double[]>();
-			
+
 			for (int i = 0; i < ret.Count; ++i)
 			{
 				d_data.Add(ret[i].GetData());
@@ -90,22 +87,29 @@ namespace Cdn.RawC
 			d_monitors = ret;
 		}
 
-		private void ReadAndCompare(DynamicNetwork dynnet, List<uint> indices, int row, double t)
+		private void ReadAndCompare(DynamicNetwork dynnet, List<uint> indices, List<Cdn.Dimension> dimensions, int row, double[] data, double t)
 		{
 			List<string> failures = new List<string>();
-
+			
 			for (int i = 0; i < indices.Count; ++i)
 			{
-				double rawcval = dynnet.Value(indices[i]);
-				double cdnval = d_data[i][row];
-
-				if (System.Math.Abs(cdnval - rawcval) > Options.Instance.ValidatePrecision ||
-				    double.IsNaN(cdnval) != double.IsNaN(rawcval))
+				var dim = dimensions[i];
+				var size = dim.Size();
+				
+				for (int j = 0; j < size; ++j)
 				{
-					failures.Add(String.Format("{0} (got {1} but expected {2})",
-						         d_monitors[i].Variable.FullName,
-						         rawcval,
-						         cdnval));
+					double rawcval = data[indices[i] + (uint)j];
+					double cdnval = d_data[i][row * size + j];
+				
+					if (System.Math.Abs(cdnval - rawcval) > Options.Instance.ValidatePrecision ||
+				        double.IsNaN(cdnval) != double.IsNaN(rawcval))
+					{
+						failures.Add(String.Format("{0}[{1}] (got {2} but expected {3})",
+							         d_monitors[i].Variable.FullNameForDisplay,
+							         j,
+						             rawcval,
+						             cdnval));
+					}
 				}
 			}
 
@@ -143,16 +147,22 @@ namespace Cdn.RawC
 
 			dynnet.Reset(t);
 
-			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].Index);
+			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].DataIndex);
+			var dimensions = d_monitors.ConvertAll<Cdn.Dimension>(a => a.Variable.Dimension);
 
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
+			var len = d_data[0].Length - 1;
 
-			for (int i = 0; i < d_data[0].Length; ++i)
+			var shvals = dynnet.Values();
+
+			for (int i = 0; i < len; ++i)
 			{
-				ReadAndCompare(dynnet, indices, i, t);
+				ReadAndCompare(dynnet, indices, dimensions, i, shvals, t);
 
 				dynnet.Step(t, ts);
-				t += dynnet.Value((uint)dtstate.Index);
+				shvals = dynnet.Values();
+
+				t += shvals[dtstate.DataIndex];
 			}
 
 			Log.WriteLine("Network {0} successfully validated...", d_network.Filename);
@@ -163,7 +173,12 @@ namespace Cdn.RawC
 			private Type d_type;
 			private Type d_valuetype;
 			private string d_name;
-		
+			private uint d_shsize;
+			private IntPtr d_shnetwork;
+			private IntPtr d_dataptr;
+			private double[] d_data;
+			private Array d_realdata;
+	
 			private string ToAsciiOnly(string name)
 			{
 				StringBuilder builder = new StringBuilder();
@@ -188,20 +203,8 @@ namespace Cdn.RawC
 				TypeBuilder tb = mb.DefineType("DynamicRawcType" + Guid.NewGuid().ToString("N"));
 
 				// Define dynamic PInvoke method
-				var typesize = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_get_type_size",
-				                                      shlib,
-				                                      MethodAttributes.Public |
-				                                      MethodAttributes.Static |
-				                                      MethodAttributes.PinvokeImpl,
-				                                      CallingConventions.Standard,
-				                                      typeof(byte),
-				                                      new Type[] {},
-				                                      CallingConvention.StdCall,
-				                                      CharSet.Auto);
-
-				// Implementation flags for preserving signature
-				typesize.SetImplementationFlags(typesize.GetMethodImplementationFlags() |
-				                                MethodImplAttributes.PreserveSig);
+				DefineMethod(tb, shlib, "cdn_rawc_network_get_type_size", typeof(byte), typeof(IntPtr));
+				DefineMethod(tb, shlib, "cdn_rawc_" + name  + "_network", typeof(IntPtr));
 			
 				Type tp;
 
@@ -215,12 +218,18 @@ namespace Cdn.RawC
 					d_valuetype = typeof(double);
 					return;
 				}
+				
+				var net = (IntPtr)tp.InvokeMember("cdn_rawc_" + name + "_network",
+				                                  BindingFlags.InvokeMethod,
+				                                  null,
+				                                  Activator.CreateInstance(tp),
+				                                  new object[] {});
 
-				var s = (byte)tp.InvokeMember("cdn_rawc_" + d_name + "_get_type_size",
+				var s = (byte)tp.InvokeMember("cdn_rawc_network_get_type_size",
 				                              BindingFlags.InvokeMethod,
 				                              null,
 				                              Activator.CreateInstance(tp),
-				                              new object[] {});
+				                              new object[] {net});
 			
 				if (s == sizeof(float))
 				{
@@ -230,6 +239,22 @@ namespace Cdn.RawC
 				{
 					d_valuetype = typeof(double);
 				}
+			}
+			
+			private void DefineMethod(TypeBuilder tb, string shlib, string name, Type rettype, params Type[] args)
+			{
+				var ret = tb.DefinePInvokeMethod(name,
+				                                 shlib,
+				                                 MethodAttributes.Public |
+				                                 MethodAttributes.Static |
+				                                 MethodAttributes.PinvokeImpl,
+				                                 CallingConventions.Standard,
+				                                 rettype,
+				                                 args,
+				                                 CallingConvention.StdCall,
+				                                 CharSet.Auto);
+				
+				ret.SetImplementationFlags(ret.GetMethodImplementationFlags() | MethodImplAttributes.PreserveSig);
 			}
 
 			public DynamicNetwork(string shlib, string basename)
@@ -250,52 +275,13 @@ namespace Cdn.RawC
 
 				// Type builder
 				TypeBuilder tb = mb.DefineType("DynamicRawc" + Guid.NewGuid().ToString("N"));
-
-				// Define dynamic PInvoke method
-				var netinit = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_reset",
-				                                     shlib,
-				                                     MethodAttributes.Public |
-				                                     MethodAttributes.Static |
-				                                     MethodAttributes.PinvokeImpl,
-				                                     CallingConventions.Standard,
-				                                     null,
-				                                     new Type[] {d_valuetype},
-				                                     CallingConvention.StdCall,
-				                                     CharSet.Auto);
-	
-				// Implementation flags for preserving signature
-				netinit.SetImplementationFlags(netinit.GetMethodImplementationFlags() |
-				                               MethodImplAttributes.PreserveSig);
-	
-				var netstep = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_step",
-				                                     shlib,
-				                                     MethodAttributes.Public |
-				                                     MethodAttributes.Static |
-				                                     MethodAttributes.PinvokeImpl,
-				                                     CallingConventions.Standard,
-				                                     null,
-				                                     new Type[] {d_valuetype, d_valuetype},
-				                                     CallingConvention.StdCall,
-				                                     CharSet.Auto);
-	
-				// Implementation flags for preserving signature
-				netstep.SetImplementationFlags(netstep.GetMethodImplementationFlags() |
-				                               MethodImplAttributes.PreserveSig);
-	
-				var netdataget = tb.DefinePInvokeMethod("cdn_rawc_" + d_name  + "_get",
-	                                     shlib,
-	                                     MethodAttributes.Public |
-	                                     MethodAttributes.Static |
-	                                     MethodAttributes.PinvokeImpl,
-	                                     CallingConventions.Standard,
-	                                     d_valuetype,
-	                                     new Type[] {typeof(UInt32)},
-	                                     CallingConvention.StdCall,
-	                                     CharSet.Auto);
-	
-				// Implementation flags for preserving signature
-				netdataget.SetImplementationFlags(netdataget.GetMethodImplementationFlags() |
-				                               MethodImplAttributes.PreserveSig);
+				
+				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_reset", null, d_valuetype);
+				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_step", null, d_valuetype, d_valuetype);
+				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_get", d_valuetype, typeof(UInt32));
+				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_network", typeof(IntPtr));
+				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_data", typeof(IntPtr));
+				DefineMethod(tb, shlib, "cdn_rawc_network_get_data_count", typeof(UInt32), typeof(IntPtr));
 
 				// Create the dynamic type
 				try
@@ -307,17 +293,55 @@ namespace Cdn.RawC
 					Console.Error.WriteLine("Could not create dynamic type proxy: {0}", e.Message);
 					return;
 				}
+				
+				d_shnetwork = (IntPtr)d_type.InvokeMember("cdn_rawc_" + d_name + "_network",
+				                                          BindingFlags.InvokeMethod,
+				                                          null,
+				                                          Activator.CreateInstance(d_type),
+				                                          null);
+
+				d_shsize = (UInt32)d_type.InvokeMember("cdn_rawc_network_get_data_count",
+				                                       BindingFlags.InvokeMethod,
+				                                       null,
+				                                       Activator.CreateInstance(d_type),
+				                                       new object[] {d_shnetwork});
+
+				d_dataptr = (IntPtr)d_type.InvokeMember("cdn_rawc_" + d_name + "_data",
+				                                        BindingFlags.InvokeMethod,
+				                                        null,
+				                                        Activator.CreateInstance(d_type),
+				                                        null);
+				
+				d_data = new double[d_shsize];
+				
+				if (d_valuetype != typeof(double))
+				{				
+					d_realdata = Array.CreateInstance(d_valuetype, d_shsize);
+				}
 			}
 
-			public double Value(uint index)
+			public double[] Values()
 			{
-				var f = d_type.InvokeMember("cdn_rawc_" + d_name + "_get",
-				                            BindingFlags.InvokeMethod,
-				                            null,
-				                            Activator.CreateInstance(d_type),
-				                            new object[] {index});
+				if (d_realdata != null)
+				{
+					if (d_realdata.GetType().GetElementType() == typeof(float))
+					{
+						Marshal.Copy(d_dataptr, (float[])d_realdata, 0, (int)d_shsize);
+						
+						float[] fl = (float[])d_realdata;
+						
+						for (int i = 0; i < d_shsize; ++i)
+						{
+							d_data[i] = (double)fl[i];
+						}						
+					}
+				}
+				else
+				{
+                    Marshal.Copy(d_dataptr, d_data, 0, (int)d_shsize);
+                }
 
-				return (double)Convert.ChangeType(f, typeof(double));
+                return d_data;
 			}
 
 			public void Reset(double t)

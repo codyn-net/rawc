@@ -1,0 +1,112 @@
+matrix = "[1, 2, 3; 4, 5, 6]" | out
+
+single_rowcol  = "matrix[1, 2]"           | out
+single_linear  = "matrix[5]"              | out
+
+offset_mat     = "matrix[[1, 2; 3, 4]]"   | out
+rowcol         = "matrix[[0, 0], [1, 2]]" | out
+
+noncont        = "matrix[[0, 1], [1, 2]]" | out
+noncontrow     = "matrix[[0, 1], [0, 0]]" | out
+
+node "partial_couple_{left,right}"
+{
+    a' = "[0, 0, 0]"
+}
+
+edge "partial_coupling" from "partial_couple_left" to "partial_couple_right"
+{
+    a'[0, 2] += "[1, 2]"
+}
+
+node "deriv_noncont"
+{
+    a = "[0, 0, 0]"
+    a'[0, 2] = "[2, 3]"
+}
+
+node "deriv_inv_noncont"
+{
+    a = "[0, 0, 0]"
+    a'[2, 0] = "[2, 1]"
+}
+
+node "deriv_inv_cont"
+{
+    a = "[0, 0, 0]"
+    a'[2, 1, 0] = "[4, 3, 2]"
+}
+
+node "deriv_cont"
+{
+    a = "[0, 0, 0]"
+    a'[1, 2] = "[-1, 2]"
+}
+
+node "deriv_looped{1:5}"
+{
+    a = "[0, 0, 0]"
+    a'[2, 1] = "[-4, 1]"
+}
+
+node "deriv_single_index"
+{
+    a = "[0, 0]"
+    a'[2] = "2"
+}
+
+node "multiple_mixed"
+{
+    a = "[0, 0, 0, 0]"
+    a'[0, 2] = "[3, 4]"
+}
+
+edge on "multiple_mixed"
+{
+    a'[1, 0, 2] += "[1, 0, 3]"
+}
+
+edge on "multiple_mixed"
+{
+    a'[2, 3] += "[3, -1]"
+}
+
+node "direct_edge"
+{
+    a = "[0, 0, 0]" | out
+
+    edge on self
+    {
+        a[2, 0] <= "[-2, -4]"
+    }
+}
+
+node "direct_coupling_{left,right}"
+{
+    a = "[0, 0, 0]" | out
+}
+
+node "direct_coupling_left"
+{
+    edge on self
+    {
+        a[2, 1, 0] <= "[1, 2, 3]"
+    }
+}
+
+edge from "direct_coupling_left" to "direct_coupling_right"
+{
+    a[2, 1] <= "a[0, 2]"
+}
+
+node "direct_edge_chain{1:5}"
+{
+    a = "[0, 0, 0]" | out
+}
+
+edge from "direct_edge_chain{1:5}" to "direct_edge_chain$(@1 - 1)"
+{
+    a[1, 2] <= "a[0, 1] * 2"
+}
+
+# vi:ts=4:et

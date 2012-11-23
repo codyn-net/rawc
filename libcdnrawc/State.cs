@@ -79,7 +79,7 @@ namespace Cdn.RawC
 
 			if (d_expressionUnexpanded != null)
 			{
-				d_expression = Tree.Expression.Expand(d_expressionUnexpanded);
+				d_expression = Knowledge.Instance.ExpandExpression(d_expressionUnexpanded);
 				return;
 			}
 			
@@ -124,8 +124,21 @@ namespace Cdn.RawC
 
 			Dictionary<Instruction, Instruction> instmap = new Dictionary<Instruction, Instruction>();
 
-			d_expression = RawC.Tree.Expression.Expand(instmap, exprs.ToArray());
+			d_expression = Knowledge.Instance.ExpandExpression(instmap, exprs.ToArray());
 			Knowledge.Instance.UpdateInstructionMap(instmap);
+		}
+
+		public int[] Slice
+		{
+			get
+			{
+				if (d_actions != null && d_actions.Length > 0)
+				{
+					return d_actions[0].Indices;
+				}
+
+				return null;
+			}
 		}
 
 		private string TypeToString(Flags type)
@@ -192,6 +205,29 @@ namespace Cdn.RawC
 		public EdgeAction[] Actions
 		{
 			get { return d_actions; }
+		}
+		
+		public virtual Cdn.Dimension Dimension
+		{
+			get
+			{
+				var v = Object as Cdn.Variable;
+				
+				if (v != null)
+				{
+					return v.Dimension;
+				}
+				
+				var i = Object as Cdn.Instruction;
+				
+				if (i != null)
+				{
+					var smanip = i.GetStackManipulation();
+					return smanip.Push.Dimension;
+				}
+				
+				return new Cdn.Dimension { Rows = 1, Columns = 1 };
+			}
 		}
 		
 		public Instruction[] Instructions
