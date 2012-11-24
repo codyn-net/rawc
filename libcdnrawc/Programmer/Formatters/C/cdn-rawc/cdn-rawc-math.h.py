@@ -40,7 +40,7 @@ def print_func(f, n, body=None):
     if not body:
         body = "return CDN_MATH_VALUE_TYPE_FUNC({0})({1});".format(f, argcall)
 
-    print("""static ValueType cdn_math_{0}_builtin ({1}) GNUC_INLINE;
+    print("""static inline ValueType cdn_math_{0}_builtin ({1}) GNUC_INLINE;
 
 static ValueType cdn_math_{0}_builtin ({1})
 {{
