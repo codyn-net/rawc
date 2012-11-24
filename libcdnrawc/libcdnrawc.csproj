@@ -110,6 +110,8 @@
     <Compile Include="Programmer\Computation\Block.cs" />
     <Compile Include="Programmer\Computation\ZeroMemory.cs" />
     <Compile Include="Programmer\Instructions\IInstruction.cs" />
+    <Compile Include="UnidecodeSharp\Characters.cs" />
+    <Compile Include="UnidecodeSharp\Unidecoder.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

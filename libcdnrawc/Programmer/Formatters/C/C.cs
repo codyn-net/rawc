@@ -4,6 +4,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
+using BinaryAnalysis.UnidecodeSharp;
 
 namespace Cdn.RawC.Programmer.Formatters.C
 {
@@ -314,21 +315,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string ToAsciiOnly(string name)
 		{
-			StringBuilder builder = new StringBuilder();
-
-			foreach (char c in name)
-			{
-				if (!char.IsLetterOrDigit(c))
-				{
-					builder.Append("_");
-				}
-				else
-				{
-					builder.Append(c);
-				}
-			}
-			
-			return builder.ToString();
+			return Context.ToAsciiOnly(name);
 		}
 		
 		private string CPrefix
@@ -740,10 +727,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					continue;
 				}
+				string impl = ToAsciiOnly(function.Name);
+				string def = impl.ToUpper();
 
-				string def = function.Name.ToUpper();
-				string impl = function.Name;
-				
 				WriteDefine(writer, def, "", impl, String.Format("#define {0}_IS_DEFINED", def));
 			}
 		}
@@ -785,10 +771,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			var expr = function.Expression;
 			var isone = expr.Dimension.IsOne;
+			var impl = ToAsciiOnly(function.Name);
 
 			if (function.IsCustom)
 			{
-				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+				writer.WriteLine("#ifdef {0}_IS_DEFINED", impl.ToUpper());
 			}
 
 			writer.Write("static ValueType ");
@@ -801,7 +788,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 
 			writer.WriteLine("{0} ({1})",
-			                 function.Name,
+			                 impl,
 			                 GenerateArgsList(function));
 			writer.WriteLine("{");
 
@@ -828,7 +815,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			if (function.IsCustom)
 			{
-				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+				writer.WriteLine("#endif /* {0}_IS_DEFINED */", impl.ToUpper());
 			}
 
 			writer.WriteLine();
@@ -836,9 +823,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private void WriteFunctionDecl(TextWriter writer, Programmer.Function function)
 		{
+			var impl = ToAsciiOnly(function.Name);
+
 			if (function.IsCustom)
 			{
-				writer.WriteLine("#ifdef {0}_IS_DEFINED", function.Name.ToUpper());
+				writer.WriteLine("#ifdef {0}_IS_DEFINED", impl.ToUpper());
 			}
 
 			writer.Write("static ");
@@ -856,7 +845,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			writer.Write("{0} ({1})",
-			             function.Name,
+			             impl,
 			             GenerateArgsList(function));
 
 			if (function.Inline)
@@ -873,7 +862,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			if (function.IsCustom)
 			{
-				writer.WriteLine("#endif /* {0}_IS_DEFINED */", function.Name.ToUpper());
+				writer.WriteLine("#endif /* {0}_IS_DEFINED */", impl.ToUpper());
 				writer.WriteLine();
 			}
 		}
@@ -909,7 +898,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("static CdnRawcEventValue *{0}_get_events_value (void *data, uint32_t i);", CPrefixDown);
 
 			writer.WriteLine();
-						
+
 			foreach (var function in d_program.Functions)
 			{
 				WriteFunction(writer, function);

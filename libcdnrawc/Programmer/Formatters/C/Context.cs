@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Cdn.RawC.Programmer.Formatters.C
 {
@@ -536,6 +537,26 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			
 			return true;
+		}
+
+		public static string ToAsciiOnly(string t)
+		{
+			var ascii = BinaryAnalysis.UnidecodeSharp.Unidecoder.Unidecode(t);
+			StringBuilder builder = new StringBuilder();
+
+			foreach (char c in ascii)
+			{
+				if (!char.IsLetterOrDigit(c))
+				{
+					builder.Append("_");
+				}
+				else
+				{
+					builder.Append(c);
+				}
+			}
+
+			return builder.ToString();
 		}
 	}
 }

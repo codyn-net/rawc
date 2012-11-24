@@ -495,8 +495,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string Translate(Instructions.Function instruction, Context context)
 		{
-			string name = instruction.FunctionCall.Name;
-			
+			string name = Context.ToAsciiOnly(instruction.FunctionCall.Name);
+
 			if (instruction.FunctionCall.IsCustom)
 			{
 				name = name.ToUpper();

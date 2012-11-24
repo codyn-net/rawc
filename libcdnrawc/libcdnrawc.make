@@ -113,7 +113,9 @@ FILES = \
 	Sort.cs \
 	Log.cs \
 	Config.cs \
-	Validator.cs
+	Validator.cs \
+	UnidecodeSharp/Characters.cs \
+	UnidecodeSharp/Unidecoder.cs
 
 DATA_FILES =
 
