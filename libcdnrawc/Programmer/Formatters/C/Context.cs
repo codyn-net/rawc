@@ -264,21 +264,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return d_mapping.TryGetValue(path, out ret);
 		}
 		
-		public static string MathFunctionDefine(Cdn.InstructionFunction instruction)
+		public static string MathFunctionDefine(Tree.Node node)
 		{
+			Cdn.InstructionFunction instruction = (Cdn.InstructionFunction)node.Instruction;
 			var smanip = instruction.GetStackManipulation();
 			var type = (Cdn.MathFunctionType)instruction.Id;
 			
 			if (!smanip.Push.Dimension.IsOne)
 			{
-				return MathFunctionDefineV(type, smanip);
+				return MathFunctionDefineV(type, node);
 			}
 			
-			for (int i = 0; i < smanip.Pop.Num; ++i)
+			for (int i = 0; i < node.Children.Count; ++i)
 			{
-				if (!smanip.GetPopn(i).Dimension.IsOne)
+				if (!node.Children[i].Dimension.IsOne)
 				{
-					return MathFunctionDefineV(type, smanip);
+					return MathFunctionDefineV(type, node);
 				}
 			}
 			
@@ -338,7 +339,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return val;
 		}
 		
-		public static string MathFunctionDefineV(Cdn.MathFunctionType type, Cdn.StackManipulation smanip)
+		public static string MathFunctionDefineV(Cdn.MathFunctionType type, Tree.Node node)
 		{
 			string name = Enum.GetName(typeof(Cdn.MathFunctionType), type);
 			string val;
@@ -402,9 +403,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				break;
 			case MathFunctionType.Multiply:
 			{
-				var d1 = smanip.GetPopn(1).Dimension;
-				var d2 = smanip.GetPopn(0).Dimension;
-				
+				var d1 = node.Children[0].Dimension;
+				var d2 = node.Children[1].Dimension;
+
 				if (d1.Rows == d2.Columns && d1.Columns == d2.Rows)
 				{
 					return "CDN_MATH_MATRIX_MULTIPLY_V";
@@ -419,19 +420,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
 			
-			if (smanip.Pop.Num == 2)
+			if (node.Children.Count == 2)
 			{
-				var n1 = smanip.GetPopn(1).Dimension.IsOne;
-				var n2 = smanip.GetPopn(0).Dimension.IsOne;
-				
+				var n1 = node.Children[0].Dimension.IsOne;
+				var n2 = node.Children[1].Dimension.IsOne;
+
 				return String.Format("{0}_{1}_{2}", val, n1 ? "1" : "M", n2 ? "1" : "M");
 			}
-			else if (smanip.Pop.Num == 3)
+			else if (node.Children.Count == 3)
 			{
-				var n1 = smanip.GetPopn(2).Dimension.IsOne;
-				var n2 = smanip.GetPopn(1).Dimension.IsOne;
-				var n3 = smanip.GetPopn(0).Dimension.IsOne;
-				
+				var n1 = node.Children[0].Dimension.IsOne;
+				var n2 = node.Children[1].Dimension.IsOne;
+				var n3 = node.Children[2].Dimension.IsOne;
+
 				return String.Format("{0}_{1}_{2}_{3}", val, n1 ? "1" : "M", n2 ? "1" : "M", n3 ? "1" : "M");
 			}	
 			

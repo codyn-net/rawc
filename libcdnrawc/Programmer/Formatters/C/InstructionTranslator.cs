@@ -434,13 +434,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				return TranslateOperator(instruction, context);
 			}
-			
-			string name = Context.MathFunctionDefine(instruction);
+
+			string name = Context.MathFunctionDefine(context.Node);
 			Context.MathDefines.Add(name);
 
-			string[] args = new string[instruction.GetStackManipulation().Pop.Num];
+			string[] args = new string[context.Node.Children.Count];
 			
-			for (int i = 0; i < instruction.GetStackManipulation().Pop.Num; ++i)
+			for (int i = 0; i < context.Node.Children.Count; ++i)
 			{
 				args[i] = Translate(context, i);
 			}
@@ -616,7 +616,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			type = (Cdn.MathFunctionType)instruction.Id;
 			
-			var def = Context.MathFunctionDefineV(type, instruction.GetStackManipulation());
+			var def = Context.MathFunctionDefineV(type, context.Node);
 			string ret = null;
 
 			if (!context.Node.Dimension.IsOne)
