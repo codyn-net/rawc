@@ -511,7 +511,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			string name = Context.ToAsciiOnly(instruction.FunctionCall.Name);
 
-			if (instruction.FunctionCall.IsCustom)
+			if (instruction.FunctionCall.CanBeOverridden)
 			{
 				name = name.ToUpper();
 			}
@@ -791,7 +791,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			string name = instruction.FunctionCall.Name;
 			
-			if (instruction.FunctionCall.IsCustom)
+			if (instruction.FunctionCall.CanBeOverridden)
 			{
 				name = name.ToUpper();
 			}

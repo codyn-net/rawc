@@ -741,10 +741,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			foreach (Programmer.Function function in d_program.Functions)
 			{
-				if (!function.IsCustom)
+				if (!function.CanBeOverridden)
 				{
 					continue;
 				}
+
 				string impl = ToAsciiOnly(function.Name);
 				string def = impl.ToUpper();
 
@@ -791,7 +792,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			var isone = expr.Dimension.IsOne;
 			var impl = ToAsciiOnly(function.Name);
 
-			if (function.IsCustom)
+			if (function.CanBeOverridden)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", impl.ToUpper());
 			}
@@ -831,7 +832,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("\treturn {0};", Context.Reindent(retval, "\t").Substring(1));
 			writer.WriteLine("}");
 			
-			if (function.IsCustom)
+			if (function.CanBeOverridden)
 			{
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", impl.ToUpper());
 			}
@@ -843,7 +844,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			var impl = ToAsciiOnly(function.Name);
 
-			if (function.IsCustom)
+			if (function.CanBeOverridden)
 			{
 				writer.WriteLine("#ifdef {0}_IS_DEFINED", impl.ToUpper());
 			}
@@ -878,7 +879,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine(";");
 			
-			if (function.IsCustom)
+			if (function.CanBeOverridden)
 			{
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", impl.ToUpper());
 				writer.WriteLine();
