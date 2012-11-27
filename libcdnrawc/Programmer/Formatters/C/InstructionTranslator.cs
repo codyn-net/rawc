@@ -385,7 +385,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				ret = String.Format("({0})[{1}]", toindex, instruction.Offset);
 			}
-			else if (instruction.IsOffset)
+			else if (instruction.IndexType == Cdn.InstructionIndexType.Offset)
 			{
 				var retvar = context.PeekRet();
 
@@ -467,18 +467,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			return String.Format("{0} ({1})", name, String.Join(", ", args));
 		}
-		
-		private string Translate(InstructionCustomOperator instruction, Context context)
-		{
-			OperatorDelayed delayed;
-			
-			delayed = instruction.Operator as OperatorDelayed;
-			
-			if (delayed == null)
-			{
-				throw new NotSupportedException(String.Format("The custom operator `{0}' is not yet implemented in rawc...", instruction.Operator.Name));
-			}
 
+		private string TranslateDelayed(InstructionCustomOperator instruction, Context context)
+		{
+			OperatorDelayed delayed = (OperatorDelayed)instruction.Operator;
 			double delay;
 
 			if (!Knowledge.Instance.LookupDelay(instruction, out delay))
@@ -491,6 +483,28 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return String.Format("{0}[{1}]",
 			                     context.Program.StateTable.Name,
 			                     item.AliasOrIndex);
+		}
+		
+		private string Translate(InstructionCustomOperator instruction, Context context)
+		{
+			var op = instruction.Operator;
+
+			if (op is OperatorDelayed)
+			{
+				return TranslateDelayed(instruction, context);
+			}
+
+			var f = op.PrimaryFunction;
+
+			if (f != null)
+			{
+				// Hmm
+			}
+			else
+			{
+				throw new NotSupportedException("The custom operator `{0}' is not yet supported.",
+				                                op.ToString());
+			}
 		}
 		
 		private string Translate(Instructions.Function instruction, Context context)
@@ -553,7 +567,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			var i = instruction as Cdn.InstructionIndex;
 
-			if (i != null && i.IsOffset)
+			if (i != null && i.IndexType == Cdn.InstructionIndexType.Offset)
 			{
 				return true;
 			}

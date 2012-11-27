@@ -887,7 +887,7 @@ namespace Cdn.RawC.Tree
 			}
 			else if (InstructionIs(inst, out iindex))
 			{
-				if (iindex.IsOffset)
+				if (iindex.IndexType == Cdn.InstructionIndexType.Offset)
 				{
 					yield return InstructionIdentifier(String.Format("index_o{0}", iindex.Offset), inst);
 				}
