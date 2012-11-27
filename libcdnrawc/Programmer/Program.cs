@@ -378,8 +378,8 @@ namespace Cdn.RawC.Programmer
 		private class CustomFunctionNode
 		{
 			public Tree.Node Node { get; set; }
-
 			public List<Tree.Node> Nodes { get; set; }
+			public bool IsOperator { get; set; }
 
 			public CustomFunctionNode(Cdn.Function func)
 			{
@@ -391,17 +391,42 @@ namespace Cdn.RawC.Programmer
 		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cdn.Function, CustomFunctionNode> usage)
 		{
 			CustomFunctionNode lst;
-			Cdn.Function f = ((Cdn.InstructionCustomFunction)node.Instruction).Function;
+			Cdn.Function f;
+			bool isop = false;
+
+			Cdn.InstructionCustomFunction func = node.Instruction as Cdn.InstructionCustomFunction;
+
+			if (func != null)
+			{
+				f = func.Function;
+			}
+			else
+			{
+				var op = (Cdn.InstructionCustomOperator)node.Instruction;
+				f = op.Operator.PrimaryFunction;
+				isop = true;
+
+				if (f == null)
+				{
+					return;
+				}
+			}
 				
 			if (!usage.TryGetValue(f, out lst))
 			{
 				lst = new CustomFunctionNode(f);
+				lst.IsOperator = isop;
 				usage[f] = lst;
 
 				d_usedCustomFunctions.Add(f);
 
 				// Recurse
 				foreach (Tree.Node child in lst.Node.Collect<Cdn.InstructionCustomFunction>())
+				{
+					CustomFunctionUsage(child, usage);
+				}
+
+				foreach (Tree.Node child in lst.Node.Collect<Cdn.InstructionCustomOperator>())
 				{
 					CustomFunctionUsage(child, usage);
 				}
@@ -419,12 +444,17 @@ namespace Cdn.RawC.Programmer
 
 		private void ProgramCustomFunctions()
 		{			
-			Dictionary<Cdn.Function, CustomFunctionNode > usage = new Dictionary<Cdn.Function, CustomFunctionNode>();
+			var usage = new Dictionary<Cdn.Function, CustomFunctionNode>();
 			
 			// Calculate map from a custom function to the nodes that use that function
 			foreach (KeyValuePair<State, Tree.Node> eq in d_equations)
 			{
 				foreach (Tree.Node node in eq.Value.Collect<Cdn.InstructionCustomFunction>())
+				{
+					CustomFunctionUsage(node, usage);
+				}
+
+				foreach (Tree.Node node in eq.Value.Collect<Cdn.InstructionCustomOperator>())
 				{
 					CustomFunctionUsage(node, usage);
 				}
@@ -437,13 +467,21 @@ namespace Cdn.RawC.Programmer
 				{
 					CustomFunctionUsage(node, usage);
 				}
+
+				foreach (Tree.Node node in function.Expression.Collect<Cdn.InstructionCustomOperator>())
+				{
+					CustomFunctionUsage(node, usage);
+				}
 			}
 
 			// Foreach custom function that is used
-			foreach (Cdn.Function function in usage.Keys)
+			foreach (var pair in usage)
 			{
+				var function = pair.Key;
+				var fn = pair.Value;
+
 				// Create a new node for the custom function expression
-				Tree.Node node = usage[function].Node;
+				Tree.Node node = fn.Node;
 
 				// Calculate all the paths to where the arguments for this function
 				// are used in the expression. All arguments are implemented as properties
@@ -478,9 +516,10 @@ namespace Cdn.RawC.Programmer
 				// function is used.
 				Tree.Embedding embedding = new Tree.Embedding(node, args);
 
-				string name = GenerateFunctionName(String.Format("cf_{0}", function.Id.ToLower()));
+				var cfname = function.FullIdForDisplay.Replace(".", "_").ToLower();
+				string name = GenerateFunctionName(String.Format("cf_{0}", cfname));
 
-				Function func = new Function(name, embedding, aa);
+				Function func = new Function(name, embedding, aa, !fn.IsOperator);
 				Add(embedding, func);
 
 				d_embeddings.Add(embedding);
@@ -1166,10 +1205,7 @@ namespace Cdn.RawC.Programmer
 		
 		public IEnumerable<Cdn.Function> UsedCustomFunctions
 		{
-			get
-			{
-				return d_usedCustomFunctions;
-			}
+			get { return d_usedCustomFunctions; }
 		}
 		
 		public bool NodeIsInitialization(Computation.INode node)
