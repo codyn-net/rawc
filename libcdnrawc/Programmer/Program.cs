@@ -448,10 +448,12 @@ namespace Cdn.RawC.Programmer
 				// Calculate all the paths to where the arguments for this function
 				// are used in the expression. All arguments are implemented as properties
 				List<Cdn.Variable> arguments = new List<Cdn.Variable>();
+				List<Cdn.FunctionArgument> aa = new List<FunctionArgument>();
 				
 				foreach (Cdn.FunctionArgument arg in function.Arguments)
 				{
 					arguments.Add(function.Variable(arg.Name));
+					aa.Add(arg);
 				}
 				
 				List<Tree.Embedding.Argument> args = new List<Tree.Embedding.Argument>();
@@ -478,7 +480,7 @@ namespace Cdn.RawC.Programmer
 
 				string name = GenerateFunctionName(String.Format("cf_{0}", function.Id.ToLower()));
 
-				Function func = new Function(name, embedding, true);
+				Function func = new Function(name, embedding, aa);
 				Add(embedding, func);
 
 				d_embeddings.Add(embedding);

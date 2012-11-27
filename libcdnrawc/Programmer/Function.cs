@@ -6,23 +6,18 @@ namespace Cdn.RawC.Programmer
 	public class Function
 	{
 		private string d_name;
-		private bool d_iscustom;
 
 		private Tree.Node d_expression;
 		private List<Tree.Embedding.Argument> d_arguments;
 		private List<Tree.Embedding.Argument> d_orderedArguments;
 		private Tree.Embedding d_embedding;
+		private List<Cdn.FunctionArgument> d_customArguments;
 		
-		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments) : this(name, expression, arguments, false)
-		{
-		}
-
-		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments, bool iscustom)
+		public Function(string name, Tree.Node expression, IEnumerable<Tree.Embedding.Argument> arguments)
 		{
 			d_expression = expression;
 			d_arguments = new List<Tree.Embedding.Argument>(arguments);
 			d_name = name;
-			d_iscustom = iscustom;
 			
 			d_orderedArguments = new List<Tree.Embedding.Argument>();
 			
@@ -44,16 +39,26 @@ namespace Cdn.RawC.Programmer
 		{
 			get
 			{
-				return d_iscustom;
+				return d_customArguments != null;
+			}
+		}
+
+		public IEnumerable<Cdn.FunctionArgument> CustomArguments
+		{
+			get { return d_customArguments; }
+		}
+		
+		public Function(string name, Tree.Embedding embedding, IEnumerable<Cdn.FunctionArgument> customArguments) : this(name, embedding.Expression, embedding.Arguments)
+		{
+			d_embedding = embedding;
+
+			if (customArguments != null)
+			{
+				d_customArguments = new List<Cdn.FunctionArgument>(customArguments);
 			}
 		}
 		
-		public Function(string name, Tree.Embedding embedding, bool iscustom) : this(name, embedding.Expression, embedding.Arguments, iscustom)
-		{
-			d_embedding = embedding;
-		}
-		
-		public Function(string name, Tree.Embedding embedding) : this(name, embedding, false)
+		public Function(string name, Tree.Embedding embedding) : this(name, embedding, null)
 		{
 			d_embedding = embedding;
 		}
@@ -74,7 +79,7 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 		
-		public IEnumerable<Tree.Embedding.Argument> OrderedArguments
+		public List<Tree.Embedding.Argument> OrderedArguments
 		{
 			get
 			{

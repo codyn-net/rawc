@@ -623,24 +623,42 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				ret.Add("ValueType *ret");
 			}
 
-			int i = 0;
-
-			foreach (var arg in function.OrderedArguments)
+			if (function.IsCustom)
 			{
-				var child = function.Expression.FromPath(arg.Path);
+				int i = 0;
 
-				if (child.Dimension.IsOne)
+				foreach (var arg in function.CustomArguments)
 				{
-					ret.Add(String.Format("ValueType x{0}", i));
-				}
-				else
-				{
-					ret.Add(String.Format("ValueType *x{0}", i));
-				}
+					if (arg.Dimension.IsOne)
+					{
+						ret.Add(String.Format("ValueType x{0}", i));
+					}
+					else
+					{
+						ret.Add(String.Format("ValueType *x{0}", i));
+					}
 
-				++i;
+					++i;
+				}
 			}
-			
+			else
+			{
+				for (int i = 0; i < function.OrderedArguments.Count; ++i)
+				{
+					var arg = function.OrderedArguments[i];
+					var child = function.Expression.FromPath(arg.Path);
+
+					if (child.Dimension.IsOne)
+					{
+						ret.Add(String.Format("ValueType x{0}", i));
+					}
+					else
+					{
+						ret.Add(String.Format("ValueType *x{0}", i));
+					}
+				}
+			}
+
 			return String.Join(", ", ret.ToArray());
 		}
 		
