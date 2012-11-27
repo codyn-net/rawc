@@ -28,7 +28,6 @@ namespace Cdn.RawC
 		private List<State> d_eventEquationStates;
 		private List<EventNodeState> d_eventNodeStates;
 		private Dictionary<Cdn.Event, List<EventSetState>> d_eventSetStates;
-		private List<Cdn.Variable> d_direct;
 		private Dictionary<Cdn.Variable, Cdn.EdgeAction[]> d_actionedVariables;
 		private List<Cdn.Variable> d_functionHelperVariables;
 		
@@ -108,7 +107,6 @@ namespace Cdn.RawC
 			d_eventEquationStates = new List<State>();
 			d_eventNodeStates = new List<EventNodeState>();
 			d_eventSetStates = new Dictionary<Event, List<EventSetState>>();
-			d_direct = new List<Variable>();
 			d_actionedVariables = new Dictionary<Variable, EdgeAction[]>();
 			d_functionHelperVariables = new List<Variable>();
 
@@ -410,12 +408,12 @@ namespace Cdn.RawC
 				}
 			}
 			
-			// Add direct variables
-			foreach (var v in d_direct)
+			// Add acted upon variables
+			foreach (var v in d_actionedVariables)
 			{
-				if (!unique.Contains(v))
+				if (!unique.Contains(v.Key))
 				{
-					var s = ExpandedState(v);
+					var s = ExpandedState(v.Key);
 					AddState(unique, s);
 				}
 			}
