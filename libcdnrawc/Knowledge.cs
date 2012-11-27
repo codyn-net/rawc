@@ -30,6 +30,7 @@ namespace Cdn.RawC
 		private Dictionary<Cdn.Event, List<EventSetState>> d_eventSetStates;
 		private List<Cdn.Variable> d_direct;
 		private Dictionary<Cdn.Variable, Cdn.EdgeAction[]> d_actionedVariables;
+		private List<Cdn.Variable> d_functionHelperVariables;
 		
 		public class EventState
 		{
@@ -109,6 +110,7 @@ namespace Cdn.RawC
 			d_eventSetStates = new Dictionary<Event, List<EventSetState>>();
 			d_direct = new List<Variable>();
 			d_actionedVariables = new Dictionary<Variable, EdgeAction[]>();
+			d_functionHelperVariables = new List<Variable>();
 
 			d_instructionMapping = new Dictionary<Instruction, Instruction>();
 
@@ -433,6 +435,20 @@ namespace Cdn.RawC
 					AddState(unique, s);
 					AddAux(s, auxset);
 				}
+			}
+
+			// Add function help varaibles
+			foreach (var v in d_functionHelperVariables)
+			{
+				if (unique.Contains(v))
+				{
+					continue;
+				}
+
+				var s = ExpandedState(v);
+
+				AddState(unique, s);
+				AddAux(s, auxset);
 			}
 
 			d_network.ForeachExpression((e) => {
@@ -1106,7 +1122,24 @@ namespace Cdn.RawC
 
 		private void Scan(Cdn.Object obj)
 		{
-			d_variables.AddRange(obj.Variables);
+			Cdn.Function f = obj as Cdn.Function;
+
+			if (f != null)
+			{
+				foreach (var v in obj.Variables)
+				{
+					if ((v.Flags & Cdn.VariableFlags.FunctionArgument) == 0)
+					{
+						d_functionHelperVariables.Add(v);
+					}
+				}
+
+				return;
+			}
+			else
+			{
+				d_variables.AddRange(obj.Variables);
+			}
 
 			ScanEvent(obj as Cdn.Event);
 
