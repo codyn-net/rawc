@@ -91,7 +91,37 @@ namespace Cdn.RawC
 				d_previous.UpdateIdForwards();
 			}
 		}
-		
+
+		public DependencyGroup Last
+		{
+			get
+			{
+				var ret = this;
+
+				while (ret.d_next != null)
+				{
+					ret = ret.d_next;
+				}
+
+				return ret;
+			}
+		}
+
+		public DependencyGroup First
+		{
+			get
+			{
+				var ret = this;
+
+				while (ret.d_previous != null)
+				{
+					ret = ret.d_previous;
+				}
+
+				return ret;
+			}
+		}
+
 		public DependencyGroup Next
 		{
 			get

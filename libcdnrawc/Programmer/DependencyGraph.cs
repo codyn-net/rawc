@@ -256,11 +256,14 @@ namespace Cdn.RawC.Programmer
 
 			seen[collapsed.d_root] = null;
 
-			// Go from all the leafs upwards
-			foreach (Node leaf in leafs)
+			Queue<Node> q = new Queue<Node>();
+
+			foreach (var leaf in leafs)
 			{
-				ComputeNodeInGroups(leaf, ret, seen);
+				q.Enqueue(leaf);
 			}
+
+			ComputeNodeInGroups(q, ret, seen);
 
 			foreach (var grp in ret)
 			{
@@ -288,7 +291,19 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
-		private void ComputeNodeInGroups(Node node,
+		private void ComputeNodeInGroups(Queue<Node> q,
+		                                 DependencyGroup grp,
+		                                 Dictionary<Node, DependencyGroup> seen)
+		{
+			while (q.Count > 0)
+			{
+				var n = q.Dequeue();
+				ComputeNodeInGroups(q, n, grp, seen);
+			}
+		}
+
+		private void ComputeNodeInGroups(Queue<Node> q,
+		                                 Node node,
 		                                 DependencyGroup grp,
 		                                 Dictionary<Node, DependencyGroup> seen)
 		{
@@ -304,7 +319,7 @@ namespace Cdn.RawC.Programmer
 			{
 				DependencyGroup depgrp;
 
-				if (!seen.TryGetValue(dep, out depgrp))
+				if (dep == node || !seen.TryGetValue(dep, out depgrp))
 				{
 					continue;
 				}
@@ -322,7 +337,7 @@ namespace Cdn.RawC.Programmer
 			{
 				DependencyGroup depgrp;
 
-				if (!seen.TryGetValue(dep, out depgrp))
+				if (dep == node || !seen.TryGetValue(dep, out depgrp))
 				{
 					continue;
 				}
@@ -343,6 +358,7 @@ namespace Cdn.RawC.Programmer
 					// Insert new empty group for the node
 					root.Next = new DependencyGroup(node.Embedding);
 					root = root.Next;
+				
 					break;
 				}
 				else
@@ -362,7 +378,12 @@ namespace Cdn.RawC.Programmer
 			// Recursively go up, i.e. nodes that depend on 'node'.
 			foreach (Node dep in node.DependencyFor)
 			{
-				ComputeNodeInGroups(dep, root, seen);
+				if (dep == node || dep.State == null || seen.ContainsKey(dep))
+				{
+					continue;
+				}
+
+				q.Enqueue(dep);
 			}
 		}
 		
