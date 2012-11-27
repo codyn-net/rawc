@@ -500,17 +500,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return TranslateDelayed(instruction, context);
 			}
 
-			var f = op.PrimaryFunction;
-
-			if (f != null)
-			{
-				// Hmm
-			}
-			else
-			{
-				throw new NotSupportedException("The custom operator `{0}' is not yet supported.",
-				                                op.ToString());
-			}
+			throw new NotSupportedException(String.Format("The custom operator `{0}' is not yet supported.",
+			                                              op.ToString()));
 		}
 		
 		private string Translate(Instructions.Function instruction, Context context)
