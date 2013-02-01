@@ -1412,7 +1412,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 				else
 				{
-					break;
+					continue;
 				}
 
 				meta.States.Add(sm);
