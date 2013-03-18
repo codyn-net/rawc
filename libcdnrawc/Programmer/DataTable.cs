@@ -354,7 +354,7 @@ namespace Cdn.RawC.Programmer
 				
 				if (!d_items.TryGetValue(basekey, out ret))
 				{
-					Console.Error.WriteLine("Failed to find state item: {0}, {1}", key, basekey);
+					Console.Error.WriteLine("Failed to find state item: {0}, {1}", ((Cdn.Variable)key).FullNameForDisplay, basekey);
 					throw new KeyNotFoundException();
 				}
 				else
