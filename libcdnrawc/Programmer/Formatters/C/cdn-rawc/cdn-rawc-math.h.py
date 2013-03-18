@@ -246,7 +246,7 @@ print_func('cycle', 3, """if (x0 < x1)
 	else
 	{
 		return x0;
-	})""")
+	}""")
 
 print_func('min', 2, 'return x0 < x1 ? x0 : x1;')
 print_func('max', 2, 'return x0 > x1 ? x0 : x1;')
