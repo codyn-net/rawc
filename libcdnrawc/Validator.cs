@@ -55,7 +55,7 @@ namespace Cdn.RawC
 
 			foreach (var v in d_network.Integrator.State.AllVariables())
 			{
-				if (v != t && (v.Integrated || (v.Flags & Cdn.VariableFlags.InOut) != 0))
+				if (v != t && (v.Integrated || (v.Flags & Cdn.VariableFlags.InOut) != 0) && (v.Flags & Cdn.VariableFlags.FunctionArgument) == 0)
 				{
 					ret.Add(new Cdn.Monitor(d_network, v));
 				}
