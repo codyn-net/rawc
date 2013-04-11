@@ -1,6 +1,6 @@
 #!/bin/bash
 
-files="matrix.cdn indices.cdn"
+files=*.cdn
 
 binary=$srcdir/../bin/Debug/cdn-rawc.exe
 
