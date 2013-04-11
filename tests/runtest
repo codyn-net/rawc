@@ -1,6 +1,6 @@
 #!/bin/bash
 
-files=*.cdn
+unset MAKEFLAGS
 
 binary=$srcdir/../bin/Debug/cdn-rawc.exe
 
@@ -16,8 +16,6 @@ then
 fi
 
 for f in $files; do
-	echo "Running test $f"
-
 	mono "$binary" --validate -q "$srcdir/$f"
 	status=$?
 
