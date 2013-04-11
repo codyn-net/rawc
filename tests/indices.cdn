@@ -11,7 +11,7 @@ noncontrow     = "matrix[[0, 1], [0, 0]]" | out
 
 node "partial_couple_{left,right}"
 {
-    a' = "[0, 0, 0]"
+    "{a,a'}" = "[0, 0, 0]"
 }
 
 edge "partial_coupling" from "partial_couple_left" to "partial_couple_right"
