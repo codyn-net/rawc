@@ -1,0 +1,12 @@
+# Simple example of reasonably complex dependency graphs involving multiple
+# separable loops
+a = "2 * sin(b) + pi"
+aa = "2 * sin(b) + pi"
+b = "2 * sin(3) + t"
+d = "b + 2"
+c = "2 * sin(d) + e"
+cc = "2 * sin(d) + e"
+e = "2 * sin(3) + d"
+
+# Mark all variables as outs so they are being computed in rawc
+set /.*/ = | out
