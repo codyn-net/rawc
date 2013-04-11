@@ -28,3 +28,4 @@ ltmain.sh
 py-compile
 /cdnrawc
 libcdnrawc/Programmer/Formatters/C/cdn-rawc/cdn-rawc-math.h
+tests/*.test
