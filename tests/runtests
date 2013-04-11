@@ -17,5 +17,11 @@ fi
 
 for f in $files; do
 	echo "Running test $f"
+
 	mono "$binary" --validate -q "$srcdir/$f"
+	status=$?
+
+	if [ $status -ne 0 ]; then
+		exit $status
+	fi
 done
