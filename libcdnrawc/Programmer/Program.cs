@@ -768,10 +768,10 @@ namespace Cdn.RawC.Programmer
 
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
-				if (grp.StatesCount > 0)
+				if (grp.Count > 0)
 				{
 					d_apiTDT.Body.Add(new Computation.Comment("Dependencies of integrated variables that depend on t or dt"));
-					d_apiTDT.Body.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					d_apiTDT.Body.AddRange(AssignmentStates(grp, grp.Embedding));
 					d_apiTDT.Body.Add(new Computation.Empty());
 				}
 			}
@@ -781,14 +781,14 @@ namespace Cdn.RawC.Programmer
 		{
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
-				if (grp.StatesCount > 0)
+				if (grp.Count > 0)
 				{
 					if (!string.IsNullOrEmpty(comment))
 					{
 						api.Body.Add(new Computation.Comment(comment));
 					}
 
-					api.Body.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					api.Body.AddRange(AssignmentStates(grp, grp.Embedding));
 					api.Body.Add(new Computation.Empty());
 				}
 			}
@@ -986,7 +986,7 @@ namespace Cdn.RawC.Programmer
 			// Update delayed states
 			var grps = d_dependencyGraph.Sort(delays);
 
-			if (grps.StatesCount > 0)
+			if (grps.Count > 0)
 			{
 				d_apiPost.Body.Add(new Computation.Empty());
 				d_apiPost.Body.Add(new Computation.Comment("Write values of delayed expressions"));
@@ -994,7 +994,7 @@ namespace Cdn.RawC.Programmer
 				foreach (var grp in grps)
 				{
 					// TODO: check with loops
-					d_apiPost.Body.AddRange(AssignmentStates(grp.States, grp.Embedding));
+					d_apiPost.Body.AddRange(AssignmentStates(grp, grp.Embedding));
 					d_apiPost.Body.Add(new Computation.Empty());
 				}
 

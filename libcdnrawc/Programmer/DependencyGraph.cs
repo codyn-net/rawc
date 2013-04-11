@@ -19,6 +19,74 @@ namespace Cdn.RawC.Programmer
 				DependencyFor = new HashSet<Node>();
 			}
 		}
+
+		private class Queue
+		{
+			private Dictionary<Tree.Embedding, uint> d_embeddingsMap;
+			private SortedDictionary<uint, Queue<Node>> d_storage;
+			private uint d_nextId;
+
+			public Queue()
+			{
+				d_embeddingsMap = new Dictionary<Tree.Embedding, uint>();
+				d_storage = new SortedDictionary<uint, Queue<Node>>();
+
+				d_nextId = 1;
+			}
+
+			public bool Empty
+			{
+				get { return d_storage.Count == 0; }
+			}
+
+			public void Enqueue(Node n)
+			{
+				uint id;
+
+				if (n.Embedding == null)
+				{
+					id = 0;
+				}
+				else if (!d_embeddingsMap.TryGetValue(n.Embedding, out id))
+				{
+					id = d_nextId;
+
+					d_embeddingsMap[n.Embedding] = id;
+					d_nextId++;
+				}
+
+				Queue<Node> q;
+				if (!d_storage.TryGetValue(id, out q))
+				{
+					q = new Queue<Node>();
+					d_storage[id] = q;
+				}
+
+				q.Enqueue(n);
+			}
+
+			public Node Dequeue()
+			{
+				var e = d_storage.GetEnumerator();
+
+				if (!e.MoveNext())
+				{
+					return null;
+				}
+
+				var id = e.Current.Key;
+				var q = e.Current.Value;
+
+				var ret = q.Dequeue();
+
+				if (q.Count == 0)
+				{
+					d_storage.Remove(id);
+				}
+
+				return ret;
+			}
+		}
 		
 		private Node d_root;
 		private DataTable d_states;
@@ -218,7 +286,7 @@ namespace Cdn.RawC.Programmer
 				CollapseNode(ret, dependency, states, parent, seen, leafs);
 			}
 
-			if (checkleaf && parent.Dependencies.Count == 0)
+			if (checkleaf && parent.Dependencies.Count == 0 && parent.State != null)
 			{
 				leafs.Add(parent);
 			}
@@ -245,148 +313,62 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
-		public DependencyGroup Sort(HashSet<State> states)
+		public List<DependencyGroup> Sort(HashSet<State> states)
 		{
 			HashSet<Node> leafs;
 
-			var collapsed = Collapse(states, out leafs);
+			Collapse(states, out leafs);
+			var ret = new List<DependencyGroup>();
 
-			var ret = new DependencyGroup(null);
-			var seen = new Dictionary<Node, DependencyGroup>();
+			var q = new Queue();
 
-			seen[collapsed.d_root] = null;
-
-			Queue<Node> q = new Queue<Node>();
-
-			foreach (var leaf in leafs)
+			// Add all leaf nodes (nothing depends on them) to the initial set
+			foreach (var n in leafs)
 			{
-				q.Enqueue(leaf);
+				q.Enqueue(n);
 			}
 
-			ComputeNodeInGroups(q, ret, seen);
-
-			foreach (var grp in ret)
-			{
-				grp.Sort((a, b) => {
-					if (a == b)
-					{
-						return 0;
-					}
-
-					if (DependsOn(a, b.DataKey))
-					{
-						return 1;
-					}
-					else if (DependsOn(b, a.DataKey))
-					{
-						return -1;
-					}
-					else
-					{
-						return d_states[a].DataIndex.CompareTo(d_states[b].DataIndex);
-					}
-				});
-			}
-
-			return ret;
-		}
-
-		private void ComputeNodeInGroups(Queue<Node> q,
-		                                 DependencyGroup grp,
-		                                 Dictionary<Node, DependencyGroup> seen)
-		{
-			while (q.Count > 0)
+			while (!q.Empty)
 			{
 				var n = q.Dequeue();
-				ComputeNodeInGroups(q, n, grp, seen);
-			}
-		}
 
-		private void ComputeNodeInGroups(Queue<Node> q,
-		                                 Node node,
-		                                 DependencyGroup grp,
-		                                 Dictionary<Node, DependencyGroup> seen)
-		{
-			if (seen.ContainsKey(node))
-			{
-				return;
-			}
-
-			var root = grp;
-
-			// Find right-most dependency
-			foreach (Node dep in node.Dependencies)
-			{
-				DependencyGroup depgrp;
-
-				if (dep == node || !seen.TryGetValue(dep, out depgrp))
+				// Append the node to the last group if it has the same
+				// embedding
+				if (ret.Count != 0 && ret[ret.Count - 1].Embedding == n.Embedding)
 				{
-					continue;
-				}
-
-				if (depgrp.Id > root.Id)
-				{
-					root = depgrp;
-				}
-			}
-
-			DependencyGroup before = null;
-
-			// Find left-most dependency if needed
-			foreach (Node dep in node.DependencyFor)
-			{
-				DependencyGroup depgrp;
-
-				if (dep == node || !seen.TryGetValue(dep, out depgrp))
-				{
-					continue;
-				}
-
-				if (before == null || depgrp.Id < before.Id)
-				{
-					before = depgrp;
-				}
-			}
-
-			// Need to add between 'root' and 'before'
-			while (root.Embedding != node.Embedding && root.StatesCount > 0)
-			{
-				var next = root.Next;
-
-				if (next == before)
-				{
-					// Insert new empty group for the node
-					root.Next = new DependencyGroup(node.Embedding);
-					root = root.Next;
-				
-					break;
+					ret[ret.Count - 1].Add(n.State);
 				}
 				else
 				{
-					root = next;
+					// Otherwise create a new group for it and append the group
+					// to the resulting set
+					DependencyGroup g = new DependencyGroup(n.Embedding);
+					g.Add(n.State);
+
+					ret.Add(g);
 				}
-			}
 
-			if (root.StatesCount == 0)
-			{
-				root.Embedding = node.Embedding;
-			}
-
-			root.Add(node.State);
-			seen[node] = root;
-
-			// Recursively go up, i.e. nodes that depend on 'node'.
-			foreach (Node dep in node.DependencyFor)
-			{
-				if (dep == node || dep.State == null || seen.ContainsKey(dep))
+				// Iterate over all the nodes (dep) that depend on (n)
+				foreach (var dep in n.DependencyFor)
 				{
-					continue;
-				}
+					// Remove the node from its dependencies (it has been
+					// processed)
+					dep.Dependencies.Remove(n);
 
-				q.Enqueue(dep);
+					// If this list is now 0, then (dep) does not have any
+					// dependencies left and can be added to our queue to be
+					// inserted in the result
+					if (dep.Dependencies.Count == 0 && dep.State != null)
+					{
+						q.Enqueue(dep);
+					}
+				}
 			}
+
+			// TODO: check for cyclic dependencies
+			return ret;
 		}
-		
+
 		public void Add(State state, Dictionary<object, State> mapping)
 		{
 			Node node = new Node(state);
