@@ -217,6 +217,36 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 		}
+
+		public string MaxSizeTypeName
+		{
+			get
+			{
+				if (IntegerType)
+				{
+					if (d_maxSize < (ulong)byte.MaxValue)
+					{
+						return "uint8";
+					}
+					else if (d_maxSize < (ulong)UInt16.MaxValue)
+					{
+						return "uint16";
+					}
+					else if (d_maxSize < (ulong)UInt32.MaxValue)
+					{
+						return "uint32";
+					}
+					else
+					{
+						return "uint64";
+					}
+				}
+				else
+				{
+					return "ValueType";
+				}
+			}
+		}
 		
 		public bool IsConstant
 		{
@@ -354,7 +384,19 @@ namespace Cdn.RawC.Programmer
 				
 				if (!d_items.TryGetValue(basekey, out ret))
 				{
-					Console.Error.WriteLine("Failed to find state item: {0}, {1}", ((Cdn.Variable)key).FullNameForDisplay, basekey);
+					if (key is Cdn.Variable)
+					{
+						Console.Error.WriteLine("Failed to find state item: {0}, {1}", ((Cdn.Variable)key).FullNameForDisplay, basekey);
+					}
+					else if (basekey is Cdn.Variable)
+					{
+						Console.Error.WriteLine("Failed to find state item: {0}, {1}", key, ((Cdn.Variable)basekey).FullNameForDisplay);
+					}
+					else
+					{
+						Console.Error.WriteLine("Failed to find state item: {0}, {1}", key, basekey);
+					}
+
 					throw new KeyNotFoundException();
 				}
 				else

@@ -75,14 +75,25 @@ FILES = \
 	Programmer/DependencyGroup.cs \
 	Programmer/Function.cs \
 	Programmer/Formatters/C/InitialValueTranslator.cs \
-	Programmer/Formatters/C/C.cs \
-	Programmer/Formatters/C/ComputationNodeTranslator.cs \
-	Programmer/Formatters/C/NumberTranslator.cs \
-	Programmer/Formatters/C/Context.cs \
-	Programmer/Formatters/C/DynamicVisitor.cs \
 	Programmer/Formatters/C/Options.cs \
+	Programmer/Formatters/C/NumberTranslator.cs \
 	Programmer/Formatters/C/InstructionTranslator.cs \
+	Programmer/Formatters/C/Context.cs \
+	Programmer/Formatters/C/ComputationNodeTranslator.cs \
+	Programmer/Formatters/C/C.cs \
 	Programmer/Formatters/IFormatter.cs \
+	Programmer/Formatters/DynamicVisitor.cs \
+	Programmer/Formatters/CLike/InitialValueTranslator.cs \
+	Programmer/Formatters/CLike/Options.cs \
+	Programmer/Formatters/CLike/InstructionTranslator.cs \
+	Programmer/Formatters/CLike/Context.cs \
+	Programmer/Formatters/CLike/ComputationNodeTranslator.cs \
+	Programmer/Formatters/CLike/CLike.cs \
+	Programmer/Formatters/JavaScript/Options.cs \
+	Programmer/Formatters/JavaScript/JavaScript.cs \
+	Programmer/Formatters/JavaScript/InstructionTranslator.cs \
+	Programmer/Formatters/JavaScript/Context.cs \
+	Programmer/Formatters/JavaScript/ComputationNodeTranslator.cs \
 	Programmer/DataTable.cs \
 	Programmer/Computation/Block.cs \
 	Programmer/Computation/IBlock.cs \
@@ -120,7 +131,6 @@ FILES = \
 DATA_FILES =
 
 RESOURCES = \
-	Programmer/Formatters/C/Resources/MexProgram.c,Cdn.RawC.Programmer.Formatters.C.Resources.MexProgram.c \
 	Programmer/Formatters/C/Resources/Library.make,Cdn.RawC.Programmer.Formatters.C.Resources.Library.make \
 	Programmer/Formatters/C/Resources/Standalone.make,Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make \
 	Programmer/Formatters/C/Resources/Include.make,Cdn.RawC.Programmer.Formatters.C.Resources.Include.make \

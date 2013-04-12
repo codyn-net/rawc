@@ -11,12 +11,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 	[Plugins.Attributes.Plugin(Name="C",
 	                           Description="Write compact C file",
 	                           Author="Jesse van den Kieboom")]
-	public class C : IFormatter, Plugins.IOptions
+	public class C : CLike.CLike, IFormatter, Plugins.IOptions
 	{
 		private Options d_options;
 		private Programmer.Program d_program;
-		private string d_cprefix;
-		private string d_cprefixup;
 
 		private string d_sourceFilename;
 		private string d_headerFilename;
@@ -24,26 +22,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private string d_runSourceFilename;
 		private string d_runHeaderFilename;
 
-		private class EnumItem
-		{
-			public Cdn.Variable Variable;
-			public string ShortName;
-			public string CName;
-			
-			public EnumItem(Cdn.Variable property, string shortname, string cname)
-			{
-				Variable = property;
-				ShortName = shortname;
-				CName = cname;
-			}
-		}
-
-		private List<EnumItem> d_enumMap;
-
 		public C()
 		{
 			d_options = new Options("C Formatter");
-			d_enumMap = new List<EnumItem>();
 		}
 
 		private bool IsStandalone
@@ -53,6 +34,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public string[] Write(Program program)
 		{
+			Initialize(program, d_options);
+
 			d_program = program;
 			
 			List<string > written = new List<string>();
@@ -227,11 +210,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return writer.ToString();
 		}
 
-		public string MexSource()
-		{
-			return Source("Cdn.RawC.Programmer.Formatters.C.Resources.MexProgram.c");
-		}
-
 		public string CompileForValidation(bool verbose)
 		{
 			return Compile(verbose, true)[0];
@@ -313,50 +291,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
-		private string ToAsciiOnly(string name)
-		{
-			return Context.ToAsciiOnly(name);
-		}
-		
-		private string CPrefix
-		{
-			get
-			{
-				if (d_cprefix == null)
-				{
-					string[] parts = ToAsciiOnly(d_program.Options.Basename).ToLower().Split('_');
-			
-					parts = Array.FindAll(parts, a => !String.IsNullOrEmpty(a));
-					parts = Array.ConvertAll(parts, a => char.ToUpper(a[0]) + a.Substring(1));
-			
-					d_cprefix = String.Join("", parts);
-				}
-				
-				return d_cprefix;
-			}
-		}
-		
-		private string CPrefixUp
-		{
-			get
-			{
-				if (d_cprefixup == null)
-				{
-					d_cprefixup = ToAsciiOnly(d_program.Options.Basename).ToUpper();
-				}
-				
-				return d_cprefixup;
-			}
-		}
-		
-		private string CPrefixDown
-		{
-			get
-			{
-				return CPrefixUp.ToLower();
-			}
-		}
-		
 		private string ValueType
 		{
 			get
@@ -375,8 +309,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("typedef enum");
 			writer.WriteLine("{");
 			
-			Dictionary<string, bool > unique = new Dictionary<string, bool>();
-			
 			List<string > names = new List<string>();
 			List<string > values = new List<string>();
 			List<string > comments = new List<string>();
@@ -384,110 +316,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			int maxname = 0;
 			int maxval = 0;
 
-			int firstrand = -1;
-			
-			foreach (DataTable.DataItem item in d_program.StateTable)
+			foreach (var e in d_enumMap)
 			{
-				Cdn.Variable prop = null;
-				bool isdiff = false;
-
-				if ((item.Type & DataTable.DataItem.Flags.Derivative) != 0)
-				{
-					var state = item.Object as DerivativeState;
-
-					if (state != null)
-					{
-						prop = state.Object as Cdn.Variable;
-						isdiff = true;
-					}
-				}
-				else
-				{
-					prop = item.Key as Cdn.Variable;
-				}
+				names.Add(e.CName);
+				values.Add(e.Value);
+				comments.Add(e.Comment);
 				
-				if (prop == null || prop.Flags == 0)
-				{
-					if (!(Cdn.RawC.Options.Instance.Verbose && d_options.SymbolicNames))
-					{
-						continue;
-					}
-
-					var rinstr = item.Key as InstructionRand;
-
-					if (rinstr != null)
-					{
-						if (firstrand == -1)
-						{
-							firstrand = item.Index;
-						}
-
-						item.Alias = string.Format("{0} /* RAND_{1} */", item.Index, item.Index - firstrand);
-					}
-					else if ((item.Type & DataTable.DataItem.Flags.Constant) != 0)
-					{
-						item.Alias = string.Format("{0} /* {1} */", item.Index, item.Key);
-					}
-
-					continue;
-				}
-				
-				string fullname;
-				
-				if (prop.Object == d_program.Options.Network || prop.Object == d_program.Options.Network.Integrator)
-				{
-					fullname = prop.Name;
-				}
-				else
-				{
-					fullname = prop.FullName;
-				}
-				
-				string orig = ToAsciiOnly(fullname).ToUpper();
-				string prefix;
-
-				if (isdiff)
-				{
-					prefix = String.Format("{0}_DERIV", CPrefixUp);
-				}
-				else
-				{
-					prefix = String.Format("{0}_STATE", CPrefixUp);
-				}
-
-				string enumname = String.Format("{0}_{1}", prefix, orig);
-				string shortname = orig;
-
-				int id = 0;
-				
-				while (unique.ContainsKey(enumname))
-				{
-					enumname = String.Format("_{1}__{2}", prefix, orig, ++id);
-					shortname = String.Format("{0}__{1}", orig, id);
-				}
-				
-				var comment = fullname;
-				
-				if (isdiff)
-				{
-					comment += "'";
-				}
-				
-				names.Add(enumname);
-				values.Add(item.DataIndex.ToString());
-				comments.Add(comment);
-				
-				maxname = System.Math.Max(maxname, enumname.Length);
-				maxval = System.Math.Max(maxval, item.DataIndex.ToString().Length);
-
-				if (d_options.SymbolicNames)
-				{
-					item.Alias = enumname;
-				}
-				
-				unique[enumname] = true;
-
-				d_enumMap.Add(new EnumItem(prop, shortname, enumname));
+				maxname = System.Math.Max(maxname, e.CName.Length);
+				maxval = System.Math.Max(maxval, e.Value.Length);
 			}
 			
 			for (int i = 0; i < names.Count; ++i)
@@ -606,10 +442,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public bool IsDouble
 		{
-			get
-			{
-				return d_options.ValueType == "double";
-			}
+			get { return d_options.ValueType == "double"; }
 		}
 		
 		private string GenerateArgsList(Programmer.Function function)
@@ -746,23 +579,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					continue;
 				}
 
-				string impl = ToAsciiOnly(function.Name);
+				string impl = Context.ToAsciiOnly(function.Name);
 				string def = impl.ToUpper();
 
 				WriteDefine(writer, def, "", impl, String.Format("#define {0}_IS_DEFINED", def));
 			}
-		}
-		
-		private Dictionary<Tree.NodePath, string> GenerateMapping(string format, IEnumerable<Tree.Embedding.Argument> args)
-		{
-			Dictionary<Tree.NodePath, string > mapping = new Dictionary<Tree.NodePath, string>();
-
-			foreach (Tree.Embedding.Argument arg in args)
-			{
-				mapping[arg.Path] = String.Format(format, arg.Index);
-			}
-			
-			return mapping;
 		}
 		
 		private string FunctionToC(Function function, out Context context)
@@ -790,7 +611,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			var expr = function.Expression;
 			var isone = expr.Dimension.IsOne;
-			var impl = ToAsciiOnly(function.Name);
+			var impl = Context.ToAsciiOnly(function.Name);
 
 			if (function.CanBeOverridden)
 			{
@@ -842,7 +663,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private void WriteFunctionDecl(TextWriter writer, Programmer.Function function)
 		{
-			var impl = ToAsciiOnly(function.Name);
+			var impl = Context.ToAsciiOnly(function.Name);
 
 			if (function.CanBeOverridden)
 			{
@@ -932,7 +753,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		private void WriteComputationNode(TextWriter writer, Computation.INode node, string indent)
 		{
 			Context context = new Context(d_program, d_options);
-			writer.WriteLine(Context.Reindent(ComputationNodeTranslator.Translate(node, context), indent));
+			writer.WriteLine(Context.Reindent(CLike.ComputationNodeTranslator<ComputationNodeTranslator>.Translate(node, context), indent));
 		}
 		
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
@@ -1067,7 +888,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		private string MinimumTableType(DataTable table)
 		{
-			return MinimumCType(table.MaxSize);
+			if (table.IntegerType)
+			{
+				return table.MaxSizeTypeName + "_t";
+			}
+			else
+			{
+				return table.MaxSizeTypeName;
+			}
 		}
 	
 		private string MinimumCType(ulong maxnum)
@@ -1117,7 +945,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				int row = i / cols;
 				int col = i % cols;
-				string val = table.NeedsInitialization ? translator.Translate(table[i].Key) : InitialValueTranslator.NotInitialized;
+				string val = table.NeedsInitialization ? translator.Translate(table[i].Key) : "0";
 				vals[row, col] = val;
 
 				if (val.Length > maxs)

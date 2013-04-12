@@ -318,6 +318,7 @@ namespace Cdn.RawC.Programmer
 			HashSet<Node> leafs;
 
 			Collapse(states, out leafs);
+
 			var ret = new List<DependencyGroup>();
 
 			var q = new Queue();

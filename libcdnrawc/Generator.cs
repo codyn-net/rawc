@@ -85,11 +85,6 @@ namespace Cdn.RawC
 				}
 			}
 
-			if (Options.Instance.PrintMexSource)
-			{
-				Console.WriteLine(Options.Instance.Formatter.MexSource());
-			}
-
 			if (Options.Instance.Validate && !Options.Instance.PrintCompileSource)
 			{
 				try

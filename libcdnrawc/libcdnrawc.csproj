@@ -72,7 +72,6 @@
     <Compile Include="Programmer\Computation\Loop.cs" />
     <Compile Include="Programmer\Computation\Empty.cs" />
     <Compile Include="Programmer\Formatters\C\C.cs" />
-    <Compile Include="Programmer\Formatters\C\DynamicVisitor.cs" />
     <Compile Include="Programmer\Formatters\C\InstructionTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\Context.cs" />
     <Compile Include="Programmer\Formatters\C\ComputationNodeTranslator.cs" />
@@ -112,6 +111,18 @@
     <Compile Include="Programmer\Instructions\IInstruction.cs" />
     <Compile Include="UnidecodeSharp\Characters.cs" />
     <Compile Include="UnidecodeSharp\Unidecoder.cs" />
+    <Compile Include="Programmer\Formatters\CLike\CLike.cs" />
+    <Compile Include="Programmer\Formatters\CLike\ComputationNodeTranslator.cs" />
+    <Compile Include="Programmer\Formatters\CLike\Context.cs" />
+    <Compile Include="Programmer\Formatters\CLike\InitialValueTranslator.cs" />
+    <Compile Include="Programmer\Formatters\CLike\InstructionTranslator.cs" />
+    <Compile Include="Programmer\Formatters\CLike\Options.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\ComputationNodeTranslator.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\Context.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\InstructionTranslator.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\JavaScript.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\Options.cs" />
+    <Compile Include="Programmer\Formatters\DynamicVisitor.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
@@ -125,10 +136,11 @@
     <Folder Include="Programmer\Computation\" />
     <Folder Include="Programmer\Formatters\C\" />
     <Folder Include="Programmer\Formatters\C\Resources\" />
+    <Folder Include="Programmer\Formatters\CLike\" />
+    <Folder Include="Programmer\Formatters\JavaScript\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <EmbeddedResource Include="Programmer\Formatters\C\Resources\MexProgram.c" />
     <EmbeddedResource Include="Programmer\Formatters\C\Resources\Library.make" />
     <EmbeddedResource Include="Programmer\Formatters\C\Resources\Standalone.make" />
     <EmbeddedResource Include="Programmer\Formatters\C\Resources\Include.make" />

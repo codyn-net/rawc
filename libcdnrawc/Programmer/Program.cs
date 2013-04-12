@@ -1194,10 +1194,7 @@ namespace Cdn.RawC.Programmer
 				if (lst.Count > 0)
 				{
 					var b = new Computation.Block();
-					var filt = new DependencyFilter(d_dependencyGraph, lst);
-
-					ProgramDependencies(b, filt, null);
-
+					b.Body.AddRange(AssignmentStates(lst, null));
 					d_eventPrograms[ev] = b;
 				}
 			}

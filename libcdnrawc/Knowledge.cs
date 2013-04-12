@@ -435,7 +435,7 @@ namespace Cdn.RawC
 				}
 			}
 
-			// Add function help varaibles
+			// Add function help variables
 			foreach (var v in d_functionHelperVariables)
 			{
 				if (unique.Contains(v))
@@ -447,6 +447,18 @@ namespace Cdn.RawC
 
 				AddState(unique, s);
 				AddAux(s, auxset);
+			}
+
+			// Add event set variables
+			foreach (var kv in d_eventSetStates)
+			{
+				foreach (var e in kv.Value)
+				{
+					var s = ExpandedState(e.SetVariable.Variable);
+
+					AddState(unique, s);
+					AddAux(s, auxset);
+				}
 			}
 
 			d_network.ForeachExpression((e) => {
@@ -560,11 +572,6 @@ namespace Cdn.RawC
 		public IEnumerable<State> ExternalConstraintStates
 		{
 			get { return d_externalConstraintStates; }
-		}
-
-		private void AddLogicalNodeState()
-		{
-
 		}
 
 		private IEnumerable<EventLogicalNode> EventNodes(EventLogicalNode node)

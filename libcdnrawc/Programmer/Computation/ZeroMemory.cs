@@ -16,20 +16,10 @@ namespace Cdn.RawC.Programmer.Computation
 			d_datatable = datatable;
 		}
 
-		public ZeroMemory() : this(null, null)
+		public ZeroMemory()
 		{
 		}
 
-		public ZeroMemory(string name, int size) : this(name, size.ToString())
-		{
-		}
-
-		public ZeroMemory(string name, string size)
-		{
-			d_name = name;
-			d_size = size;
-		}
-		
 		public string Name
 		{
 			get { return d_name; }

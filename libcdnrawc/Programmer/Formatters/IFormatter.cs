@@ -9,8 +9,6 @@ namespace Cdn.RawC.Programmer.Formatters
 		
 		string[] Compile(bool verbose);
 		string CompileForValidation(bool verbose);
-
-		string MexSource();
 	}
 }
 

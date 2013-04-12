@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Cdn.RawC.Programmer.Formatters.C
 {
-	public class Options : CommandLine.OptionGroup
+	public class Options : CLike.Options
 	{
 		[CommandLine.Option("value-type", Description="Value type to use (double, float, etc)")]
 		public string ValueType = "double";
@@ -15,8 +15,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public string CFlags;
 		[CommandLine.Option("libs", Description="Specify linker flags for compilation")]
 		public string Libs;
-		[CommandLine.Option("symbolic-names", Description="Use symbolic names for state indices in the source code")]
-		public bool SymbolicNames;
 		[CommandLine.Option("no-makefile", Description="Don't generate makefile to compile the network")]
 		public bool NoMakefile;
 		[CommandLine.Option("static", Description="Compile a static library")]
@@ -26,9 +24,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		[CommandLine.Option("standalone", ArgumentName="TYPE", OptionalArgument=true, DefaultArgument="minimal", Description="Create a standalone network (minimal, full)")]
 		public string Standalone;
 
-		public string CPrefix;
-		public string CPrefixDown;
-		public string CPrefixUp;
 		public string EventStateType;
 		
 		public Options(string name) : base(name)

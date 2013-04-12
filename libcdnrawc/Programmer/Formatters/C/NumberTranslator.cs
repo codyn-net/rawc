@@ -17,7 +17,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private static string SpecifierFromContext(Context context)
 		{
-			if (context != null && context.Options.ValueType == "float")
+			if (context != null && ((Options)context.Options).ValueType == "float")
 			{
 				return "f";
 			}
@@ -49,6 +49,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		public static string Translate(double number, Context context)
 		{
+			string vt;
+
+			if (context != null)
+			{
+				vt = ((Options)context.Options).ValueType;
+			}
+			else
+			{
+				vt = "double";
+			}
+
 			if (Double.IsNaN(number))
 			{
 				return "NAN";
@@ -63,7 +74,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			else if (number == Double.MaxValue)
 			{
-				if (context.Options.ValueType == "float")
+				if (vt == "float")
 				{
 					return "FLT_MAX";
 				}
@@ -74,7 +85,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			else if (number == Double.MinValue)
 			{
-				if (context.Options.ValueType == "float")
+				if (vt == "float")
 				{
 					return "-FLT_MAX";
 				}
@@ -85,7 +96,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			else if (number == Double.Epsilon)
 			{
-				if (context.Options.ValueType == "float")
+				if (vt == "float")
 				{
 					return "FLT_MIN";
 				}
@@ -96,7 +107,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			else if (number == -Double.Epsilon)
 			{
-				if (context.Options.ValueType == "float")
+				if (vt == "float")
 				{
 					return "-FLT_MIN";
 				}
