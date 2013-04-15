@@ -24,7 +24,7 @@ WARNINGS = 				\
 	unused-function		\
 	unused-variable
 
-${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags} -DENABLE_MALLOC
+${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags} -DENABLE_MALLOC -std=c99
 ${NAME}_LDFLAGS = -lm ${libs}
 
 ifeq ($(UNAME),Darwin)

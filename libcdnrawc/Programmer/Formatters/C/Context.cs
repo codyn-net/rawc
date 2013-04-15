@@ -6,34 +6,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 {
 	public class Context : CLike.Context
 	{
-		private static HashSet<string> s_mathdefines;
-
 		public Context(Program program, CLike.Options options) : this(program, options, null, null)
 		{
 		}
 
-		public Context(Program program, CLike.Options options, Tree.Node node, Dictionary<Tree.NodePath, string> mapping) : base(program, options, node, mapping)
+		public Context(Program program, CLike.Options options, Tree.Node node, Dictionary<Tree.NodePath, object> mapping) : base(program, options, node, mapping)
 		{
 		}
 
-		public static HashSet<string> MathDefines
-		{
-			get
-			{
-				if (s_mathdefines == null)
-				{
-					s_mathdefines = new HashSet<string>();
-				}
-
-				return s_mathdefines;
-			}
-		}
-
-		protected override CLike.Context Clone()
-		{
-			return new Context(Program, Options);
-		}
-		
 		public override string MathFunction(Cdn.MathFunctionType type, int arguments)
 		{
 			return String.Format("CDN_MATH_{0}", base.MathFunction(type, arguments).ToUpper());
@@ -61,6 +41,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				source = String.Format("({0}) + {1}", source, sourceStart);
 			}
 
+			type = Context.TypeToCType(type);
+
 			return String.Format("({0} *)memcpy({1}, {2}, sizeof({3}) * {4})",
 			                     type, dest, source, type, nelem);
 		}
@@ -74,8 +56,45 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return String.Format("memset({0}, 0, sizeof({1}) * {2})",
 			                     dest,
-			                     type,
+			                     Context.TypeToCType(type),
 			                     nelem);
+		}
+
+		public static string TypeToCType(string type)
+		{
+			if (type == "ValueType")
+			{
+				return type;
+			}
+
+			return type + "_t";
+		}
+
+		public override CLike.Context Clone(Program program, CLike.Options options, Tree.Node node, Dictionary<Tree.NodePath, object> mapping)
+		{
+			return new Context(program, options, node, mapping);
+		}
+
+		public override string DeclareArrayVariable(string type, string name, int size)
+		{
+			return base.DeclareArrayVariable(type, name, size) + " = {0,}";
+		}
+
+		public override string APIName(Computation.CallAPI node)
+		{
+			return String.Format("{0}_{1}", Options.CPrefixDown, node.Function.Name);
+		}
+
+		public override string FunctionCallName(Function function)
+		{
+			string name = Context.ToAsciiOnly(function.Name);
+
+			if (function.CanBeOverridden)
+			{
+				name = name.ToUpper();
+			}
+
+			return name;
 		}
 	}
 }

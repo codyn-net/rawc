@@ -12,8 +12,7 @@ namespace Cdn.RawC.Programmer
 		private bool d_needsInitialization;
 		private int d_columns;
 		private bool d_isconstant;
-		private bool d_integertype;
-		private ulong d_maxSize;
+		private ulong d_integertypesize;
 		private bool d_locked;
 		private int d_size;
 
@@ -192,7 +191,6 @@ namespace Cdn.RawC.Programmer
 			d_needsInitialization = needsInitialization;
 			d_columns = columns;
 			d_isconstant = false;
-			d_integertype = false;
 			d_locked = false;
 		}
 		
@@ -206,46 +204,29 @@ namespace Cdn.RawC.Programmer
 			get { return d_locked; }
 		}
 		
-		public ulong MaxSize
+		private string TypeNameForSize(ulong s)
 		{
-			get { return d_maxSize;	}
-			set
+			if (s < (ulong)byte.MaxValue)
 			{
-				if (value > d_maxSize)
-				{
-					d_maxSize = value;
-				}
+				return "uint8";
+			}
+			else if (s < (ulong)UInt16.MaxValue)
+			{
+				return "uint16";
+			}
+			else if (s < (ulong)UInt32.MaxValue)
+			{
+				return "uint32";
+			}
+			else
+			{
+				return "uint64";
 			}
 		}
 
-		public string MaxSizeTypeName
+		public string IndexTypeName
 		{
-			get
-			{
-				if (IntegerType)
-				{
-					if (d_maxSize < (ulong)byte.MaxValue)
-					{
-						return "uint8";
-					}
-					else if (d_maxSize < (ulong)UInt16.MaxValue)
-					{
-						return "uint16";
-					}
-					else if (d_maxSize < (ulong)UInt32.MaxValue)
-					{
-						return "uint32";
-					}
-					else
-					{
-						return "uint64";
-					}
-				}
-				else
-				{
-					return "ValueType";
-				}
-			}
+			get { return TypeNameForSize((ulong)Count); }
 		}
 		
 		public bool IsConstant
@@ -254,10 +235,34 @@ namespace Cdn.RawC.Programmer
 			set { d_isconstant = value; }
 		}
 		
-		public bool IntegerType
+		public ulong IntegerTypeSize
 		{
-			get { return d_integertype; }
-			set { d_integertype = value; }
+			get
+			{
+				return d_integertypesize;
+			}
+			set
+			{
+				if (value > d_integertypesize)
+				{
+					d_integertypesize = value;
+				}
+			}
+		}
+
+		public string TypeName
+		{
+			get
+			{
+				if (d_integertypesize != 0)
+				{
+					return TypeNameForSize(d_integertypesize);
+				}
+				else
+				{
+					return "ValueType";
+				}
+			}
 		}
 		
 		public int Columns
@@ -442,10 +447,7 @@ namespace Cdn.RawC.Programmer
 		
 		public string Name
 		{
-			get
-			{
-				return d_name;
-			}
+			get { return d_name; }
 		}
 	}
 }

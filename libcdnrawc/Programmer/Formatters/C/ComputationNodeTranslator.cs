@@ -52,21 +52,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return ret.ToString();
 		}
 
-		protected override string APIName(Computation.CallAPI node, CLike.Context context)
-		{
-			return String.Format("{0}_{1}", context.Options.CPrefixDown, node.Function.Name);
-		}
-
-		protected override string DeclareValueVariable(string type, string name, CLike.Context context)
-		{
-			return String.Format("{0} {1}", type, name);
-		}
-
-		protected override string DeclareArrayVariable(string type, string name, int size, CLike.Context context)
-		{
-			return base.DeclareArrayVariable(type, name, size, context) + " = {{0,}}";
-		}
-
 		protected override string Translate(Computation.ZeroMemory node, CLike.Context context)
 		{
 			// Override default copy loop for more efficient memset

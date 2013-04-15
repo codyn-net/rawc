@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 
 using CL = Cdn.RawC.Programmer.Formatters.CLike;
 
@@ -41,6 +42,36 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			options.CPrefixUp = CPrefixUp;
 
 			InitializeEnum(options);
+
+			var ctx = CreateContext();
+
+			if (ctx.SupportsFirstClassArrays)
+			{
+				// Here we are going to translate the main data table into
+				// a table where each element is an array if the element is
+				// multidim
+				foreach (var item in d_program.StateTable)
+				{
+					item.DataIndex = item.Index;
+				}
+			}
+		}
+
+		private string PrettyFullName(Cdn.Variable v)
+		{
+			if (v.Object == d_program.Options.Network || v.Object == d_program.Options.Network.Integrator)
+			{
+				return v.Name;
+			}
+			else
+			{
+				return v.FullName;
+			}
+		}
+
+		protected virtual string EnumAlias(string name)
+		{
+			return name;
 		}
 
 		private void InitializeEnum(Options options)
@@ -75,7 +106,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					prop = item.Key as Cdn.Variable;
 				}
-				
+
 				if (prop == null || prop.Flags == 0)
 				{
 					if (!(Cdn.RawC.Options.Instance.Verbose && options.SymbolicNames))
@@ -84,7 +115,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					}
 					
 					var rinstr = item.Key as InstructionRand;
-					
+
 					if (rinstr != null)
 					{
 						if (firstrand == -1)
@@ -98,31 +129,26 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					{
 						item.Alias = string.Format("{0} /* {1} */", item.Index, item.Key);
 					}
-					
+					else if (prop != null)
+					{
+						item.Alias = string.Format("{0} /* {1} */", item.Index, PrettyFullName(prop));
+					}
+
 					continue;
 				}
 				
-				string fullname;
-				
-				if (prop.Object == d_program.Options.Network || prop.Object == d_program.Options.Network.Integrator)
-				{
-					fullname = prop.Name;
-				}
-				else
-				{
-					fullname = prop.FullName;
-				}
-				
+				string fullname = PrettyFullName(prop);
+
 				string orig = Context.ToAsciiOnly(fullname).ToUpper();
 				string prefix;
 				
 				if (isdiff)
 				{
-					prefix = String.Format("{0}_DERIV", CPrefixUp);
+					prefix = "DERIV";
 				}
 				else
 				{
-					prefix = String.Format("{0}_STATE", CPrefixUp);
+					prefix = "STATE";
 				}
 				
 				string enumname = String.Format("{0}_{1}", prefix, orig);
@@ -145,7 +171,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 				if (options.SymbolicNames)
 				{
-					item.Alias = enumname;
+					item.Alias = EnumAlias(enumname);
 				}
 				
 				unique[enumname] = true;
@@ -198,9 +224,9 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 		}
 
-		protected Dictionary<Tree.NodePath, string> GenerateMapping(string format, IEnumerable<Tree.Embedding.Argument> args)
+		protected Dictionary<Tree.NodePath, object> GenerateMapping(string format, IEnumerable<Tree.Embedding.Argument> args)
 		{
-			Dictionary<Tree.NodePath, string > mapping = new Dictionary<Tree.NodePath, string>();
+			var mapping = new Dictionary<Tree.NodePath, object>();
 			
 			foreach (Tree.Embedding.Argument arg in args)
 			{
@@ -208,6 +234,227 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 			
 			return mapping;
+		}
+
+		public string ReadResource(string resource)
+		{
+			resource = "Cdn.RawC.Programmer.Formatters." + GetType().Name + ".Resources." + resource;
+
+			Stream res = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resource);
+			StreamReader reader = new StreamReader(res);
+			return reader.ReadToEnd();
+		}
+
+		private string EventNodeStateVariable(Cdn.EventLogicalNode node,
+		                                      EventNodeState.StateType type,
+		                                      Context context)
+		{
+			var st = d_program.StateTable[EventNodeState.Key(node, type)];
+
+			return String.Format("{0}[{1}]", context.This(d_program.StateTable), st.AliasOrIndex);
+		}
+
+		protected virtual Context CreateContext()
+		{
+			return null;
+		}
+
+		private string EventConditionHolds(Cdn.Event ev,
+		                                   Cdn.EventLogicalNode node,
+		                                   EventNodeState.StateType type,
+		                                   Context context)
+		{
+			var st = EventNodeStateVariable(node, type, context);
+
+			switch (node.CompareType)
+			{
+			case Cdn.MathFunctionType.Less:
+			case Cdn.MathFunctionType.Greater:
+				return String.Format("{0} > 0",
+				                     st);
+			case Cdn.MathFunctionType.LessOrEqual:
+			case Cdn.MathFunctionType.GreaterOrEqual:
+			case Cdn.MathFunctionType.And:
+			case Cdn.MathFunctionType.Or:
+				return String.Format("{0} >= 0",
+				                     st);
+			case Cdn.MathFunctionType.Equal:
+				if (ev.Approximation != Double.MaxValue)
+				{
+					var approx = context.TranslateNumber(ev.Approximation);
+
+					return String.Format("{0}({1}) <= {2}",
+					                     context.MathFunction(MathFunctionType.Abs, 1),
+					                     st,
+					                     approx);
+				}
+				else
+				{
+					return "1";
+				}
+			default:
+				return "0";
+			}
+		}
+
+		protected virtual void WriteEventsUpdateDistance(TextWriter writer)
+		{
+			// Write updates of the logical nodes
+			var states = new List<EventNodeState>(Knowledge.Instance.EventNodeStates);
+
+			if (states.Count == 0)
+			{
+				return;
+			}
+
+			bool first = true;
+			var context = CreateContext();
+
+			// Compute in reverse order to get the right dependencies
+			for (int i = states.Count - 1; i >= 0; --i)
+			{
+				var st = states[i];
+
+				if (st.Type != EventNodeState.StateType.Current)
+				{
+					continue;
+				}
+
+				if (first)
+				{
+					first = false;
+				}
+				else
+				{
+					writer.WriteLine();
+				}
+
+				switch (st.Node.CompareType)
+				{
+				case Cdn.MathFunctionType.And:
+				case Cdn.MathFunctionType.Or:
+				{
+					var dist = EventNodeStateVariable(st.Node,
+					                                  EventNodeState.StateType.Distance,
+					                                  context);
+
+					var cur = EventNodeStateVariable(st.Node,
+					                                 EventNodeState.StateType.Current,
+					                                 context);
+
+					var ldist = EventNodeStateVariable(st.Node.Left,
+					                                   EventNodeState.StateType.Distance,
+					                                   context);
+
+					var rdist = EventNodeStateVariable(st.Node.Right,
+					                                   EventNodeState.StateType.Distance,
+					                                   context);
+
+					if (st.Node.CompareType == Cdn.MathFunctionType.And)
+					{
+						var lcond = EventConditionHolds(st.Event,
+						                                st.Node.Left,
+						                                EventNodeState.StateType.Current,
+						                                context);
+
+						var rcond = EventConditionHolds(st.Event,
+						                                st.Node.Right,
+						                                EventNodeState.StateType.Current,
+						                                context);
+
+						writer.WriteLine("\tif ({0} >= 0 && {1} >= 0)", ldist, rdist);
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = {1}({2}, {3});", dist, context.MathFunction(MathFunctionType.Max, 2), ldist, rdist);
+						writer.WriteLine("\t}");
+						writer.WriteLine("\telse if ({0} >= 0 && {1})", ldist, rcond);
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = {1};", dist, ldist);
+						writer.WriteLine("\t}");
+						writer.WriteLine("\telse if ({0} >= 0 && {1})", rdist, lcond);
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = {1};", dist, rdist);
+						writer.WriteLine("\t}");
+						writer.WriteLine("\telse");
+						writer.WriteLine("\t{");
+						writer.WriteLine("\t\t{0} = -1;", dist);
+						writer.WriteLine("\t}");
+						writer.WriteLine();
+					}
+					else
+					{
+						writer.WriteLine("\t{0} = {1}({2}, {3});", dist, context.MathFunction(MathFunctionType.Max, 2), ldist, rdist);
+					}
+
+					writer.WriteLine("\t{0} = ({1} >= 0 ? 0 : -1);", cur, dist);
+				}
+				break;
+				default:
+				{
+					var prevCond = EventConditionHolds(st.Event,
+					                                   st.Node,
+					                                   EventNodeState.StateType.Previous,
+					                                   context);
+
+					var curCond = EventConditionHolds(st.Event,
+					                                  st.Node,
+					                                  EventNodeState.StateType.Current,
+					                                  context);
+
+					var dist = EventNodeStateVariable(st.Node,
+					                                  EventNodeState.StateType.Distance,
+					                                  context);
+
+					var prev = EventNodeStateVariable(st.Node,
+					                                  EventNodeState.StateType.Previous,
+					                                  context);
+
+					var cur = EventNodeStateVariable(st.Node,
+					                                 EventNodeState.StateType.Current,
+					                                 context);
+
+					// Compute distance for actual values
+					writer.WriteLine("\tif (!({0}) && {1})", prevCond, curCond);
+					writer.WriteLine("\t{");
+
+					if (st.Event.Approximation == Double.MaxValue)
+					{
+						writer.WriteLine("\t\t{0} = 1;", dist);
+					}
+					else
+					{
+						var approx = context.TranslateNumber(st.Event.Approximation);
+
+						writer.WriteLine("\t\tif ({0} <= {1})", cur, approx);
+						writer.WriteLine("\t\t{");
+						writer.WriteLine("\t\t\t{0} = 1;", dist);
+						writer.WriteLine("\t\t}");
+						writer.WriteLine("\t\telse");
+						writer.WriteLine("\t\t{");
+						writer.Write("\t\t\t{0} = {1} / ({1} - {2})", dist, prev, cur);
+						
+						if (st.Node.CompareType == Cdn.MathFunctionType.Less ||
+						    st.Node.CompareType == Cdn.MathFunctionType.Greater)
+						{
+							writer.WriteLine(" + 1e-10;");
+						}
+						else
+						{
+							writer.WriteLine(";");
+						}
+
+						writer.WriteLine("\t\t}");
+					}
+
+					writer.WriteLine("\t}");
+					writer.WriteLine("\telse");
+					writer.WriteLine("\t{");
+					writer.WriteLine("\t\t{0} = -1;", dist);
+					writer.WriteLine("\t}");
+
+					break;
+				}
+				}
+			}
 		}
 	}
 }

@@ -166,7 +166,7 @@ binary = [
     'hypot',
 ]
 
-binary_all = binary + ['max', 'min', 'modulo', 'csign']
+binary_all = binary + ['max', 'min', 'modulo', 'csign', 'sum', 'product', 'sqsum']
 ternary_all = ['lerp', 'clip', 'cycle']
 
 for f in unary_all:
@@ -250,6 +250,10 @@ print_func('cycle', 3, """if (x0 < x1)
 
 print_func('min', 2, 'return x0 < x1 ? x0 : x1;')
 print_func('max', 2, 'return x0 > x1 ? x0 : x1;')
+print_func('hypot', 2, 'return hypot(x0, x1);')
+print_func('product', 2, 'return x0 * x1;')
+print_func('sum', 2, 'return x0 + x1;')
+print_func('sqsum', 2, 'return x0 * x0 + x1 * x1;')
 
 print_func('rand', 1, 'return (random () / (ValueType)RAND_MAX);')
 print_func('modulo', 2, """ValueType ans = CDN_MATH_VALUE_TYPE_FUNC(fmod) (x0, x1);
@@ -497,13 +501,12 @@ print_operator_v('nequal', 2, '!=')
 print_operator_v('or', 2, '||')
 print_operator_v('and', 2, '&&')
 
-print_accumulator_v('sum', 'ret += x0[i];')
-print_accumulator_v('product', 'ret *= x0[i];')
-print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
-
 print_accumulator_v('max', 'ret = CDN_MATH_MAX (ret, x0[i]);', 'x0[0]')
 print_accumulator_v('min', 'ret = CDN_MATH_MIN (ret, x0[i]);', 'x0[0]')
 print_accumulator_v('hypot', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]', 'CDN_MATH_SQRT (ret)')
+print_accumulator_v('sum', 'ret += x0[i];')
+print_accumulator_v('product', 'ret *= x0[i];')
+print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 
 print_index_v()
 print_hcat()

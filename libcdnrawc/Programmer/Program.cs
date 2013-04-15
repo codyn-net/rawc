@@ -1,4 +1,4 @@
-																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	using System;
+using System;
 using System.Collections.Generic;
 
 namespace Cdn.RawC.Programmer
@@ -29,6 +29,8 @@ namespace Cdn.RawC.Programmer
 		private DataTable d_delayedCounters;
 		private DataTable d_delayedCountersSize;
 		private DataTable d_constants;
+		private DataTable d_eventStates;
+		private DataTable d_initialEventStates;
 		private List<DataTable> d_indexTables;
 		private List<DataTable> d_delayHistoryTables;
 		private Dictionary<DelayedState, DataTable> d_delayHistoryMap;
@@ -39,29 +41,37 @@ namespace Cdn.RawC.Programmer
 		private HashSet<State> d_initStates;
 		private DependencyFilter d_preparedStates;
 		private Dictionary<Cdn.Event, Computation.INode> d_eventPrograms;
+		private Tree.Node d_zeroNumberExpression;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
 			// Write out equations and everything
 			d_statetable = new DataTable("ss", true);
 			d_constants = new DataTable("constants", true);
+			d_constants.IsConstant = true;
+
+			d_eventStates = new DataTable("event_states", false);
+			d_initialEventStates = new DataTable("initial_event_states", true);
+			d_initialEventStates.IsConstant = true;
 
 			d_functions = new List<Function>();
 			d_embeddings = new List<Tree.Embedding>(embeddings);
 			d_embeddingFunctionMap = new Dictionary<Tree.Embedding, Function>();
+
+			d_zeroNumberExpression = new Tree.Node(null, new InstructionNumber("0"));
 			
-			d_apiTDT = new APIFunction("tdtdeps", "void", "void *", "data");
+			d_apiTDT = new APIFunction("tdtdeps", "void");
 			d_apiTDT.Private = true;
 
-			d_apiPre = new APIFunction("pre", "void", "void*", "data", "ValueType", "t", "ValueType", "dt");
-			d_apiPreDiff = new APIFunction("prediff", "void", "void*", "data");
-			d_apiDiff = new APIFunction("diff", "void", "void*", "data", "ValueType", "t", "ValueType", "dt");
-			d_apiPost = new APIFunction("post", "void", "void*", "data", "ValueType", "t", "ValueType", "dt");
-			d_apiInit = new APIFunction("init", "void", "void*", "data", "ValueType", "t");
-			d_apiPrepare = new APIFunction("prepare", "void", "void*", "data", "ValueType", "t");
-			d_apiReset = new APIFunction("reset", "void", "void*", "data", "ValueType", "t");
-			d_apiEvents = new APIFunction("events_update", "void", "void*", "data");
-			d_apiEventsDistance = new APIFunction("events_update_distance", "void", "void*", "data");
+			d_apiPre = new APIFunction("pre", "void", "ValueType", "t", "ValueType", "dt");
+			d_apiPreDiff = new APIFunction("prediff", "void");
+			d_apiDiff = new APIFunction("diff", "void", "ValueType", "t", "ValueType", "dt");
+			d_apiPost = new APIFunction("post", "void", "ValueType", "t", "ValueType", "dt");
+			d_apiInit = new APIFunction("init", "void", "ValueType", "t");
+			d_apiPrepare = new APIFunction("prepare", "void", "ValueType", "t");
+			d_apiReset = new APIFunction("reset", "void", "ValueType", "t");
+			d_apiEvents = new APIFunction("events_update", "void");
+			d_apiEventsDistance = new APIFunction("events_update_distance", "void");
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
 			d_functionMap = new Dictionary<string, Function>();
@@ -74,10 +84,8 @@ namespace Cdn.RawC.Programmer
 			d_eventPrograms = new Dictionary<Event, Computation.INode>();
 
 			d_delayedCounters = new DataTable("delay_counters", true);
-			d_delayedCounters.IntegerType = true;
-			
+
 			d_delayedCountersSize = new DataTable("delayed_counters_size", true);
-			d_delayedCountersSize.IntegerType = true;
 			d_delayedCountersSize.IsConstant = true;
 
 			d_equations = equations;
@@ -274,10 +282,10 @@ namespace Cdn.RawC.Programmer
 					DelayedState.Size size = ds.Count;
 
 					d_delayedCounters.Add(size).Type = DataTable.DataItem.Flags.Counter;
-					d_delayedCounters.MaxSize = size - 1;
+					d_delayedCounters.IntegerTypeSize = size;
 
 					d_delayedCountersSize.Add((uint)size).Type = DataTable.DataItem.Flags.Size;
-					d_delayedCountersSize.MaxSize = size;
+					d_delayedCountersSize.IntegerTypeSize = size;
 
 					var dt = new DataTable(String.Format("delay_{0}", d_delayHistoryTables.Count), true);
 
@@ -298,12 +306,30 @@ namespace Cdn.RawC.Programmer
 				d_statetable.AddAlias(st, st.Object);
 			}
 
+			foreach (var kv in Knowledge.Instance.EventStatesMap)
+			{
+				d_eventStates.Add(kv.Key);
+
+				if (kv.Key.State != null)
+				{
+					var idx = kv.Value.States.IndexOf(kv.Key.State);
+					d_initialEventStates.Add((uint)(idx + 1));
+				}
+				else
+				{
+					d_initialEventStates.Add((uint)0);
+
+				}
+			}
+
+			d_eventStates.IntegerTypeSize = (ulong)Knowledge.Instance.EventStates.Count;
+			d_initialEventStates.IntegerTypeSize = (ulong)Knowledge.Instance.EventStates.Count;
+
 			if (Cdn.RawC.Options.Instance.Validate)
 			{
 				d_randSeedTable = new DataTable("rand_seeds", true);
 				d_randSeedTable.IsConstant = true;
-				d_randSeedTable.IntegerType = true;
-				d_randSeedTable.MaxSize = UInt32.MaxValue - 1;
+				d_randSeedTable.IntegerTypeSize = UInt32.MaxValue - 1;
 
 				foreach (State r in Knowledge.Instance.RandStates)
 				{
@@ -561,11 +587,9 @@ namespace Cdn.RawC.Programmer
 		
 		private Computation.Loop CreateLoop(LoopData loop)
 		{
-			DataTable dt = new DataTable(String.Format("ssi_{0}", d_indexTables.Count), true, loop.Function.NumArguments + 1);
-			
+			DataTable dt = new DataTable(String.Format("ssi_{0}", d_indexTables.Count), true, loop.Function.NumArguments + 1);		
 			dt.IsConstant = true;
-			dt.IntegerType = true;
-			
+
 			d_indexTables.Add(dt);
 
 			Computation.Loop ret = new Computation.Loop(this, dt, loop.Embedding, loop.Function);
@@ -749,7 +773,7 @@ namespace Cdn.RawC.Programmer
 
 			if (dtzero)
 			{
-				dteq = new Tree.Node(null, new InstructionNumber("0"));
+				dteq = d_zeroNumberExpression;
 			}
 			else
 			{
@@ -779,6 +803,11 @@ namespace Cdn.RawC.Programmer
 
 		private void ProgramDependencies(Computation.IBlock api, DependencyFilter deps, string comment)
 		{
+			ProgramDependencies(api, deps, comment, null);
+		}
+
+		private void ProgramDependencies(Computation.IBlock api, DependencyFilter deps, string comment, List<State> ret)
+		{
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
 				if (grp.Count > 0)
@@ -788,7 +817,14 @@ namespace Cdn.RawC.Programmer
 						api.Body.Add(new Computation.Comment(comment));
 					}
 
-					api.Body.AddRange(AssignmentStates(grp, grp.Embedding));
+					var eq = AssignmentStates(grp, grp.Embedding);
+
+					if (ret != null)
+					{
+						ret.AddRange(grp);
+					}
+
+					api.Body.AddRange(eq);
 					api.Body.Add(new Computation.Empty());
 				}
 			}
@@ -894,10 +930,19 @@ namespace Cdn.RawC.Programmer
 				if (deps.Count > 0)
 				{
 					var cond = new Computation.StateConditional(grp);
+					List<State> conds = new List<State>();
 				
 					ProgramDependencies(cond,
 					                    deps,
-					                    "Dependencies of event state dependent derivatives that depend on states");
+					                    "Dependencies of event state dependent derivatives that depend on states",
+					                    conds);
+
+					// Set the "Else" of the state conditional to clear all
+					// state diffs to 0 when event is not begin active
+					foreach (var s in conds)
+					{
+						cond.Else.Add(new Computation.Assignment(s, d_statetable[s], d_zeroNumberExpression));
+					}
 
 					d_apiPreDiff.Body.Add(cond);
 					d_apiPreDiff.Body.Add(new Computation.Empty());
@@ -923,19 +968,28 @@ namespace Cdn.RawC.Programmer
 			if (d_apiTDT.Body.Count > 0)
 			{
 				// Call calculate t/dt integrated dependencies
-				var data = new Tree.Node(null, new Instructions.Variable("data"));
-				d_apiDiff.Body.Add(new Computation.CallAPI(d_apiTDT, data));
+				d_apiDiff.Body.Add(new Computation.CallAPI(d_apiTDT));
 			}
 
 			foreach (var grp in Knowledge.Instance.EventStateGroups)
 			{
 				var cond = new Computation.StateConditional(grp);
 				var eq = new DependencyFilter(d_dependencyGraph, grp.States);
+				var conds = new List<State>();
 
-				ProgramDependencies(cond, eq, "Calculate event state dependent derivatives");
+				ProgramDependencies(cond, eq, "Calculate event state dependent derivatives", conds);
+
+				// Set the "Else" of the state conditional to clear all
+				// state diffs to 0 when event is not begin active
+				foreach (var s in conds)
+				{
+					cond.Else.Add(new Computation.Assignment(s, d_statetable[s], d_zeroNumberExpression));
+				}
 
 				d_apiDiff.Body.Add(cond);
 				d_apiDiff.Body.Add(new Computation.Empty());
+
+				d_apiDiff.NeedsEventStates = true;
 			}
 			
 			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
@@ -1034,11 +1088,11 @@ namespace Cdn.RawC.Programmer
 
 		private void ProgramPrepare()
 		{
-			ProgramSetTDT(d_apiPrepare, true);
-
 			d_apiPrepare.Body.Add(new Computation.Comment("Prepare data"));
 			d_apiPrepare.Body.Add(new Computation.ZeroMemory());
 			d_apiPrepare.Body.Add(new Computation.Empty());
+
+			ProgramSetTDT(d_apiPrepare, true);
 
 			var rands = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
 
@@ -1053,6 +1107,16 @@ namespace Cdn.RawC.Programmer
 			d_apiPrepare.Body.Add(new Computation.Comment("Copy constants"));
 			d_apiPrepare.Body.Add(new Computation.CopyTable(d_constants, d_statetable, 0, d_statetable.Size, -1));
 			d_apiPrepare.Body.Add(new Computation.Empty());
+
+			// Set initial states if needed
+			if (d_eventStates.Count > 0)
+			{
+				d_apiPrepare.NeedsEventStates = true;
+			
+				d_apiPrepare.Body.Add(new Computation.Comment("Copy initial event states"));
+				d_apiPrepare.Body.Add(new Computation.CopyTable(d_initialEventStates, d_eventStates, -1));
+				d_apiPrepare.Body.Add(new Computation.Empty());
+			}
 
 			// Initialize _IN_
 			var ins = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.PrepareStates);
@@ -1165,18 +1229,15 @@ namespace Cdn.RawC.Programmer
 			}
 
 			ProgramDependencies(d_apiInit, depontimeLeft, "Finally, compute values that depended on t/dt or delays");
-
-			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
-			d_apiInit.Body.Add(new Computation.CallAPI(d_apiEvents, ss));
+			d_apiInit.Body.Add(new Computation.CallAPI(d_apiEvents));
 		}
 
 		private void ProgramReset()
 		{
-			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
 			var t = new Tree.Node(null, new Instructions.Variable("t"));
 
-			d_apiReset.Body.Add(new Computation.CallAPI(d_apiPrepare, ss, t));
-			d_apiReset.Body.Add(new Computation.CallAPI(d_apiInit, ss, t));
+			d_apiReset.Body.Add(new Computation.CallAPI(d_apiPrepare, t));
+			d_apiReset.Body.Add(new Computation.CallAPI(d_apiInit, t));
 		}
 
 		private void ProgramEvents()
@@ -1184,8 +1245,7 @@ namespace Cdn.RawC.Programmer
 			var eq = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
 			ProgramDependencies(d_apiEvents, eq, "Event conditions");
 
-			var ss = new Tree.Node(null, new Instructions.Variable(d_statetable.Name));
-			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsDistance, ss));
+			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsDistance));
 
 			foreach (var ev in Knowledge.Instance.Events)
 			{
@@ -1249,6 +1309,7 @@ namespace Cdn.RawC.Programmer
 				}
 
 				yield return d_constants;
+				yield return d_initialEventStates;
 			}
 		}
 		
@@ -1266,6 +1327,16 @@ namespace Cdn.RawC.Programmer
 			{
 				return d_delayedCountersSize;
 			}
+		}
+
+		public DataTable EventStatesTable
+		{
+			get { return d_eventStates; }
+		}
+
+		public DataTable InitialEventStatesTable
+		{
+			get { return d_initialEventStates; }
 		}
 	}
 }

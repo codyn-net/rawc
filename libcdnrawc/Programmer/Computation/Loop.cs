@@ -34,12 +34,26 @@ namespace Cdn.RawC.Programmer.Computation
 			}
 		}
 
+		public class Mapped
+		{
+			public Tree.Node Node;
+			public DataTable IndexTable;
+			public int Index;
+
+			public Mapped(Tree.Node node, DataTable table, int index)
+			{
+				Node = node;
+				IndexTable = table;
+				Index = index;
+			}
+		}
+
 		private Function d_function;
 		private List<Item> d_items;
 		private DataTable d_indextable;
 		private Tree.Node d_expression;
 		private Tree.Embedding d_embedding;
-		private Dictionary<Tree.NodePath, string> d_mapping;
+		private Dictionary<Tree.NodePath, object> d_mapping;
 		private Program d_program;
 
 		public Loop(Program program, DataTable indextable, Tree.Embedding embedding, Function function)
@@ -55,7 +69,7 @@ namespace Cdn.RawC.Programmer.Computation
 			d_expression.Instruction = new Instructions.Function(d_function);
 			
 			// Generate mapping
-			d_mapping = new Dictionary<Tree.NodePath, string>();
+			d_mapping = new Dictionary<Tree.NodePath, object>();
 		}
 
 		public DataTable IndexTable
@@ -70,12 +84,9 @@ namespace Cdn.RawC.Programmer.Computation
 			}
 		}
 		
-		public Dictionary<Tree.NodePath, string> Mapping
+		public Dictionary<Tree.NodePath, object> Mapping
 		{
-			get
-			{
-				return d_mapping;
-			}
+			get { return d_mapping; }
 		}
 		
 		public List<Item> Items
@@ -108,7 +119,7 @@ namespace Cdn.RawC.Programmer.Computation
 			
 			// Add row to index table
 			d_indextable.Add(new Index((ulong)target.DataIndex, target));
-			d_indextable.MaxSize = (ulong)target.DataIndex;
+			d_indextable.IntegerTypeSize = (ulong)target.DataIndex;
 			
 			foreach (Tree.Embedding.Argument arg in d_function.OrderedArguments)
 			{
@@ -117,7 +128,7 @@ namespace Cdn.RawC.Programmer.Computation
 				DataTable.DataItem it = d_program.StateTable[subnode];
 				
 				d_indextable.Add(new Index((ulong)it.DataIndex, it)).Type = (it.Type | DataTable.DataItem.Flags.Index);
-				d_indextable.MaxSize = (ulong)it.DataIndex;
+				d_indextable.IntegerTypeSize = (ulong)it.DataIndex;
 			}
 		}
 		
@@ -209,25 +220,11 @@ namespace Cdn.RawC.Programmer.Computation
 					break;
 				}
 			}
-			
+
 			foreach (Tree.Embedding.Argument arg in d_function.Arguments)
 			{
 				var node = d_function.Expression.FromPath(arg.Path);
-				
-				if (node.Dimension.IsOne)
-				{
-					d_mapping[arg.Path] = String.Format("{0}[{1}[i][{2}]]",
-					                                    d_program.StateTable.Name,
-					                                    d_indextable.Name,
-					                                    FromMap(indexmap, (int)arg.Index + 1));
-				}
-				else
-				{
-					d_mapping[arg.Path] = String.Format("({0} + {1}[i][{2}])",
-					                                    d_program.StateTable.Name,
-					                                    d_indextable.Name,
-					                                    FromMap(indexmap, (int)arg.Index + 1));
-				}
+				d_mapping[arg.Path] = new Mapped(node, d_indextable, FromMap(indexmap, (int)arg.Index + 1));
 			}
 		}
 	}

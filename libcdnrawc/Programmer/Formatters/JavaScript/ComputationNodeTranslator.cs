@@ -18,7 +18,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			foreach (Computation.Rand.IndexRange range in node.Ranges(context.Program.StateTable))
 			{
 				ret.AppendFormat("\tfor ({0} = {1}; i <= {2}; ++i)",
-				                 DeclareValueVariable("int", "i", context),
+				                 context.DeclareValueVariable("int", "i"),
 				                 range.Start,
 				                 range.End);
 
@@ -26,7 +26,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				ret.AppendLine("\t{");
 
 				ret.AppendFormat("\t\t{0}[i] = Cdn.Math.rand();",
-				                 context.Program.StateTable.Name);
+				                 context.This(context.Program.StateTable));
 				ret.AppendLine();
 				ret.AppendLine("\t}");
 			}
@@ -36,32 +36,16 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			return ret.ToString();
 		}
 
-		protected override string BeginBlock
+		protected override string Translate(Computation.ZeroMemory node, CLike.Context context)
 		{
-			get { return "function() {"; }
-		}
-
-		protected override string EndBlock
-		{
-			get { return "}();"; }
-		}
-
-		protected override string APIName(Computation.CallAPI node, CLike.Context context)
-		{
-			return "this." + node.Function.Name;
-		}
-
-		protected override string DeclareValueVariable(string type, string name, CLike.Context context)
-		{
-			return String.Format("var {0}", name);
-		}
-
-		protected override string DeclareArrayVariable(string type, string name, int size, CLike.Context context)
-		{
-			return String.Format("var {0} {1}[{2}] = {3}",
-			                     DeclareValueVariable("ValueType", name, context),
-			                     size,
-			                     Context.ZeroArrayOfSize(size));
+			if (node.Name == null)
+			{
+				return "this._clear_data();";
+			}
+			else
+			{
+				return base.Translate(node, context);
+			}
 		}
 	}
 }

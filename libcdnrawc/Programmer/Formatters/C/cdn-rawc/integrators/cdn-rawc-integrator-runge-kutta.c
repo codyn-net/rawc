@@ -1,4 +1,5 @@
 #include "cdn-rawc-integrator-runge-kutta.h"
+#include <string.h>
 
 static void diff (CdnRawcIntegrator *integrator,
                   CdnRawcNetwork    *network,
@@ -6,15 +7,9 @@ static void diff (CdnRawcIntegrator *integrator,
                   ValueType          t,
                   ValueType          dt);
 
-static void step (CdnRawcIntegrator *integrator,
-                  CdnRawcNetwork    *network,
-                  void              *data,
-                  ValueType          t,
-                  ValueType          dt);
-
 static CdnRawcIntegratorRungeKutta integrator_class = {
 	{
-		step,
+		NULL,
 		diff,
 		CDN_RAWC_INTEGRATOR_RUNGE_KUTTA_ORDER
 	}
@@ -27,49 +22,91 @@ cdn_rawc_integrator_runge_kutta ()
 }
 
 static void
-update (CdnRawcNetwork *network,
-        ValueType      *data,
-        uint32_t        order,
-        ValueType       norm)
+update (CdnRawcNetwork    *network,
+        void              *data,
+        uint32_t           n,
+        double             factor)
 {
-	/*uint32_t i;
-	uint32_t offset;
+	ValueType *current_state;
+	ValueType *current_deriv;
+	ValueType *next_deriv;
+	ValueType *prev_deriv;
+	ValueType *stored_state;
 	uint32_t num;
-
-	ValueType *states;
-	ValueType *stateswr;
-	ValueType *derivatives;
-
-	offset = (order - 1) * network->data_size;
-
-	states = data + network->states.start;
-	derivatives = data + network->derivatives.start + offset;
-
-	stateswr = data + network->states.start + offset + network->data_size;
+	uint32_t i;
 
 	num = network->states.end - network->states.start;
 
+	if (num == 0)
+	{
+		return;
+	}
+
+	current_state = network->get_states (data);
+	current_deriv = network->get_derivatives (data);
+
+	// Original states are always stored in the first extra data segment
+	stored_state = network->get_states (network->get_nth (data, 1));
+
+	next_deriv = network->get_derivatives (network->get_nth (data, n + 1));
+	prev_deriv = network->get_derivatives (network->get_nth (data, n));
+
 	for (i = 0; i < num; ++i)
 	{
-		stateswr[i] = states[i] + norm * derivatives[i];
-	}*/
+		// Store state
+		next_deriv[i] = current_deriv[i];
+
+		// Prepare next state
+		current_state[i] = stored_state[i] + factor * current_deriv[i];
+	}
 }
+
 static void
-step (CdnRawcIntegrator *integrator,
-      CdnRawcNetwork    *network,
-      void              *data,
-      ValueType          t,
-      ValueType          dt)
+update_total (CdnRawcNetwork *network,
+              void           *data,
+              ValueType       dt)
 {
-	/*ValueType hdt = 0.5 * dt;
+	ValueType *current_state;
+	ValueType *current_deriv;
+	ValueType *stored_state;
+	ValueType *k1;
+	ValueType *k2;
+	ValueType *k3;
+	ValueType *k4;
+	uint32_t num;
+	uint32_t i;
+	double f1;
+	double f2;
 
-	// Precompute step
-	network->pre (data, t, hdt);
+	num = network->states.end - network->states.start;
 
-	// Compute first diff
-	network->diff (data, t, hdt);
+	if (num == 0)
+	{
+		return;
+	}
 
-	diff (integrator, network, data, t, dt);*/
+	current_state = network->get_states (data);
+	current_deriv = network->get_derivatives (data);
+
+	// Original states are always stored in the first extra data segment
+	stored_state = network->get_states (network->get_nth (data, 1));
+
+	k1 = network->get_derivatives (network->get_nth (data, 1));
+	k2 = network->get_derivatives (network->get_nth (data, 2));
+	k3 = network->get_derivatives (network->get_nth (data, 3));
+	k4 = current_deriv;
+
+	f1 = dt / 6.0;
+	f2 = dt / 3.0;
+
+	for (i = 0; i < num; ++i)
+	{
+		current_state[i] = stored_state[i] +
+		                   f1 * k1[i] +
+		                   f2 * k2[i] +
+		                   f2 * k3[i] +
+		                   f1 * k4[i];
+	}
 }
 
 static void
@@ -79,36 +116,37 @@ diff (CdnRawcIntegrator *integrator,
       ValueType          t,
       ValueType          dt)
 {
-	/*uint32_t i;
-	ValueType *states;
-	ValueType *stateswr;
-	ValueType *derivatives;
-	ValueType hdt;
+	uint32_t i;
+	double hdt = 0.5 * dt;
 
-	states = data + network->states.start;
-	derivatives = data + network->derivatives.start;
+	// First, store original states in the next data segment
+	memcpy (network->get_states (network->get_nth (data, 1)),
+	        network->get_states (data),
+	        sizeof(ValueType) * (network->states.end - network->states.start));
 
-	hdt = 0.5 *dt;
+	// Then, store derivatives, K1, which are already computed before this
+	// function is called (see cdn_rawc_integrator_step) and update
+	// current states for the next diff
+	update (network, data, 0, hdt);
 
-	// K1: dy_1 = df(y_0, t, 0.5 * dt)
-	//      y_1 = y_0 + dy_1 * 0.5 * dt
-	// note first diff is already computed here
-	update (network, data->data, 1, hdt);
+	// Calculate next diff, K2
+	network->prediff (data);
+	network->diff (data, t + hdt, hdt);
 
-	// K2: dy_2 = df(y_1, t + 0.5 * dt, 0.5 * dt)
-	//      y_2 = y_0 + dy_2 * 0.5 * dt
-	network->diff (CDN_RAWC_INTEGRATOR_NTH_DATA (network, data, 1), t + hdt, hdt);
-	update (network, data->data, 2, hdt);
+	// Store derivatives for K2
+	update (network, data, 1, hdt);
 
-	// K3: dy_3 = df(y_2, t + 0.5 * dt, 0.5 * dt)
-	//      y_3 = y_0 + dy_3 * dt
-	network->diff (CDN_RAWC_INTEGRATOR_NTH_DATA (network, data, 2), t + hdt, hdt);
-	update (network, data->data, 3, dt);
+	// Calculate next diff, K3
+	network->prediff (data);
+	network->diff (data, t + hdt, hdt);
 
-	// K4: dy_4 = df(y_3, t + dt, dt)
-	network->diff (data, t + dt, dt);
+	// Store derivatives for K3
+	update (network, data, 2, dt);
 
-	// TODO stuff
+	// Calculate next diff, K4
+	network->prediff (data);
+	network->diff (data, t + dt, hdt);
 
-	network->post (data, t + dt, dt);*/
+	// Update total derivative
+	update_total (network, data, dt);
 }

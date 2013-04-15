@@ -28,7 +28,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		private Program d_program;
 		private Tree.Node d_root;
 		private Stack<Item> d_stack;
-		private Dictionary<Tree.NodePath, string> d_mapping;
+		private Dictionary<Tree.NodePath, object> d_mapping;
 		private Options d_options;
 		private List<Temporary> d_tempstorage;
 		private Dictionary<Tree.Node, int> d_tempactive;
@@ -40,7 +40,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 		}
 
-		public Context(Program program, Options options, Tree.Node node, Dictionary<Tree.NodePath, string> mapping)
+		public Context(Program program, Options options, Tree.Node node, Dictionary<Tree.NodePath, object> mapping)
 		{
 			d_program = program;
 			d_options = options;
@@ -54,7 +54,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 			else
 			{
-				d_mapping = new Dictionary<Tree.NodePath, string>();
+				d_mapping = new Dictionary<Tree.NodePath, object>();
 			}
 			
 			d_tempstorage = new List<Temporary>();
@@ -173,9 +173,9 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 		}
 
-		protected virtual Context Clone()
+		protected Context Clone()
 		{
-			return new Context(d_program, d_options);
+			return Clone(d_program, d_options);
 		}
 
 		public Context Base()
@@ -248,10 +248,48 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			get { return d_options; }
 		}
 		
-		public bool TryMapping(Tree.Node node, out string ret)
+		public virtual bool TryMapping(Tree.Node node, out string ret)
 		{
 			Tree.NodePath path = node.RelPath(d_root);
-			return d_mapping.TryGetValue(path, out ret);
+
+			object o;
+
+			if (d_mapping.TryGetValue(path, out o))
+			{
+				var li = o as Computation.Loop.Mapped;
+
+				if (li != null)
+				{
+					var t = This(d_program.StateTable);
+					var i = This(li.IndexTable);
+
+					if (li.Node.Dimension.IsOne)
+					{
+						ret = String.Format("{0}[{1}[i][{2}]]",
+						                    t, i, li.Index);
+					}
+					else if (SupportsPointers)
+					{
+						ret = String.Format("({0} + {1}[i][{2}])",
+						                    t, i, li.Index);
+					}
+					else
+					{
+						throw new Exception("Loop substitutes requiring pointers are not supported yet in this format.");
+					}
+				}
+				else
+				{
+					ret = o.ToString();
+				}
+
+				return true;
+			}
+			else
+			{
+				ret = "";
+				return false;
+			}
 		}
 		
 		public virtual string MathFunction(Tree.Node node)
@@ -429,11 +467,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return val;
 		}
 		
-		public Dictionary<Tree.NodePath, string> Mapping
-		{
-			get { return d_mapping; }
-		}
-
 		private static int IndentCount(string s)
 		{
 			int i;
@@ -489,6 +522,51 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			return String.Join("\n", lines);
+		}
+
+		public virtual string ArraySlice(string v, string start, string end)
+		{
+			throw new Exception("Taking a slice of an array is not supported for this format.");
+		}
+
+		public virtual string ArraySliceIndices(string v, int[] indices)
+		{
+			throw new Exception("Taking a slice of indices of an array is not supported for this format.");
+		}
+
+		public virtual string ArrayConcat(string[] arrays)
+		{
+			throw new Exception("Taking a slice of indices of an array is not supported for this format.");
+		}
+
+		public virtual string BeginBlock
+		{
+			get { return "{"; }
+		}
+
+		public virtual string EndBlock
+		{
+			get { return "}"; }
+		}
+
+		public virtual string BeginComment
+		{
+			get { return "/*"; }
+		}
+
+		public virtual string EndComment
+		{
+			get { return "*/"; }
+		}
+
+		public virtual string BeginArray
+		{
+			get { return "["; }
+		}
+
+		public virtual string EndArray
+		{
+			get { return "]"; }
 		}
 
 		public string AddedIndex(DataTable.DataItem item, int added)
@@ -547,12 +625,27 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return builder.ToString();
 		}
 
+		public virtual string ThisCall(string name)
+		{
+			return This(name);
+		}
+
 		public virtual string This(string name)
 		{
 			return name;
 		}
 
+		public virtual string This(DataTable table)
+		{
+			return table.Name;
+		}
+
 		public virtual bool SupportsPointers
+		{
+			get { return false; }
+		}
+
+		public virtual bool SupportsFirstClassArrays
 		{
 			get { return false; }
 		}
@@ -565,6 +658,57 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		public virtual string MemZero(string dest, string destStart, string type, int nelem)
 		{
 			throw new Exception("Memzero is not available for this format...");
+		}
+
+		public Context Clone(Program program, Options options)
+		{
+			return Clone(program, options, null, null);
+		}
+
+		public virtual Context Clone(Program program, Options options, Tree.Node node, Dictionary<Tree.NodePath, object> mapping)
+		{
+			return new Context(program, options, node, mapping);
+		}
+
+		public virtual string TranslateNumber(double number)
+		{
+			var val = number.ToString("0." + new String('0', 15));
+
+			val = val.TrimEnd('0');
+
+			if (val.EndsWith("."))
+			{
+				val += "0";
+			}
+
+			return val;
+		}
+
+		protected Dictionary<Tree.NodePath, object> Mapping
+		{
+			get { return d_mapping; }
+		}
+
+		public virtual string DeclareValueVariable(string type, string name)
+		{
+			return String.Format("{0} {1}", type, name);
+		}
+
+		public virtual string DeclareArrayVariable(string type, string name, int size)
+		{
+			return String.Format("{0}[{1}]",
+				               DeclareValueVariable("ValueType", name),
+				               size);
+		}
+
+		public virtual string APIName(Computation.CallAPI node)
+		{
+			return ThisCall(node.Function.Name);
+		}
+
+		public virtual string FunctionCallName(Programmer.Function function)
+		{
+			return ThisCall(function.Name);
 		}
 	}
 }

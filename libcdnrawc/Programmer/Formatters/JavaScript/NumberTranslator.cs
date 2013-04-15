@@ -1,6 +1,6 @@
 using System;
 
-namespace Cdn.RawC.Programmer.Formatters.C
+namespace Cdn.RawC.Programmer.Formatters.JavaScript
 {
 	public class NumberTranslator : DynamicVisitor
 	{
@@ -15,27 +15,15 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 		}
 
-		private static string SpecifierFromContext(Context context)
-		{
-			if (context != null && ((Options)context.Options).ValueType == "float")
-			{
-				return "f";
-			}
-			else
-			{
-				return "";
-			}
-		}
-
 		public static string Translate(double number, int precision, Context context)
 		{
 			if (Double.IsNaN(number))
 			{
-				return "NAN";
+				return "Number.NaN";
 			}
 			else if (Double.IsInfinity(number))
 			{
-				return "INFINITY";
+				return "Number.POSITIVE_INFINITY";
 			}
 			else if (precision == 0)
 			{
@@ -49,87 +37,56 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		public static string Translate(double number, Context context)
 		{
-			string vt;
-
-			if (context != null)
-			{
-				vt = ((Options)context.Options).ValueType;
-			}
-			else
-			{
-				vt = "double";
-			}
-
 			if (Double.IsNaN(number))
 			{
-				return "NAN";
+				return "Number.NaN";
 			}
 			else if (Double.IsPositiveInfinity(number))
 			{
-				return "INFINITY";
+				return "Number.POSITIVE_INFINITY";
 			}
 			else if (Double.IsNegativeInfinity(number))
 			{
-				return "-INFINITY";
+				return "Number.NEGATIVE_INFINITY";
 			}
 			else if (number == Double.MaxValue)
 			{
-				if (vt == "float")
-				{
-					return "FLT_MAX";
-				}
-				else
-				{
-					return "DBL_MAX";
-				}
+				return "Number.MAX_VALUE";
 			}
 			else if (number == Double.MinValue)
 			{
-				if (vt == "float")
-				{
-					return "-FLT_MAX";
-				}
-				else
-				{
-					return "-DBL_MAX";
-				}
+				return "-Number.MAX_VALUE";
 			}
 			else if (number == Double.Epsilon)
 			{
-				if (vt == "float")
-				{
-					return "FLT_MIN";
-				}
-				else
-				{
-					return "DBL_MIN";
-				}
+				return "Number.MIN_VALUE";
 			}
 			else if (number == -Double.Epsilon)
 			{
-				if (vt == "float")
-				{
-					return "-FLT_MIN";
-				}
-				else
-				{
-					return "-DBL_MIN";
-				}
+				return "-Number.MIN_VALUE";
 			}
 			else if (number == System.Math.PI)
 			{
-				return "M_PI";
+				return "Math.PI";
 			}
 			else if (number == -System.Math.PI)
 			{
-				return "-M_PI";
+				return "-Math.PI";
+			}
+			else if (number == System.Math.E)
+			{
+				return "Math.E";
+			}
+			else if (number == -System.Math.E)
+			{
+				return "-Math.E";
 			}
 
 			string val = Translate(number, 15, context);
 
 			if (val.IndexOf('.') == -1)
 			{
-				return val + ".0" + SpecifierFromContext(context);
+				return val + ".0";
 			}
 			else
 			{
@@ -140,7 +97,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					val += "0";
 				}
 
-				return val + SpecifierFromContext(context);
+				return val;
 			}
 		}
 
@@ -152,9 +109,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				string val = ((InstructionNumber)instructions[0]).Representation;
 
-				if (val == "pi")
+				if (val.ToLower() == "pi")
 				{
-					return "M_PI";
+					return "Math.PI";
+				}
+				else if (val.ToLower() == "e")
+				{
+					return "Math.E";
 				}
 
 				int pos = val.IndexOf('.');
@@ -170,16 +131,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			return Translate(property.Value, context);
-		}
-		
-		private string DoTranslate(double number, Context context)
-		{
-			return Translate(number, context);
-		}
-		
-		private string DoTranslate(Cdn.Variable property, Context context)
-		{
-			return Translate(property, context);
 		}
 	}
 }

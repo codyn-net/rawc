@@ -1,5 +1,6 @@
 #include "cdn-rawc-integrator.h"
 #include <string.h>
+#include <stdio.h>
 
 void
 cdn_rawc_integrator_step (CdnRawcIntegrator *integrator,
@@ -22,7 +23,7 @@ cdn_rawc_integrator_step (CdnRawcIntegrator *integrator,
 
 	if (network->event_refinement)
 	{
-		// Store state in last data
+		// Store state in last data reserved for events data
 		void *storage = network->get_nth (data, integrator->order);
 
 		current_state = network->get_data (data);

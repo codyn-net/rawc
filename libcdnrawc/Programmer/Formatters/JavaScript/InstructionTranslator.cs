@@ -11,16 +11,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		
 		protected override string Translate(InstructionNumber instruction, CLike.Context context)
 		{
-			if (instruction.Representation.ToLower() == "pi")
-			{
-				return "Math.PI";
-			}
-			else if (instruction.Representation.ToLower() == "e")
-			{
-				return "Math.E";
-			}
-
-			return base.Translate(instruction, context);
+			return NumberTranslator.Translate(instruction.Value, (Context)context);
 		}
 		
 		protected override string TranslateOperator(InstructionFunction instruction, CLike.Context context)
@@ -44,11 +35,6 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 
 			return val;
-		}
-
-		protected override string FunctionCallName(Programmer.Function function, CLike.Context context)
-		{
-			return "this." + function.Name;
 		}
 	}
 }

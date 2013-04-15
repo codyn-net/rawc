@@ -241,8 +241,10 @@ namespace Cdn.RawC
 			}
 		}
 
-		private void ExtractEventActionStates(Cdn.Variable v)
+		private List<State> ExtractEventActionStates(Cdn.Variable v)
 		{
+			var ret = new List<State>();
+
 			foreach (Cdn.EdgeAction action in v.Actions)
 			{
 				var ph = action.Phases;
@@ -257,8 +259,7 @@ namespace Cdn.RawC
 					d_eventActionProperties[action] = nv;
 
 					var evst = new EventActionState(action, nv);
-
-					AddState(null, evst);
+					ret.Add(evst);
 
 					HashSet<string> hs;
 
@@ -314,6 +315,8 @@ namespace Cdn.RawC
 					}
 				}
 			}
+
+			return ret;
 		}
 
 		public EventState GetEventState(Cdn.Node parent, string state)
@@ -331,10 +334,11 @@ namespace Cdn.RawC
 
 			// Add integrated state variables
 			var integrated = Knowledge.Instance.FlaggedVariables(VariableFlags.Integrated);
+			var evstates = new List<State>();
 
 			foreach (var v in integrated)
 			{
-				ExtractEventActionStates(v);
+				evstates.AddRange(ExtractEventActionStates(v));
 
 				var st = new State(v, null);
 
@@ -362,6 +366,12 @@ namespace Cdn.RawC
 				d_states.Add(st);
 				d_derivativeStates.Add(st);
 				d_derivativeMap[v] = st;
+			}
+
+			// Add states for the event partials
+			foreach (var s in evstates)
+			{
+				AddState(null, s);
 			}
 
 			// Add in variables

@@ -92,7 +92,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			if (node.Dimension.IsOne)
 			{
-				return String.Format("{0}[0] = {1}", assignto, Translate(context, node));
+				return String.Format("({0})[0] = {1}", assignto, Translate(context, node));
 			}
 			else
 			{
@@ -278,15 +278,25 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				Cdn.Dimension dim;
 				int[] slice = instruction.GetSlice(out dim);
-				
-				return String.Format("{0}[{1}]",
-				                     context.This(context.Program.StateTable.Name),
-				                     context.AddedIndex(item, slice[0]));
+
+				if (context.SupportsFirstClassArrays)
+				{
+					return String.Format("{0}[{1}][{2}]",
+					                     context.This(context.Program.StateTable),
+					                     item.AliasOrIndex,
+					                     slice[0]);
+				}
+				else
+				{
+					return String.Format("{0}[{1}]",
+					                     context.This(context.Program.StateTable),
+					                     context.AddedIndex(item, slice[0]));
+				}
 			}
 			else
 			{
 				return String.Format("{0}[{1}]",
-				                     context.This(context.Program.StateTable.Name),
+				                     context.This(context.Program.StateTable),
 				                     item.AliasOrIndex);
 			}
 		}
@@ -300,7 +310,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var item = context.Program.StateTable[instruction];
 
 				val = String.Format("{0}[{1}]",
-				                    context.This(context.Program.StateTable.Name),
+				                    context.This(context.Program.StateTable),
 				                    item.AliasOrIndex);
 			}
 
@@ -353,7 +363,43 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			return Translate(instruction, context);
 		}
-		
+
+		/*
+		 * Translate an index instruction. The index instruction contains the
+		 * indices of the slice it should return inside the instruction. The
+		 * expression to index is the first child of the current context node.
+		 * 
+		 * This method allocates a temporary storage for the result of the
+		 * expression to index of necessary. This is necessary if:
+		 * 
+		 * 1. The expression is multidimensional AND
+		 * 2. The expression is not already stored in global network memory
+		 * 
+		 * The second condition holds for example for variables which are in
+		 * the state table. In addition, for languages that support first class
+		 * arrays, a temporary variable never needs to be allocated since the
+		 * results of the expression are simply stored in an array on the
+		 * stack, allocated by the return result of the expression.
+		 * 
+		 * If the result of the indexing is multidimensional, then there are
+		 * two separate cases.
+		 * 
+		 * 1. The indexing operation is a simple _offset_ + length in the
+		 *    expression (i.e. a slice of adjacent elements)
+		 * 2. The indexing operation indexes randomly
+		 * 
+		 * The following conditions determine how to deal with these cases:
+		 *
+		 * 1. Return value of indexing needs to be stored in temporary
+		 *    1.1 Use language specific memcpy to copy the result to the temporary
+		 *    1.2 Assign each element to the temporary using comma operators
+		 * 2. SupportsPointers
+		 *    2.1 Add offset to child expression pointer
+		 *    2.2 Case does not occur since temporary has been allocated for this case
+		 * 3. FirstClassArrays
+		 *    3.1 Use language specific array slice operation
+		 *    3.2 Use language specific array slice indices operation
+		 */
 		protected virtual string Translate(InstructionIndex instruction, Context context)
 		{
 			var child = context.Node.Children[0];
@@ -378,12 +424,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			
 			string ret = null;
 
+			// Check if the thing to index is just one thing, then we can
+			// directly return that thing
 			if (child.Dimension.IsOne)
 			{
 				context.RestoreTemporaryStack();
 				return toindex;
 			}
 
+			// Check if the result is just 1x1, then it must be an offset
 			if (context.Node.Dimension.IsOne)
 			{
 				ret = String.Format("({0})[{1}]", toindex, instruction.Offset);
@@ -407,9 +456,17 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					// Otherwise we can jsut return it
 					ret = String.Format("(({0}) + {1})", toindex, instruction.Offset);
 				}
+				else if (context.SupportsFirstClassArrays)
+				{
+					var size = context.Node.Dimension.Size();
+					ret = context.ArraySlice(toindex,
+					                         instruction.Offset.ToString(),
+					                         (instruction.Offset + size).ToString());
+				}
 				else
 				{
 					// TODO
+					throw new Exception("Don't know what to do without pointers.");
 				}
 			}
 			else
@@ -417,31 +474,52 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				// Too bad! Really just need to index here
 				var retvar = context.PeekRet();
 				var indices = instruction.Indices;
-				StringBuilder rets = new StringBuilder();
 
-				if (tmp != null)
+				if (retvar != null)
 				{
-					rets.Append(toindex);
-				}
-
-				for (int i = 0; i < indices.Length; ++i)
-				{
-					if (i != 0 || tmp != null)
+					StringBuilder rets = new StringBuilder();
+	
+					if (tmp != null)
 					{
-						rets.Append(", ");
+						rets.Append(toindex);
 					}
-
-					rets.AppendFormat("({0})[{1}] = ({2})[{3}]", retvar, i, tmp != null ? tmp : toindex, indices[i]);
+	
+					for (int i = 0; i < indices.Length; ++i)
+					{
+						if (i != 0 || tmp != null)
+						{
+							rets.Append(", ");
+						}
+	
+						rets.AppendFormat("({0})[{1}] = ({2})[{3}]", retvar, i, tmp != null ? tmp : toindex, indices[i]);
+					}
+	
+					ret = String.Format("({0}, {1})", rets.ToString(), retvar);
 				}
-
-				ret = String.Format("({0}, {1})", rets.ToString(), retvar);
+				else if (context.SupportsFirstClassArrays)
+				{
+					ret = context.ArraySliceIndices(toindex, indices);
+				}
+				else
+				{
+					throw new Exception("Can't random index without first class arrays support");
+				}
 			}
 			
 			context.RestoreTemporaryStack();
 
 			return ret;
 		}
-		
+
+		/*
+		 * Translates a call to a builtin math function. The InstructionFunction
+		 * is used both for operators and functions (they are treated equally).
+		 * 
+		 * If the instruction represents an operator, then we call
+		 * TranslateOperator which uses language specific available operators
+		 * to translate the instruction. Otherwise a function call is translated
+		 * to the language specific builtin math function.
+		 */
 		protected virtual string Translate(InstructionFunction instruction, Context context)
 		{
 			if (instruction.Id < (uint)Cdn.MathFunctionType.NumOperators)
@@ -450,7 +528,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			string[] args = new string[context.Node.Children.Count];
-			
+
+			// Translate function arguments
 			for (int i = 0; i < context.Node.Children.Count; ++i)
 			{
 				args[i] = Translate(context, i);
@@ -488,6 +567,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return String.Format("{0}({1})", name, String.Join(", ", args));
 		}
 
+		/*
+		 * Delay operator instructions are translated to a simple lookup in
+		 * the statetable where they delayed expressions are stored.
+		 */
 		protected virtual string TranslateDelayed(InstructionCustomOperator instruction, Context context)
 		{
 			OperatorDelayed delayed = (OperatorDelayed)instruction.Operator;
@@ -501,10 +584,16 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed, delay)];
 
 			return String.Format("{0}[{1}]",
-			                     context.This(context.Program.StateTable.Name),
+			                     context.This(context.Program.StateTable),
 			                     item.AliasOrIndex);
 		}
-		
+
+		/*
+		 * Support for custom operators which do not generate functions. 
+		 * Currently, the only operator supported here is the delay operator.
+		 * All other operators which currently exist generate functions which
+		 * are handled just like other custom functions.
+		 */
 		protected virtual string Translate(InstructionCustomOperator instruction, Context context)
 		{
 			var op = instruction.Operator;
@@ -518,14 +607,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			                                              op.ToString()));
 		}
 
-		protected virtual string FunctionCallName(Programmer.Function function, Context context)
-		{
-			return function.Name;
-		}
-		
+		/* Translate a call to a custom defined function. Custom defined functions
+		 * are handled similarly to builtin math functions with the exception
+		 * that for languages that do not support an implicit "this" variable,
+		 * the data is passed in as the first argument.
+		 */
 		protected virtual string Translate(Instructions.Function instruction, Context context)
 		{
-			string name = FunctionCallName(instruction.FunctionCall, context);
+			string name = context.FunctionCallName(instruction.FunctionCall);
 
 			List<string > args = new List<string>();
 
@@ -551,22 +640,55 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return String.Format("{0}({1})", name, String.Join(", ", args.ToArray()));
 		}
-		
+
+		/* Translate getting an item from the statetable. */
 		protected virtual string Translate(Instructions.State instruction, Context context)
 		{
 			return String.Format("{0}[{1}]",
-			                     context.This(instruction.Item.Table.Name),
+			                     context.This(instruction.Item.Table),
 			                     instruction.Item.AliasOrIndex);
 		}
-		
+
+		/* Translate a rawc variable instruction. There are two cases for variable
+		 * instructions.
+		 * 
+		 * 1. Member: in this case the variable is looked up in the language
+		 *    implicitly passed "this"
+		 * 2. Not member: just return the variable name.
+		 */
 		protected virtual string Translate(Instructions.Variable instruction, Context context)
 		{
-			return instruction.Name;
+			if (instruction.Member)
+			{
+				return context.This(instruction.Name);
+			}
+			else
+			{
+				return instruction.Name;
+			}
 		}
-		
+
+		/* Determine whether an instruction has an internal storage. This
+		 * is used to determine if temporary storage has to be allocated in
+		 * various places. If an instruction already has storage by itself
+		 * (e.g. in the statetable) then temporary storage does not need to
+		 * be allocated.
+		 * 
+		 * If the language supports first class arrays, then temporary storage
+		 * never needs to be allocated to store intermediate results. For other
+		 * languages however, temporary storage needs to be allocated for
+		 * anything that is multidimensional and does not have a representation
+		 * in the statetable. A special case is a InstructionVariable which
+		 * can optionally carry a slice. If there is such a slice and it is
+		 * not continuous, then the instruction does not have internal storage.
+		 */
 		private bool InstructionHasStorage(Cdn.Instruction instruction, Context context)
 		{
-			// TODO: check how this works without pointers
+			if (context.SupportsFirstClassArrays)
+			{
+				return true;
+			}
+
 			var v = instruction as Cdn.InstructionVariable;
 			
 			if (v != null)
@@ -592,36 +714,91 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return context.Program.StateTable.Contains(instruction);
 		}
 		
-		/* Translators for multidimension values */
+		/* 
+		 * Translators for multidimension values.
+		 * 
+		 * The following methods are called specifically for instructions
+		 * which have a multidimensional result.
+		 */
 		protected virtual string TranslateV(Cdn.InstructionMatrix instruction, Context context)
 		{
 			string[] args = new string[context.Node.Children.Count];
-			int argi = 0;
-			
-			var tmp = context.PeekRet();
 
-			for (int i = 0; i < context.Node.Children.Count; ++i)
+			if (context.SupportsFirstClassArrays)
 			{
-				var child = context.Node.Children[i];
-				
-				// Translate such that we compute the result of the child
-				// at the tmp + argi location
-				if (argi == 0)
+				bool allone = true;
+
+				// Simply concatenate the arrays
+				for (int i = 0; i < context.Node.Children.Count; ++i)
 				{
-					args[i] = TranslateAssign(context, child, String.Format("{0}", tmp));
+					args[i] = Translate(context, context.Node.Children[i]);
+
+					if (!context.Node.Children[i].Dimension.IsOne)
+					{
+						allone = false;
+					}
+				}
+
+				if (allone)
+				{
+					// Literal array
+					return String.Format("{0}{1}{2}",
+					                     context.BeginArray,
+					                     String.Join(", ", args),
+					                     context.EndArray);
 				}
 				else
 				{
-					// TODO: check how this works really
-					args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
-				}	
+					for (int i = 0; i < context.Node.Children.Count; ++i)
+					{
+						if (context.Node.Children[i].Dimension.IsOne)
+						{
+							args[i] = String.Format("{0}{1}{2}",
+							                        context.BeginArray,
+							                        args[i],
+							                        context.EndArray);
+						}
+					}
 
-				argi += child.Dimension.Size();
+					return context.ArrayConcat(args);
+				}
 			}
-			
-			return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
+			else
+			{
+				int argi = 0;
+				
+				var tmp = context.PeekRet();
+	
+				for (int i = 0; i < context.Node.Children.Count; ++i)
+				{
+					var child = context.Node.Children[i];
+					
+					// Translate such that we compute the result of the child
+					// at the tmp + argi location
+					if (argi == 0)
+					{
+						args[i] = TranslateAssign(context, child, String.Format("{0}", tmp));
+					}
+					else if (context.SupportsPointers)
+					{
+						// TODO: check how this works really, well it doesn't!
+						args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
+					}
+					else
+					{
+						throw new Exception("Matrix instruction without pointers is not yet implemented");
+					}
+	
+					argi += child.Dimension.Size();
+				}
+				
+				return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
+			}
 		}
 
+		/* This method translates a child and makes sure to allocate temporary
+		 * memory for it if necessary.
+		 */
 		private string TranslateChildV(Tree.Node child, Context context)
 		{
 			string ret;
@@ -641,7 +818,9 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return ret;
 		}
-		
+
+		/* Translate a builtin function which returns a multidimensional value.
+		 */
 		protected virtual string TranslateV(InstructionFunction instruction, Context context)
 		{
 			Cdn.MathFunctionType type;
@@ -651,7 +830,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			var def = context.MathFunctionV(type, context.Node);
 			string ret = null;
 
-			if (!context.Node.Dimension.IsOne)
+			if (!context.Node.Dimension.IsOne && !context.SupportsFirstClassArrays)
 			{
 				ret = context.PeekRet();
 			}
@@ -744,10 +923,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 			
 			DataTable.DataItem item = context.Program.StateTable[prop];
-			var ret = context.PeekRet();
-			
-			string index = item.AliasOrIndex;
+			string ret = null;
+
+			if (!context.SupportsFirstClassArrays)
+			{
+				ret = context.PeekRet();
+			}
+
 			int size = prop.Dimension.Size();
+			int offset = 0;
 			
 			if (instruction.HasSlice)
 			{
@@ -757,74 +941,99 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				// This is a multidim slice for sure, check if it's just linear
 				if (!Context.IndicesAreContinuous(slice))
 				{
-					if (ret == null)
+					if (context.SupportsFirstClassArrays)
 					{
-						throw new Exception("Temporary storage needed to have been allocated!");
+						var v = context.This(context.Program.StateTable);
+						var vi = String.Format("{0}[{1}]", v, item.AliasOrIndex);
+
+						return context.ArraySliceIndices(vi, slice);
 					}
-					
-					StringBuilder sret = new StringBuilder("(");
-					
-					// Make single element assignments
-					for (int i = 0; i < slice.Length; ++i)
+					else
 					{
-						if (i != 0)
+						StringBuilder sret = new StringBuilder("(");
+						
+						// Make single element assignments
+						for (int i = 0; i < slice.Length; ++i)
 						{
-							sret.Append(", ");
+							if (i != 0)
+							{
+								sret.Append(", ");
+							}
+							
+							sret.AppendFormat("({0})[{1}] = {2}[{3}]",
+							                  ret,
+							                  i,
+							                  context.This(context.Program.StateTable),
+							                  context.AddedIndex(item, slice[i]));
 						}
 						
-						sret.AppendFormat("({0})[{1}] = {2}[{3}]",
-						                  ret,
-						                  i,
-						                  context.This(context.Program.StateTable.Name),
-						                  context.AddedIndex(item, slice[i]));
+						sret.AppendFormat(", {0})", ret);
+						return sret.ToString();
 					}
-					
-					sret.AppendFormat(", {0})", ret);
-					return sret.ToString();
 				}
 				else
 				{
-					index = context.AddedIndex(item, slice[0]);
-					size = slice.Length;
+					offset = slice[0];
 				}
 			}
-			
+
+			// Here we should return from "offset" to "offset + size"
 			if (ret != null)
 			{
+				// We need to write the results in "ret". Make a memcpy
 				return context.MemCpy(ret,
 				                      "0",
-				                      context.This(context.Program.StateTable.Name),
-				                      index,
+				                      context.This(context.Program.StateTable),
+				                      context.AddedIndex(item, offset),
 				                      "ValueType",
 				                      size);
 			}
-			else if (index == "0")
+			else if (context.SupportsPointers)
 			{
-				return String.Format("{0}", context.This(context.Program.StateTable.Name));
+				// Simply return the correct offset of the continous slice
+				return String.Format("({0} + {1})",
+				                     context.This(context.Program.StateTable),
+				                     context.AddedIndex(item, offset));
+			}
+			else if (context.SupportsFirstClassArrays)
+			{
+				// Simply return the slice
+				var v = context.This(context.Program.StateTable);
+
+				if (offset == 0 && size == item.Dimension.Size())
+				{
+					return String.Format("{0}[{1}]", v, item.AliasOrIndex);
+				}
+				else
+				{
+					return context.ArraySlice(String.Format("{0}[{1}]", v, item.AliasOrIndex),
+					                          offset.ToString(),
+					                          (offset + size).ToString());
+				}
 			}
 			else
 			{
-				// TODO, hmm only for pointers this works
-				return String.Format("({0} + {1})", 
-				                     context.This(context.Program.StateTable.Name),
-				                     index);
+				throw new Exception("Unsupported multidim variable case!");
 			}
 		}
 
 		protected virtual string TranslateV(Instructions.Function instruction, Context context)
 		{
-			string name = FunctionCallName(instruction.FunctionCall, context);
-			
+			string name = context.FunctionCallName(instruction.FunctionCall);
+
 			List<string > args = new List<string>();
 
 			if (context.This("") == "")
 			{
 				args.Add(context.Program.StateTable.Name);
 			}
+
+			string ret = null;
 			
-			if (!context.Node.Dimension.IsOne)
+			if (!InstructionHasStorage(instruction, context))
 			{
-				var ret = context.PeekRet();
+				// The return value is given as the first argument to the function
+				ret = context.PeekRet();
 				args.Add(ret);
 			}
 

@@ -123,6 +123,8 @@
     <Compile Include="Programmer\Formatters\JavaScript\JavaScript.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\Options.cs" />
     <Compile Include="Programmer\Formatters\DynamicVisitor.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\NumberTranslator.cs" />
+    <Compile Include="Programmer\Formatters\JavaScript\InitialValueTranslator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
@@ -138,6 +140,7 @@
     <Folder Include="Programmer\Formatters\C\Resources\" />
     <Folder Include="Programmer\Formatters\CLike\" />
     <Folder Include="Programmer\Formatters\JavaScript\" />
+    <Folder Include="Programmer\Formatters\JavaScript\Resources\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -146,5 +149,8 @@
     <EmbeddedResource Include="Programmer\Formatters\C\Resources\Include.make" />
     <EmbeddedResource Include="Programmer\Formatters\C\Resources\RunSource.c" />
     <EmbeddedResource Include="Programmer\Formatters\C\Resources\RunHeader.h" />
+    <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.js" />
+    <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Math.js" />
+    <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Utils.js" />
   </ItemGroup>
 </Project>

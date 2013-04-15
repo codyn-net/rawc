@@ -1,6 +1,6 @@
 #include "${basename}_run.h"
 
-#include <cdn-rawc/integrators/cdn-rawc-integrator-${integrator}.h>
+#include <cdn-rawc/integrators/cdn-rawc-integrator-${integrator_include}.h>
 
 static CdnRawcNetwork${Name} data[CDN_RAWC_INTEGRATOR_${INTEGRATOR}_ORDER + CDN_RAWC_NETWORK_${NAME}_SPACE_FOR_EVENTS];
 
@@ -53,7 +53,7 @@ cdn_rawc_${name}_step (ValueType t, ValueType dt)
 CdnRawcIntegrator *
 cdn_rawc_${name}_integrator (void)
 {
-	return cdn_rawc_integrator_${integrator} ();
+	return cdn_rawc_integrator_${integrator_type} ();
 }
 
 ValueType

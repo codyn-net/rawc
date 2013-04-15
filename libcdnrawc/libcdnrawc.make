@@ -91,9 +91,11 @@ FILES = \
 	Programmer/Formatters/CLike/CLike.cs \
 	Programmer/Formatters/JavaScript/Options.cs \
 	Programmer/Formatters/JavaScript/JavaScript.cs \
+	Programmer/Formatters/JavaScript/InitialValueTranslator.cs \
 	Programmer/Formatters/JavaScript/InstructionTranslator.cs \
 	Programmer/Formatters/JavaScript/Context.cs \
 	Programmer/Formatters/JavaScript/ComputationNodeTranslator.cs \
+	Programmer/Formatters/JavaScript/NumberTranslator.cs \
 	Programmer/DataTable.cs \
 	Programmer/Computation/Block.cs \
 	Programmer/Computation/IBlock.cs \
@@ -135,7 +137,11 @@ RESOURCES = \
 	Programmer/Formatters/C/Resources/Standalone.make,Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make \
 	Programmer/Formatters/C/Resources/Include.make,Cdn.RawC.Programmer.Formatters.C.Resources.Include.make \
 	Programmer/Formatters/C/Resources/RunSource.c,Cdn.RawC.Programmer.Formatters.C.Resources.RunSource.c \
-	Programmer/Formatters/C/Resources/RunHeader.h,Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h
+	Programmer/Formatters/C/Resources/RunHeader.h,Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h \
+	\
+	Programmer/Formatters/JavaScript/Resources/Cdn.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.js \
+	Programmer/Formatters/JavaScript/Resources/Cdn.Utils.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Utils.js \
+	Programmer/Formatters/JavaScript/Resources/Cdn.Math.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Math.js
 
 EXTRAS = \
 	codyn-rawc-sharp.pc.in
