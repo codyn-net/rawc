@@ -6,6 +6,8 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 {
 	public class Context : CLike.Context
 	{
+		public static string DataName = "_data";
+
 		public Context(Program program, CLike.Options options) : this(program, options, null, null)
 		{
 		}
@@ -64,7 +66,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		public override string This(string name)
 		{
-			return "this.data." + name;
+			return "this." + DataName + "." + name;
 		}
 
 		public override string This(DataTable table)
@@ -75,7 +77,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 			else
 			{
-				return String.Format("this.data.{0}", table.Name);
+				return String.Format("this.{0}.{1}", DataName, table.Name);
 			}
 		}
 

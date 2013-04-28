@@ -71,9 +71,17 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteConstructor()
 		{
-			d_writer.WriteLine("Cdn.{0} = function()\n{{", CPrefix);
-			d_writer.WriteLine("\tthis.data = {};");
+			d_writer.WriteLine("Cdn.Networks.{0} = function()\n{{", CPrefix);
+			d_writer.WriteLine("\tthis.{0} = {{}};", Context.DataName);
 			d_writer.WriteLine("\tthis._clear_data();");
+			d_writer.WriteLine("\tthis._integrator = new Cdn.Integrators['{0}']();",
+			                   Knowledge.Instance.Network.Integrator.Name);
+
+			d_writer.WriteLine("\tthis.reset(0);");
+			d_writer.WriteLine("}\n");
+
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.step = function(t, dt)\n{{", CPrefix);
+			d_writer.WriteLine("\tthis._integrator.step(this, t, dt);", Context.DataName);
 			d_writer.WriteLine("}\n");
 		}
 
@@ -98,18 +106,23 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteClearData()
 		{
-			d_writer.WriteLine("Cdn.{0}.prototype._clear_data = function()\n{{", CPrefix);
-			d_writer.Write("\tthis.data.{0} = ", d_program.StateTable.Name);
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype._clear_data = function()\n{{", CPrefix);
+			d_writer.Write("\tthis.{0}.{1} = ",
+			               Context.DataName,
+			               d_program.StateTable.Name);
 			WriteStateTableArray();
 			d_writer.WriteLine(";\n");
 
-			d_writer.WriteLine("\tthis.data.event_states = {0};",
+			d_writer.WriteLine("\tthis.{0}.event_states = {1};",
+			                   Context.DataName,
 			                   Context.ZeroArrayOfSize(Knowledge.Instance.EventContainersCount, false));
 
-			d_writer.WriteLine("\tthis.data.events_active = {0};",
+			d_writer.WriteLine("\tthis.{0}.events_active = {1};",
+			                   Context.DataName,
 			                   Context.ZeroArrayOfSize(Knowledge.Instance.EventsCount, false));
 
-			d_writer.WriteLine("\tthis.data.events_active_size = 0;");
+			d_writer.WriteLine("\tthis.{0}.events_active_size = 0;",
+			                   Context.DataName);
 
 			foreach (DataTable table in d_program.DataTables)
 			{
@@ -124,7 +137,13 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteClassData()
 		{
-			var cls = String.Format("Cdn.{0}", CPrefix);
+			var cls = String.Format("Cdn.Networks.{0}", CPrefix);
+
+			d_writer.WriteLine("{0}.name = \"{1}\";", cls, CPrefix);
+
+			d_writer.WriteLine("{0}.event_refinement = {1};",
+			                   cls,
+			                   NeedsSpaceForEvents() ? "true" : "false");
 
 			foreach (DataTable table in d_program.DataTables)
 			{
@@ -141,12 +160,12 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 			if (range == null)
 			{
-				d_writer.WriteLine("{0}.states = [0, 0];",
+				d_writer.WriteLine("{0}.states = {{start: 0, end: 0}};",
 				                   cls);
 			}
 			else
 			{
-				d_writer.WriteLine("{0}.states = [{1}, {2}];",
+				d_writer.WriteLine("{0}.states = {{start: {1}, end: {2}}};",
 				                   cls,
 				                   range[0],
 				                   range[1]);
@@ -156,12 +175,12 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 			if (drange == null)
 			{
-				d_writer.WriteLine("{0}.derivatives = [0, 0];",
+				d_writer.WriteLine("{0}.derivatives = {{start: 0, end: 0}};",
 				                   cls);
 			}
 			else
 			{
-				d_writer.WriteLine("{0}.derivatives = [{1}, {2}];",
+				d_writer.WriteLine("{0}.derivatives = {{start: {1}, end: {2}}};",
 				                   cls,
 				                   drange[0],
 				                   drange[1]);
@@ -170,16 +189,12 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteDimensions()
 		{
-			d_writer.WriteLine("Cdn.{0}.dimensions = [", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.dimensions = [", CPrefix);
 
 			foreach (var item in d_program.StateTable)
 			{
 				var dim = item.Dimension;
-
-				if (!dim.IsOne)
-				{
-					d_writer.WriteLine("\tnew Cdn.Dimension([{0}, {1}]),", dim.Rows, dim.Columns);
-				}
+				d_writer.WriteLine("\t{{rows: {0}, columns: {1}, size: {2}}},", dim.Rows, dim.Columns, dim.Size());
 			}
 
 			d_writer.WriteLine("];");
@@ -327,7 +342,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteFunction(Programmer.Function function)
 		{
-			d_writer.WriteLine("Cdn.{0}.prototype.{1} = function ({2}) {{", CPrefix, function.Name, GenerateArgsList(function));
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.{1} = function ({2}) {{", CPrefix, function.Name, GenerateArgsList(function));
 			
 			d_writer.WriteLine("\treturn {0};", FunctionToJS(function));
 			d_writer.WriteLine("}");
@@ -399,7 +414,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				return;
 			}
 
-			d_writer.Write("Cdn.{0}.prototype.{1} = function(", CPrefix, api.Name);
+			d_writer.Write("Cdn.Networks.{0}.prototype.{1} = function(", CPrefix, api.Name);
 			
 			for (int i = 0; i < api.Arguments.Length; i += 2)
 			{
@@ -431,7 +446,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteEnums()
 		{
-			d_writer.WriteLine("Cdn.{0}.States = {{", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.States = {{", CPrefix);
 
 			foreach (var e in d_enumMap)
 			{
@@ -451,7 +466,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		protected override void WriteEventsUpdateDistance(TextWriter writer)
 		{
-			writer.WriteLine("Cdn.{0}.prototype.events_update_distance = function()",
+			writer.WriteLine("Cdn.Networks.{0}.prototype.events_update_distance = function()",
 			                 CPrefix);
 
 			writer.WriteLine("{");
@@ -470,7 +485,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 			var range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
 
-			writer.WriteLine("\tthis.data.events_active_size = 0;");
+			writer.WriteLine("\tthis.{0}.events_active_size = 0;", Context.DataName);
 			writer.WriteLine();
 			writer.WriteLine("\tfor (var i = 0; i < {0}; ++i)", Knowledge.Instance.EventsCount);
 			writer.WriteLine("\t{");
@@ -480,9 +495,9 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			writer.WriteLine("\t\t{");
 			writer.WriteLine("\t\t\tvar vi = this.get_events_value(i);");
 			writer.WriteLine();
-			writer.WriteLine("\t\t\tfor (var j = this.data.events_active_size; j > 0; --j)");
+			writer.WriteLine("\t\t\tfor (var j = this.{0}.events_active_size; j > 0; --j)", Context.DataName);
 			writer.WriteLine("\t\t\t{");
-			writer.WriteLine("\t\t\t\tvar vj = this.get_events_value(this.data.events_active[j - 1]);", CPrefixDown);
+			writer.WriteLine("\t\t\t\tvar vj = this.get_events_value(this.{0}.events_active[j - 1]);", Context.DataName);
 			writer.WriteLine();
 			writer.WriteLine("\t\t\t\tif (vj.distance() <= vi.distance())");
 			writer.WriteLine("\t\t\t\t{");
@@ -490,12 +505,12 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			writer.WriteLine("\t\t\t\t}");
 			writer.WriteLine("\t\t\t\telse");
 			writer.WriteLine("\t\t\t\t{");
-			writer.WriteLine("\t\t\t\t\tthis.data.events_active[j] = this.data.events_active[j - 1];");
+			writer.WriteLine("\t\t\t\t\tthis.{0}.events_active[j] = this.{0}.events_active[j - 1];", Context.DataName);
 			writer.WriteLine("\t\t\t\t}");
 			writer.WriteLine("\t\t\t}");
 			writer.WriteLine();
-			writer.WriteLine("\t\t\tthis.data.events_active[j] = i;");
-			writer.WriteLine("\t\t\t++this.data.events_active_size;");
+			writer.WriteLine("\t\t\tthis.{0}.events_active[j] = i;", Context.DataName);
+			writer.WriteLine("\t\t\t++this.{0}.events_active_size;", Context.DataName);
 			writer.WriteLine("\t\t}");
 			writer.WriteLine("\t}");
 			writer.WriteLine("\t}");
@@ -505,7 +520,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteEventsPostUpdate()
 		{
-			d_writer.WriteLine("Cdn.{0}.prototype.events_post_update = function()",
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.events_post_update = function()",
 			                 CPrefix);
 			d_writer.WriteLine("{");
 
@@ -521,8 +536,9 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				                 st.DataIndex + Knowledge.Instance.EventNodeStatesCount);
 
 				d_writer.WriteLine("\t{");
-				d_writer.WriteLine("\t\tthis.data.{0}[i] = {0}[i + 1];",
-				                 d_program.StateTable.Name);
+				d_writer.WriteLine("\t\tthis.{0}.{1}[i] = this.{0}.{1}[i + 1];",
+				                   Context.DataName,
+				                   d_program.StateTable.Name);
 				d_writer.WriteLine("\t}");
 			}
 
@@ -537,7 +553,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				return;
 			}
 
-			d_writer.WriteLine("Cdn.{0}.event_active = function(i)", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.event_active = function(i)", CPrefix);
 			d_writer.WriteLine("{");
 
 			bool hasit = false;
@@ -602,7 +618,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteEventFire()
 		{
-			d_writer.WriteLine("Cdn.{0}.events_fire = function()", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.events_fire = function()", CPrefix);
 			d_writer.WriteLine("{");
 
 			bool hasit = false;
@@ -626,9 +642,10 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				return;
 			}
 
-			d_writer.WriteLine("\tfor (var event = 0; event < this.data.events_active_size; ++event)");
+			d_writer.WriteLine("\tfor (var event = 0; event < this.{0}.events_active_size; ++event)",
+			                   Context.DataName);
 			d_writer.WriteLine("\t{");
-			d_writer.WriteLine("\t\ti = this.data.events_active[event];");
+			d_writer.WriteLine("\t\ti = this.{0}.events_active[event];", Context.DataName);
 
 			d_writer.WriteLine();
 			d_writer.WriteLine("\t\tswitch (i)");
@@ -649,7 +666,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				}
 
 				d_writer.WriteLine("\t\tcase {0}:", i - 1);
-				d_writer.WriteLine("\t\t\tif (this.data.event_active ({0}))", i - 1);
+				d_writer.WriteLine("\t\t\tif (this.{0}.event_active ({1}))", Context.DataName, i - 1);
 				d_writer.WriteLine("\t\t\t{");
 
 				if (!String.IsNullOrEmpty(state))
@@ -659,9 +676,10 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 					var idx = cont.Index;
 					var st = Knowledge.Instance.GetEventState(parent, state);
 
-					d_writer.WriteLine("\t\t\t\tthis.data.event_states[{0}] = {1};",
-					                 idx,
-					                 st.Index);
+					d_writer.WriteLine("\t\t\t\tthis.{0}.event_states[{1}] = {2};",
+					                   Context.DataName,
+					                   idx,
+					                   st.Index);
 				}
 
 				if (prg != null)
@@ -685,13 +703,41 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 		private void WriteDataAccessors()
 		{
-			d_writer.WriteLine("Cdn.{0}.prototype.get_data = function()", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.data = function(d)", CPrefix);
 			d_writer.WriteLine("{");
-			d_writer.WriteLine("\treturn this.data.{0};", d_program.StateTable.Name);
+			d_writer.WriteLine("\tif (typeof d === 'undefined')");
+			d_writer.WriteLine("\t{");
+			d_writer.WriteLine("\t\treturn this.{0}.{1};",
+			                   Context.DataName,
+			                   d_program.StateTable.Name);
+			d_writer.WriteLine("\t}");
+			d_writer.WriteLine("\telse");
+			d_writer.WriteLine("\t{");
+			d_writer.WriteLine("\t\tthis.{0}.{1} = d;",
+			                   Context.DataName,
+			                   d_program.StateTable.Name);
+			d_writer.WriteLine("\t}");
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
 
-			d_writer.WriteLine("Cdn.{0}.prototype.get_states = function()", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.integrator = function(d)", CPrefix);
+			d_writer.WriteLine("{");
+			d_writer.WriteLine("\tif (typeof d === 'undefined')");
+			d_writer.WriteLine("\t{");
+			d_writer.WriteLine("\t\treturn this._integrator;",
+			                   Context.DataName,
+			                   d_program.StateTable.Name);
+			d_writer.WriteLine("\t}");
+			d_writer.WriteLine("\telse");
+			d_writer.WriteLine("\t{");
+			d_writer.WriteLine("\t\tthis._integrator = d;",
+			                   Context.DataName,
+			                   d_program.StateTable.Name);
+			d_writer.WriteLine("\t}");
+			d_writer.WriteLine("}");
+			d_writer.WriteLine();
+
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.states = function()", CPrefix);
 
 			var range = d_program.StateRange(Knowledge.Instance.Integrated);
 
@@ -703,15 +749,17 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 			else
 			{
-				d_writer.WriteLine("\treturn this.data.ss.slice({0}, {1});",
-				                 range[0],
-				                 range[1]);
+				d_writer.WriteLine("\treturn this.{0}.{1}.slice({2}, {3});",
+				                   Context.DataName,
+				                   d_program.StateTable.Name,
+				                   range[0],
+				                   range[1]);
 			}
 
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
 
-			d_writer.WriteLine("Cdn.{0}.prototype.get_derivatives = function()", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.derivatives = function()", CPrefix);
 
 			range = d_program.StateRange(Knowledge.Instance.DerivativeStates);
 
@@ -723,22 +771,29 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 			else
 			{
-				d_writer.WriteLine("\treturn this.data.ss.slice({0}, {1});",
-				                 range[0],
-				                 range[1]);
+				d_writer.WriteLine("\treturn this.{0}.{1}.slice({2}, {3});",
+				                   Context.DataName,
+				                   d_program.StateTable.Name,
+				                   range[0],
+				                   range[1]);
 			}
 
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
 
-			d_writer.WriteLine("Cdn.{0}.prototype.get_events_active = function(i)", CPrefix);
-
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.events_active = function(i)", CPrefix);
 			d_writer.WriteLine("{");
-			d_writer.WriteLine("\treturn this.data.events_active[i];");
+			d_writer.WriteLine("\treturn this.{0}.events_active[i];", Context.DataName);
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
 
-			d_writer.WriteLine("Cdn.{0}.prototype.get_events_value = function(i)", CPrefix);
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.events_active_size = function()", CPrefix);
+			d_writer.WriteLine("{");
+			d_writer.WriteLine("\treturn this.{0}.events_active_size;", Context.DataName);
+			d_writer.WriteLine("}");
+			d_writer.WriteLine();
+
+			d_writer.WriteLine("Cdn.Networks.{0}.prototype.events_value = function(i)", CPrefix);
 
 			range = d_program.StateRange(Knowledge.Instance.EventNodeStates);
 
@@ -750,41 +805,29 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 			else
 			{
-				d_writer.WriteLine("\treturn new Cdn.EventValue(this.data.ss, {0} + i * 3);",
-				                 range[0]);
+				d_writer.WriteLine("\treturn new Cdn.EventValue(this.{0}.{1}, {2} + i * 3);",
+				                   Context.DataName,
+				                   d_program.StateTable.Name,
+				                   range[0]);
 			}
 
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
+		}
 
-			d_writer.WriteLine("Cdn.{0}.prototype.get_dimension = function(i)", CPrefix);
-			d_writer.WriteLine("{");
+		public string[] Compile(bool verbose)
+		{
+			return null;
+		}
 
-			d_writer.WriteLine("\tswitch (i)");
-			d_writer.WriteLine("\t{");
+		public string CompileForValidation(string[] sources, bool verbose)
+		{
+			return null;
+		}
 
-			int i = 0;
-
-			foreach (var item in d_program.StateTable)
-			{
-				var dim = item.Dimension;
-
-				if (!dim.IsOne)
-				{
-					d_writer.WriteLine("\tcase {0}:", item.AliasOrIndex);
-					d_writer.WriteLine("\t\treturn Cdn.{0}.dimensions[{1}];", CPrefix, i);
-					++i;
-				}
-			}
-
-			d_writer.WriteLine("\tdefault:");
-			d_writer.WriteLine("\t{");
-			d_writer.WriteLine("\t\treturn Cdn.Dimension.one;");
-			d_writer.WriteLine("\t}");
-			d_writer.WriteLine("\t}");
-
-			d_writer.WriteLine("}");
-			d_writer.WriteLine();
+		public IEnumerator<double[]> RunForValidation(string[] sources, double t, double dt)
+		{
+			return null;
 		}
 	}
 }
