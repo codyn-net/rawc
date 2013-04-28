@@ -104,11 +104,15 @@ namespace Cdn.RawC.Application
 					Console.Error.WriteLine();
 					Console.Error.WriteLine("“{0}”", b.Message);
 
-					Console.Error.WriteLine();
-					Console.Error.WriteLine();
-					Console.Error.WriteLine("Trace:");
-					Console.Error.WriteLine("======");
-					Console.Error.WriteLine("  - {0}", String.Join("\n  - ", b.StackTrace.Split('\n')));
+					if (options.Verbose)
+					{
+						Console.Error.WriteLine();
+						Console.Error.WriteLine();
+						Console.Error.WriteLine("Trace:");
+						Console.Error.WriteLine("======");
+						Console.Error.WriteLine("  - {0}", String.Join("\n  - ", b.StackTrace.Split('\n')));
+					}
+
 					Environment.Exit(1);
 				}
 			}
