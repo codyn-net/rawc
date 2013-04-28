@@ -152,5 +152,8 @@
     <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.js" />
     <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Math.js" />
     <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Utils.js" />
+    <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Integrators.js" />
+    <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Integrators.RungeKutta.js" />
+    <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Integrators.Euler.js" />
   </ItemGroup>
 </Project>

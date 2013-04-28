@@ -141,7 +141,10 @@ RESOURCES = \
 	\
 	Programmer/Formatters/JavaScript/Resources/Cdn.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.js \
 	Programmer/Formatters/JavaScript/Resources/Cdn.Utils.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Utils.js \
-	Programmer/Formatters/JavaScript/Resources/Cdn.Math.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Math.js
+	Programmer/Formatters/JavaScript/Resources/Cdn.Math.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Math.js \
+	Programmer/Formatters/JavaScript/Resources/Cdn.Integrators.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Integrators.js \
+	Programmer/Formatters/JavaScript/Resources/Cdn.Integrators.Euler.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Integrators.Euler.js \
+	Programmer/Formatters/JavaScript/Resources/Cdn.Integrators.RungeKutta.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Integrators.RungeKutta.js
 
 EXTRAS = \
 	codyn-rawc-sharp.pc.in
