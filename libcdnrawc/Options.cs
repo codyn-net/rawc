@@ -100,6 +100,11 @@ namespace Cdn.RawC
 				Console.WriteLine(ShowOptions());
 				Environment.Exit(0);
 			}
+
+			if (d_showFormatters)
+			{
+				return;
+			}
 			
 			if (d_files.Count == 0)
 			{
