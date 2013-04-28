@@ -415,7 +415,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Greater:
 			case MathFunctionType.Equal:
 			case MathFunctionType.Nequal:
-			case MathFunctionType.Hcat:
+			case MathFunctionType.Vcat:
 			case MathFunctionType.Csign:
 			case MathFunctionType.Sum:
 			case MathFunctionType.Product:

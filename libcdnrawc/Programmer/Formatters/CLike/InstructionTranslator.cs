@@ -868,14 +868,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				args.Add(dim.Columns.ToString());
 			}
 				break;
-			case MathFunctionType.Hcat:
+			case MathFunctionType.Vcat:
 			{
 				var dim1 = context.Node.Children[0].Dimension;
 				var dim2 = context.Node.Children[1].Dimension;
 
 				args.Add(dim1.Rows.ToString());
+				args.Add(dim2.Rows.ToString());
 				args.Add(dim1.Columns.ToString());
-				args.Add(dim2.Columns.ToString());
 			}
 				break;
 			case MathFunctionType.Multiply:

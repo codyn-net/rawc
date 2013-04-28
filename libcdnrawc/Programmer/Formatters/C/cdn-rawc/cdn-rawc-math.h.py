@@ -390,40 +390,40 @@ cdn_math_transpose_v_builtin (ValueType *ret,
 
     print_guard_end('transpose_v')
 
-def print_hcat():
-    print_guard('hcat')
+def print_vcat():
+    print_guard('vcat')
 
     print("""
-static ValueType *cdn_math_hcat_builtin (ValueType *ret,
+static ValueType *cdn_math_vcat_builtin (ValueType *ret,
                                          ValueType *x0,
                                          ValueType *x1,
-                                         uint32_t   rows,
-                                         uint32_t   columns1,
-                                         uint32_t   columns2);
+                                         uint32_t   rows1,
+                                         uint32_t   rows2,
+                                         uint32_t   columns);
 
 static ValueType *
-cdn_math_hcat_builtin (ValueType *ret,
+cdn_math_vcat_builtin (ValueType *ret,
                        ValueType *x0,
                        ValueType *x1,
-                       uint32_t   rows,
-                       uint32_t   columns1,
-                       uint32_t   columns2)
+                       uint32_t   rows1,
+                       uint32_t   rows2,
+                       uint32_t   columns)
 {{
-	uint32_t r;
+	uint32_t c;
 	uint32_t i1 = 0;
 	uint32_t i2 = 0;
 	uint32_t ptr = 0;
 
-	for (r = 0; r < rows; ++r)
+	for (c = 0; c < columns; ++c)
 	{{
-		uint32_t c;
+		uint32_t r = 0;
 
-		for (c = 0; c < columns1; ++c)
+		for (r = 0; r < rows1; ++r)
 		{{
 			ret[ptr++] = x0[i1++];
 		}}
 
-		for (c = 0; c < columns2; ++c)
+		for (r = 0; r < rows2; ++r)
 		{{
 			ret[ptr++] = x1[i2++];
 		}}
@@ -432,7 +432,7 @@ cdn_math_hcat_builtin (ValueType *ret,
 	return ret;
 }}""")
 
-    print_guard_end('hcat')
+    print_guard_end('vcat')
 
 def print_matrix_multiply_v():
     print_guard('matrix_multiply_v')
@@ -513,7 +513,7 @@ print_accumulator_v('product', 'ret *= x0[i];')
 print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 
 print_index_v()
-print_hcat()
+print_vcat()
 print_transpose_v()
 print_matrix_multiply_v()
 
