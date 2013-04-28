@@ -181,6 +181,7 @@ namespace Cdn.RawC
 		{
 			// Create dynamic binding to the shared lib API for rawc
 			var dynnet = new DynamicNetwork(shlib, program.Options.Basename);
+			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
 
 			dynnet.Reset(t);
 
@@ -189,7 +190,11 @@ namespace Cdn.RawC
 			while (true)
 			{
 				dynnet.Step(t, dt);
-				yield return dynnet.Values();
+				
+				var vals = dynnet.Values();
+				yield return vals;
+				
+				t += vals[dtstate.DataIndex];
 			}
 		}
 
