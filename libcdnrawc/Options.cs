@@ -22,8 +22,6 @@ namespace Cdn.RawC
 		private string d_compile;
 		[CommandLine.Option("print-compile-source", Description="Print source code of test program")]
 		private bool d_printCompileSource;
-		[CommandLine.Option("print-mex-source", Description="Print source code of a Matlab MEX program")]
-		private bool d_printMexSource;
 		[CommandLine.Option("validate", Description="Validate generated network")]
 		private bool d_validate;
 		[CommandLine.Option("validate-precision", Description="Allowed precision for validation")]
@@ -198,14 +196,6 @@ namespace Cdn.RawC
 			}
 		}
 
-		public bool PrintMexSource
-		{
-			get
-			{
-				return d_printMexSource;
-			}
-		}
-		
 		[CommandLine.Option("validate-range", Description="Range to validate network on (from:step:to)")]
 		private string ValidateRangeOption
 		{
