@@ -1,3 +1,5 @@
+Cdn = Cdn || {};
+
 if (!Cdn.EventValue)
 {
 	Cdn.EventValue = function(data, i) {
@@ -19,12 +21,7 @@ if (!Cdn.EventValue)
 	};
 }
 
-if (!Cdn.Dimension)
+if (!Cdn.Networks)
 {
-	Cdn.Dimension = function(rows, columns) {
-		this.rows = rows;
-		this.columns = columns;
-	};
-
-	Cdn.Dimension.one = new Cdn.Dimension(1, 1);
+	Cdn.Networks = {};
 }
