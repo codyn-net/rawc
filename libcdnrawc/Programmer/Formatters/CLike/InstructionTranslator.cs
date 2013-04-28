@@ -852,72 +852,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			context.RestoreTemporaryStack();
-
-			switch (type)
-			{
-			case MathFunctionType.Transpose:
-			{
-				var dim = context.Node.Children[0].Dimension;
-
-				args.Add(dim.Rows.ToString());
-				args.Add(dim.Columns.ToString());
-			}
-				break;
-			case MathFunctionType.Vcat:
-			{
-				var dim1 = context.Node.Children[0].Dimension;
-				var dim2 = context.Node.Children[1].Dimension;
-
-				args.Add(dim1.Rows.ToString());
-				args.Add(dim2.Rows.ToString());
-				args.Add(dim1.Columns.ToString());
-			}
-				break;
-			case MathFunctionType.Diag:
-			{
-				var dim1 = context.Node.Children[0].Dimension;
-				
-				if (dim1.Rows == 1 || dim1.Columns == 1)
-				{
-					args.Add(dim1.Size().ToString());
-				}
-				else
-				{
-					args.Add(dim1.Rows.ToString());
-				}
-			}
-				break;
-			case MathFunctionType.Triu:
-			case MathFunctionType.Tril:
-			{
-				var dim1 = context.Node.Children[0].Dimension;
-				args.Add(dim1.Rows.ToString());
-			}
-				break;
-			case MathFunctionType.Multiply:
-			{
-				var d1 = context.Node.Children[0].Dimension;
-				var d2 = context.Node.Children[1].Dimension;
-
-				if (d1.Rows == d2.Columns && d1.Columns == d2.Rows)
-				{
-					// Matrix multiply
-					args.Add(d1.Rows.ToString());
-					args.Add(d1.Columns.ToString());
-					args.Add(d2.Columns.ToString());
-				}
-				else
-				{
-					args.Add(cnt.ToString());
-				}
-			}
-				break;
-			case MathFunctionType.Index:
-				break;
-			default:
-				args.Add(cnt.ToString());
-				break;
-			}
+			
+			context.TranslateFunctionDimensionArguments(instruction, args, cnt);
 
 			if (ret != null)
 			{

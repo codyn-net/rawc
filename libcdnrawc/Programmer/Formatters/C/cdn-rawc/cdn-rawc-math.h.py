@@ -6,6 +6,7 @@ print("""
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -16,6 +17,65 @@ print("""
 #define CDN_MATH_VALUE_TYPE_FUNC(Func) CDN_MATH_VALUE_TYPE_FUNC_REAL(Func,ValueType)
 #define CDN_MATH_VALUE_TYPE_FUNC_float(Func) Func##f
 #define CDN_MATH_VALUE_TYPE_FUNC_double(Func) Func
+
+#ifdef ENABLE_LAPACK
+#ifdef PLATFORM_OSX
+#define LP_int __CLPK_integer
+#define LP_double __CLPK_doublereal
+#define LP_float __CLPK_floatreal
+#else
+#define LP_int int32_t
+#define LP_double double
+#define LP_float float
+#endif
+
+#define LP_ValueTypeRealOneMore(ValueType) LP_##ValueType
+#define LP_ValueTypeReal(ValueType) LP_ValueTypeRealOneMore(ValueType)
+#define LP_ValueType LP_ValueTypeReal(ValueType)
+
+#ifndef PLATFORM_OSX
+extern void dgetrf_ (LP_int *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_int *,
+                     LP_int *);
+
+extern void dgetri_ (LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_int *);
+
+extern void dgelsd_ (LP_int *,
+                     LP_int *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_double *,
+                     LP_double *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_int *,
+                     LP_int *);
+
+extern void dgesv_ (LP_int *,
+                    LP_int *,
+                    LP_double *,
+                    LP_int *,
+                    LP_int *,
+                    LP_double *,
+                    LP_int *,
+                    LP_int *);
+#endif
+
+#endif
+
 """)
 
 def print_guard(f):
@@ -447,6 +507,82 @@ cdn_math_vcat_builtin (ValueType *ret,
 
     print_guard_end('vcat')
 
+def print_linsolve_v():
+    print_guard('linsolve_v')
+
+    print("""
+static ValueType *cdn_math_linsolve_v_builtin (ValueType *ret,
+                                               ValueType *A,
+                                               ValueType *b,
+                                               uint32_t   RA,
+                                               uint32_t   CB,
+                                               int32_t   *ipiv);
+
+#ifndef ENABLE_LAPACK
+static ValueType *
+cdn_math_linsolve_v_no_lapack_builtin (ValueType *ret,
+                                       ValueType *A,
+                                       ValueType *b,
+                                       uint32_t   RA,
+                                       uint32_t   CB,
+                                       int32_t   *ipiv)
+{{
+	#error("The linsolve function is not supported without LAPACK");
+}}
+#else
+#ifdef PLATFORM_OSX
+#include <vecLib/vecLib.h>
+#else
+#include <clapack.h>
+#endif
+
+static ValueType *
+cdn_math_linsolve_v_lapack_builtin (ValueType *ret,
+                                    ValueType *A,
+                                    ValueType *b,
+                                    uint32_t   RA,
+                                    uint32_t   CB,
+                                    int32_t   *ipiv)
+{{
+	LP_ValueType *lpA = A;
+	LP_ValueType *lpb = b;
+	LP_int lpRA = RA;
+	LP_int lpCB = CB;
+	LP_int info;
+	LP_int *lpipiv = ipiv;
+
+	dgesv_ (&lpRA,
+	        &lpCB,
+	        lpA,
+	        &lpRA,
+	        lpipiv,
+	        lpb,
+	        &lpRA,
+	        &info);
+
+	memcpy (ret, b, sizeof (ValueType) * RA * CB);
+	return ret;
+}}
+#endif
+
+static ValueType *
+cdn_math_linsolve_v_builtin (ValueType *ret,
+                             ValueType *A,
+                             ValueType *b,
+                             uint32_t   RA,
+                             uint32_t   CB,
+                             int32_t   *ipiv)
+{{
+#ifdef ENABLE_LAPACK
+	return cdn_math_linsolve_v_lapack_builtin (ret, A, b, RA, CB, ipiv);
+#else
+	return cdn_math_linsolve_no_lapack_builtin (ret, A, b, RA, CB, ipiv);
+#endif
+}}
+""")
+
+    print_guard_end('linsolve_v')
+
 def print_matrix_multiply_v():
     print_guard('matrix_multiply_v')
 
@@ -458,15 +594,15 @@ static ValueType *cdn_math_matrix_multiply_v_builtin (ValueType *ret,
                                                       uint32_t   Cx0,
                                                       uint32_t   Cx1);
 
-#include <stdio.h>
+#ifndef ENABLE_BLAS
 
 static ValueType *
-cdn_math_matrix_multiply_v_builtin (ValueType *ret,
-                                    ValueType *x0,
-                                    ValueType *x1,
-                                    uint32_t   Rx0,
-                                    uint32_t   Cx0,
-                                    uint32_t   Cx1)
+cdn_math_matrix_multiply_v_no_blas_builtin (ValueType *ret,
+                                            ValueType *x0,
+                                            ValueType *x1,
+                                            uint32_t   Rx0,
+                                            uint32_t   Cx0,
+                                            uint32_t   Cx1)
 {{
 	uint32_t c;
 	uint32_t ptr = 0;
@@ -495,7 +631,59 @@ cdn_math_matrix_multiply_v_builtin (ValueType *ret,
 	}
 
 	return ret;
-}}""")
+}}
+#endif
+
+#ifdef ENABLE_BLAS
+
+#ifdef PLATFORM_OSX
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
+
+#define cblas_dgemmf cblas_sgemm
+
+static ValueType *
+cdn_math_matrix_multiply_v_blas_builtin (ValueType *ret,
+                                         ValueType *x0,
+                                         ValueType *x1,
+                                         uint32_t   Rx0,
+                                         uint32_t   Cx0,
+                                         uint32_t   Cx1)
+{{
+	CDN_MATH_VALUE_TYPE_FUNC(cblas_dgemm)(CblasColMajor,
+	             CblasNoTrans,
+	             CblasNoTrans,
+	             Rx0,
+	             Cx1,
+	             Cx0,
+	             1,
+	             x0,
+	             Rx0,
+	             x1,
+	             Cx0,
+	             0,
+	             ret,
+	             Rx0);
+}}
+#endif
+
+static ValueType *
+cdn_math_matrix_multiply_v_builtin (ValueType *ret,
+                                    ValueType *x0,
+                                    ValueType *x1,
+                                    uint32_t   Rx0,
+                                    uint32_t   Cx0,
+                                    uint32_t   Cx1)
+{{
+#ifdef ENABLE_BLAS
+	return cdn_math_matrix_multiply_v_blas_builtin (ret, x0, x1, Rx0, Cx0, Cx1);
+#else
+	return cdn_math_matrix_multiply_v_no_blas_builtin (ret, x0, x1, Rx0, Cx0, Cx1);
+#endif
+}}
+""")
 
     print_guard_end('matrix_multiply_v')
 
@@ -685,6 +873,7 @@ print_index_v()
 print_vcat()
 print_transpose()
 print_matrix_multiply_v()
+print_linsolve_v()
 print_diag()
 print_tri()
 

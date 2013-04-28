@@ -6,6 +6,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 {
 	public class Context : CLike.Context
 	{
+		private static Dictionary<string, int> s_linsolves;
+		
+		static Context()
+		{
+			s_linsolves = new Dictionary<string, int>();
+		}
+		
+		public static Dictionary<string, int> Linsolves
+		{
+			get { return s_linsolves; }
+		}
+
 		public Context(Program program, CLike.Options options) : this(program, options, null, null)
 		{
 		}
@@ -21,7 +33,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public override string MathFunctionV(Cdn.MathFunctionType type, Tree.Node node)
 		{
-			return String.Format("CDN_MATH_{0}", base.MathFunctionV(type, node).ToUpper());
+			switch (type)
+			{
+			case MathFunctionType.Linsolve:
+			{
+				var d2 = node.Children[1].Dimension;
+				var ret = String.Format(String.Format("CDN_MATH_LINSOLVE_V_{0}", d2.Rows));
+				
+				s_linsolves[ret] = d2.Rows;
+				return ret;
+			}
+			default:
+				return String.Format("CDN_MATH_{0}", base.MathFunctionV(type, node).ToUpper());
+			}
 		}
 
 		public override bool SupportsPointers
@@ -95,6 +119,35 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			return name;
+		}
+		
+		public override void TranslateFunctionDimensionArguments(InstructionFunction instruction, List<string> args, int cnt)
+		{
+			switch ((Cdn.MathFunctionType)instruction.Id)
+			{
+			case MathFunctionType.Linsolve:
+			{
+				// Add rows of A and columns of B arguments
+				var dim1 = Node.Children[1].Dimension;
+				var dim2 = Node.Children[0].Dimension;
+				
+				// Here we also reorder the arguments A and b. In codyn these
+				// are on the stack in reversed order to make it more efficient
+				// but here we really don't need that and it's more logical
+				// the other way around
+				var tmp = args[0];
+				
+				args[0] = args[1];
+				args[1] = tmp;
+				
+				args.Add(dim1.Rows.ToString());
+				args.Add(dim2.Columns.ToString());
+			}
+				break;
+			default:
+				base.TranslateFunctionDimensionArguments(instruction, args, cnt);
+				break;
+			}
 		}
 	}
 }

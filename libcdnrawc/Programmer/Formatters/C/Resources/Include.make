@@ -18,7 +18,7 @@ LDFLAGS =
 WARNINGS = 				\
 	inline				\
 	missing-prototypes		\
-	implicit-function-declaration	\
+	error-implicit-function-declaration	\
 	strict-prototypes		\
 	shadow				\
 	unused-function		\
@@ -28,12 +28,44 @@ ${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cfla
 ${NAME}_LDFLAGS = -lm ${libs}
 
 ifeq ($(UNAME),Darwin)
-${NAME}_CFLAGS += -arch i386 -arch x86_64
+${NAME}_CFLAGS += -arch i386 -arch x86_64 -DPLATFORM_OSX
 ${NAME}_LDFLAGS += -arch i386 -arch x86_64
 endif
 
 # Enable debug symbols if defined
 DEBUG =
+
+ENABLE_BLAS ?= ${enable_blas}
+ENABLE_LAPACK ?= ${enable_lapack}
+
+ifeq ($(ENABLE_BLAS),1)
+${NAME}_CFLAGS += -DENABLE_BLAS
+
+ifeq ($(UNAME),Darwin)
+${NAME}_LDFLAGS += -framework Accelerate
+else
+${NAME}_LDFLAGS += -lcblas
+endif
+
+endif
+
+ifeq ($(ENABLE_LAPACK),1)
+${NAME}_CFLAGS += -DENABLE_LAPACK
+
+ifeq ($(UNAME),Darwin)
+${NAME}_LDFLAGS += -framework vecLib
+else
+${NAME}_LDFLAGS += -llapack
+endif
+
+ifeq ($(UNAME),Linux)
+lsb = $(shell lsb_release -i -s)
+
+ifeq ($(lsb),Ubuntu)
+${NAME}_CFLAGS += -I/usr/include/atlas
+endif
+endif
+endif
 
 ifneq ($(DEBUG),)
 ${NAME}_CFLAGS += -g -O0

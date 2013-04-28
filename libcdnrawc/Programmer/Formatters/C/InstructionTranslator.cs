@@ -21,7 +21,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		protected override string Translate(InstructionNumber instruction, CLike.Context context)
 		{
 			return NumberTranslator.Translate(instruction.Value, (Context)context);
-		}
+		}		
 	}
 }
 

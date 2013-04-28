@@ -23,6 +23,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public bool CompileShared;
 		[CommandLine.Option("standalone", ArgumentName="TYPE", OptionalArgument=true, DefaultArgument="minimal", Description="Create a standalone network (minimal, full)")]
 		public string Standalone;
+		[CommandLine.Option("no-blas", Description="Disable use of blas")]
+		public bool NoBlas;
+		[CommandLine.Option("no-lapack", Description="Disable use of lapack")]
+		public bool NoLapack;
 
 		public string EventStateType;
 		

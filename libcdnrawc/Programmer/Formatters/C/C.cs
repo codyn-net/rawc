@@ -154,6 +154,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{"valuetype", ValueType},
 				{"cflags", d_options.CFlags},
 				{"libs", d_options.Libs},
+				{"enable_blas", d_options.NoBlas ? "0" : "1"},
+				{"enable_lapack", d_options.NoLapack ? "0" : "1"},
 			};
 
 			var ors = String.Join("|", (new List<string>(srep.Keys)).ToArray());
@@ -703,8 +705,40 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
+		private void WriteMathDimFunctions(TextWriter writer)
+		{
+			foreach (var def in Context.UsedMathFunctions)
+			{
+				int order;
+				
+				if (!Context.Linsolves.TryGetValue(def, out order))
+				{
+					continue;
+				}
+								
+				// Write function for this linsolve order
+				writer.WriteLine("#ifndef CDN_MATH_LINSOLVE_V_{0}", order);
+				writer.WriteLine("#define CDN_MATH_LINSOLVE_V_{0} cdn_math_linsolve_builtin_v_{0}", order, order);
+				writer.WriteLine("static ValueType *");
+				writer.WriteLine("cdn_math_linsolve_builtin_v_{0} (ValueType *ret,", order);
+				writer.WriteLine("                                 ValueType *A,");
+				writer.WriteLine("                                 ValueType *b,");
+				writer.WriteLine("                                 uint32_t   RA,");
+				writer.WriteLine("                                 uint32_t   CB)");
+				writer.WriteLine("{");
+				writer.WriteLine("\tint32_t ipiv[{0}];", order);
+				writer.WriteLine();
+				writer.WriteLine("\treturn CDN_MATH_LINSOLVE_V(ret, A, b, RA, CB, ipiv);");
+				writer.WriteLine("}");
+				writer.WriteLine("#endif");
+				writer.WriteLine();
+			}
+		}
+		
 		private void WriteFunctions(TextWriter writer)
 		{
+			WriteMathDimFunctions(writer);
+
 			// Write declarations
 			foreach (var function in d_program.Functions)
 			{
@@ -1883,9 +1917,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 			}
 
-			source.WriteLine("#include <cdn-rawc/cdn-rawc-math.h>");
-			source.WriteLine();
-
 			WriteFunctionDefines(source);
 			
 			WriteDataTables(source);
@@ -1898,10 +1929,30 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			WriteNetwork(source);
 			
+			bool haslinsolve = false;
+			
 			foreach (var def in Context.UsedMathFunctions)
 			{
-				writer.WriteLine("#define {0}_REQUIRED", def);
+				if (Context.Linsolves.ContainsKey(def))
+				{
+					if (!haslinsolve)
+					{
+						writer.WriteLine("#define CDN_MATH_LINSOLVE_V_REQUIRED");
+						haslinsolve = true;
+					}
+				}
+				else
+				{
+					writer.WriteLine("#define {0}_REQUIRED", def);
+				}
 			}
+			
+			writer.WriteLine();
+
+			writer.WriteLine("#include <cdn-rawc/cdn-rawc-math.h>");
+			writer.WriteLine();
+
+			WriteMathDimFunctions(writer);
 			
 			writer.WriteLine();
 			writer.Write(source.ToString());
