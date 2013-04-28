@@ -354,11 +354,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 		}
 		
-		private int IndexToLinear(Tree.Node node, int row, int col)
-		{
-			return row * node.Dimension.Columns + col;
-		}
-		
 		protected virtual string TranslateV(InstructionIndex instruction, Context context)
 		{
 			return Translate(instruction, context);
