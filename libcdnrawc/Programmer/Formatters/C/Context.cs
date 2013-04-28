@@ -6,16 +6,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 {
 	public class Context : CLike.Context
 	{
-		private static Dictionary<string, int> s_linsolves;
-		
-		static Context()
+		public class Workspace
 		{
-			s_linsolves = new Dictionary<string, int>();
+			public Cdn.MathFunctionType Type;
+			public int Order;
+			public int WorkSize;
+			public Cdn.Dimension Dimension;
 		}
 		
-		public static Dictionary<string, int> Linsolves
+		private static Dictionary<string, Workspace> s_workspaces;
+				
+		static Context()
 		{
-			get { return s_linsolves; }
+			s_workspaces = new Dictionary<string, Workspace>();
+		}
+		
+		public static Dictionary<string, Workspace> Workspaces
+		{
+			get { return s_workspaces; }
 		}
 
 		public Context(Program program, CLike.Options options) : this(program, options, null, null)
@@ -38,9 +46,34 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Linsolve:
 			{
 				var d2 = node.Children[1].Dimension;
-				var ret = String.Format(String.Format("CDN_MATH_LINSOLVE_V_{0}", d2.Rows));
+				var ret = String.Format("CDN_MATH_LINSOLVE_V_{0}", d2.Rows);
 				
-				s_linsolves[ret] = d2.Rows;
+				s_workspaces[ret] = new Workspace {
+					Type = type,
+					Order = d2.Rows,
+					Dimension = d2,
+					WorkSize = d2.Rows,
+				};
+
+				return ret;
+			}
+			case MathFunctionType.Inverse:
+			{
+				var d2 = node.Children[0].Dimension;
+				var ret = String.Format("CDN_MATH_INVERSE_V_{0}", d2.Rows);
+				
+				if (!s_workspaces.ContainsKey(ret))
+				{
+					int ws = Lapack.InverseWorkspace(d2.Rows);
+					
+					s_workspaces[ret] = new Workspace {
+						Type = type,
+						WorkSize = ws,
+						Dimension = d2,
+						Order = d2.Rows,
+					};
+				}
+				
 				return ret;
 			}
 			default:
@@ -143,6 +176,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				args.Add(dim1.Rows.ToString());
 				args.Add(dim2.Columns.ToString());
 			}
+				break;
+			case MathFunctionType.Inverse:
 				break;
 			default:
 				base.TranslateFunctionDimensionArguments(instruction, args, cnt);

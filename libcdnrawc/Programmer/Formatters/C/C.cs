@@ -709,26 +709,45 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			foreach (var def in Context.UsedMathFunctions)
 			{
-				int order;
+				Context.Workspace ws;
 				
-				if (!Context.Linsolves.TryGetValue(def, out order))
+				if (!Context.Workspaces.TryGetValue(def, out ws))
 				{
 					continue;
 				}
+				
+				var nm = Enum.GetName(typeof(Cdn.MathFunctionType), ws.Type);
 								
 				// Write function for this linsolve order
-				writer.WriteLine("#ifndef CDN_MATH_LINSOLVE_V_{0}", order);
-				writer.WriteLine("#define CDN_MATH_LINSOLVE_V_{0} cdn_math_linsolve_builtin_v_{0}", order, order);
+				var n = String.Format("cdn_math_{0}_builtin_v_{1}", nm.ToLower(), ws.Order);
+
+				writer.WriteLine("#ifndef {0}", def);
+				writer.WriteLine("#define {0} {1}", def, n);
 				writer.WriteLine("static ValueType *");
-				writer.WriteLine("cdn_math_linsolve_builtin_v_{0} (ValueType *ret,", order);
-				writer.WriteLine("                                 ValueType *A,");
-				writer.WriteLine("                                 ValueType *b,");
-				writer.WriteLine("                                 uint32_t   RA,");
-				writer.WriteLine("                                 uint32_t   CB)");
-				writer.WriteLine("{");
-				writer.WriteLine("\tint32_t ipiv[{0}];", order);
-				writer.WriteLine();
-				writer.WriteLine("\treturn CDN_MATH_LINSOLVE_V(ret, A, b, RA, CB, ipiv);");
+				writer.WriteLine("{0} (ValueType *ret,", n);
+				
+				switch (ws.Type)
+				{
+				case Cdn.MathFunctionType.Linsolve:
+					writer.WriteLine("     ValueType *A,");
+					writer.WriteLine("     ValueType *b,");
+					writer.WriteLine("     uint32_t   RA,");
+					writer.WriteLine("     uint32_t   CB)");
+					writer.WriteLine("{");
+					writer.WriteLine("\tint32_t ipiv[{0}];", ws.WorkSize);
+					writer.WriteLine();
+					writer.WriteLine("\treturn CDN_MATH_LINSOLVE_V(ret, A, b, RA, CB, ipiv);");
+					break;
+				case Cdn.MathFunctionType.Inverse:
+					writer.WriteLine("     ValueType *A)");
+					writer.WriteLine("{");
+					writer.WriteLine("\tint32_t ipiv[{0}];", ws.Dimension.Rows); 
+					writer.WriteLine("\tValueType work[{0}];", ws.WorkSize);
+					writer.WriteLine();
+					writer.WriteLine("\treturn CDN_MATH_INVERSE_V(ret, A, {0}, ipiv, work, {1});", ws.Dimension.Rows, ws.Order);
+					break;
+				}
+				
 				writer.WriteLine("}");
 				writer.WriteLine("#endif");
 				writer.WriteLine();
@@ -1929,16 +1948,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			WriteNetwork(source);
 			
-			bool haslinsolve = false;
+			var seen = new HashSet<MathFunctionType>();
 			
 			foreach (var def in Context.UsedMathFunctions)
 			{
-				if (Context.Linsolves.ContainsKey(def))
+				Context.Workspace ws;
+
+				if (Context.Workspaces.TryGetValue(def, out ws))
 				{
-					if (!haslinsolve)
+					if (seen.Add(ws.Type))
 					{
-						writer.WriteLine("#define CDN_MATH_LINSOLVE_V_REQUIRED");
-						haslinsolve = true;
+						var nm = Enum.GetName(typeof(Cdn.MathFunctionType), ws.Type).ToUpper();
+						writer.WriteLine("#define CDN_MATH_{0}_V_REQUIRED", nm);
 					}
 				}
 				else

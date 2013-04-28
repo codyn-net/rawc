@@ -72,6 +72,47 @@ extern void dgesv_ (LP_int *,
                     LP_double *,
                     LP_int *,
                     LP_int *);
+
+
+extern void sgetrf_ (LP_int *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_int *,
+                     LP_int *);
+
+extern void sgetri_ (LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_int *);
+
+extern void sgelsd_ (LP_int *,
+                     LP_int *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_float *,
+                     LP_float *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_int *,
+                     LP_int *);
+
+extern void sgesv_ (LP_int *,
+                    LP_int *,
+                    LP_float *,
+                    LP_int *,
+                    LP_int *,
+                    LP_float *,
+                    LP_int *,
+                    LP_int *);
+
 #endif
 
 #endif
@@ -536,6 +577,8 @@ cdn_math_linsolve_v_no_lapack_builtin (ValueType *ret,
 #include <clapack.h>
 #endif
 
+#define fdgesv_ sgesv_
+
 static ValueType *
 cdn_math_linsolve_v_lapack_builtin (ValueType *ret,
                                     ValueType *A,
@@ -551,14 +594,14 @@ cdn_math_linsolve_v_lapack_builtin (ValueType *ret,
 	LP_int info;
 	LP_int *lpipiv = ipiv;
 
-	dgesv_ (&lpRA,
-	        &lpCB,
-	        lpA,
-	        &lpRA,
-	        lpipiv,
-	        lpb,
-	        &lpRA,
-	        &info);
+	CDN_MATH_VALUE_TYPE_FUNC(dgesv_) (&lpRA,
+	                                  &lpCB,
+	                                  lpA,
+	                                  &lpRA,
+	                                  lpipiv,
+	                                  lpb,
+	                                  &lpRA,
+	                                  &info);
 
 	memcpy (ret, b, sizeof (ValueType) * RA * CB);
 	return ret;
@@ -576,12 +619,92 @@ cdn_math_linsolve_v_builtin (ValueType *ret,
 #ifdef ENABLE_LAPACK
 	return cdn_math_linsolve_v_lapack_builtin (ret, A, b, RA, CB, ipiv);
 #else
-	return cdn_math_linsolve_no_lapack_builtin (ret, A, b, RA, CB, ipiv);
+	return cdn_math_linsolve_v_no_lapack_builtin (ret, A, b, RA, CB, ipiv);
 #endif
 }}
 """)
 
     print_guard_end('linsolve_v')
+
+def print_inverse_v():
+    print_guard('inverse_v')
+
+    print("""
+static ValueType *cdn_math_inverse_v_builtin (ValueType *ret,
+                                              ValueType *A,
+                                              uint32_t   RA,
+                                              int32_t   *ipiv,
+                                              ValueType *work,
+                                              int32_t    lwork);
+
+#ifndef ENABLE_LAPACK
+static ValueType *
+cdn_math_inverse_v_no_lapack_builtin (ValueType *ret,
+                                      ValueType *A,
+                                      uint32_t   RA,
+                                      int32_t   *ipiv,
+                                      ValueType *work,
+                                      int32_t    lwork)
+{{
+	#error("The inv function is not supported without LAPACK");
+}}
+#else
+
+#define fdgetrf_ sgetrf_
+#define fdgetri_ sgetri_
+
+static ValueType *
+cdn_math_inverse_v_lapack_builtin (ValueType *ret,
+                                   ValueType *A,
+                                   uint32_t   RA,
+                                   int32_t   *ipiv,
+                                   ValueType *work,
+                                   int32_t    lwork)
+{{
+	LP_ValueType *lpA = A;
+	LP_int lpRA = RA;
+	LP_int *lpipiv = ipiv;
+	LP_ValueType *lpwork = work;
+	LP_int lplwork = lwork;
+	LP_int info;
+
+	CDN_MATH_VALUE_TYPE_FUNC(dgetrf_) (&lpRA,
+	                                   &lpRA,
+	                                   lpA,
+	                                   &lpRA,
+	                                   lpipiv,
+	                                   &info);
+
+	CDN_MATH_VALUE_TYPE_FUNC(dgetri_) (&lpRA,
+	                                   lpA,
+	                                   &lpRA,
+	                                   lpipiv,
+	                                   lpwork,
+	                                   &lplwork,
+	                                   &info);
+
+	memcpy (ret, A, sizeof (ValueType) * RA * RA);
+	return ret;
+}}
+#endif
+
+static ValueType *
+cdn_math_inverse_v_builtin (ValueType *ret,
+                             ValueType *A,
+                             uint32_t   RA,
+                             int32_t   *ipiv,
+                             ValueType *work,
+                             int32_t    lwork)
+{{
+#ifdef ENABLE_LAPACK
+	return cdn_math_inverse_v_lapack_builtin (ret, A, RA, ipiv, work, lwork);
+#else
+	return cdn_math_inverse_v_no_lapack_builtin (ret, A, RA, ipiv, work, lwork);
+#endif
+}}
+""")
+
+    print_guard_end('inverse_v')
 
 def print_matrix_multiply_v():
     print_guard('matrix_multiply_v')
@@ -874,6 +997,7 @@ print_vcat()
 print_transpose()
 print_matrix_multiply_v()
 print_linsolve_v()
+print_inverse_v()
 print_diag()
 print_tri()
 

@@ -66,5 +66,6 @@ triu_m = "triu(sqmatrix)" | out
 tril_m = "tril(sqmatrix)" | out
 
 linsolve = "linsolve([8 1 6; 3 5 7; 4 9 2], [1; 2; 3])" | out
+inverse = "inv([4, 3; 3, 2])" | out
 
 # vi:ts=4:et

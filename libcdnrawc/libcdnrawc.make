@@ -81,6 +81,7 @@ FILES = \
 	Programmer/Formatters/C/Context.cs \
 	Programmer/Formatters/C/ComputationNodeTranslator.cs \
 	Programmer/Formatters/C/C.cs \
+	Programmer/Formatters/C/Lapack.cs \
 	Programmer/Formatters/IFormatter.cs \
 	Programmer/Formatters/DynamicVisitor.cs \
 	Programmer/Formatters/CLike/InitialValueTranslator.cs \
