@@ -9,8 +9,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public class Workspace
 		{
 			public Cdn.MathFunctionType Type;
-			public int Order;
-			public int WorkSize;
+			public int[] WorkSize;
+			public int[] Order;
 			public Cdn.Dimension Dimension;
 		}
 		
@@ -50,9 +50,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				s_workspaces[ret] = new Workspace {
 					Type = type,
-					Order = d2.Rows,
+					Order = new int[] {d2.Rows},
 					Dimension = d2,
-					WorkSize = d2.Rows,
+					WorkSize = new int[] {d2.Rows},
 				};
 
 				return ret;
@@ -68,9 +68,28 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					
 					s_workspaces[ret] = new Workspace {
 						Type = type,
-						WorkSize = ws,
+						WorkSize = new int[] {ws},
 						Dimension = d2,
-						Order = d2.Rows,
+						Order = new int[] {d2.Rows},
+					};
+				}
+				
+				return ret;
+			}
+			case MathFunctionType.PseudoInverse:
+			{
+				var d2 = node.Children[0].Dimension;
+				var ret = String.Format("CDN_MATH_PSEUDOINVERSE_V_{0}_{1}", d2.Rows, d2.Columns);
+				
+				if (!s_workspaces.ContainsKey(ret))
+				{
+					int[] ws = Lapack.PseudoInverseWorkspace(d2);
+
+					s_workspaces[ret] = new Workspace {
+						Type = type,
+						Dimension = d2,
+						WorkSize = ws,
+						Order = new int[] {d2.Rows, d2.Columns},
 					};
 				}
 				
@@ -178,6 +197,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 				break;
 			case MathFunctionType.Inverse:
+			case MathFunctionType.PseudoInverse:
 				break;
 			default:
 				base.TranslateFunctionDimensionArguments(instruction, args, cnt);

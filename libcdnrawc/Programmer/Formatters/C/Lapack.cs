@@ -26,8 +26,57 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
+		public static int[] PseudoInverseWorkspace(Cdn.Dimension d)
+		{
+			int[] m = new int[] {d.Rows};
+			int[] n = new int[] {d.Columns};
+			
+			var maxdim = System.Math.Max(d.Rows, d.Columns);
+			var mindim = System.Math.Max(d.Rows, d.Columns);
+			
+			int[] nrhs = new int[] {maxdim};
+			double[] A = new double[d.Size()];
+			double[] b = new double[maxdim * maxdim];
+			double[] s = new double[mindim];
+			double[] rcond = new double[] {-1};
+			double[] rank = new double[1];
+			double[] work = new double[1];
+			int[] lwork = new int[] {-1};
+			int[] iwork = new int[1];
+			int[] info = new int[1];
+			
+			int nlvl = (int)System.Math.Log(mindim / (25.0 + 1.0), 2) + 1;
+			int riwork = 3 * mindim * nlvl + 11 * mindim;
+			
+			try
+			{
+				dgelsd_(m, n, nrhs, A, m, b, nrhs, s, rcond, rank, work, lwork, iwork, info);
+				return new int[] {(int)work[0], riwork};
+			}
+			catch
+			{
+				return new int[] {12 * mindim + 2 * mindim * 25 + 8 * mindim * nlvl + mindim * maxdim + (int)System.Math.Pow(25.0 + 1.0, 2), riwork};
+			}
+		}
+		
 		[DllImport("liblapack.dll")]
 		private static extern void dgetri_(int[] n, double[] A, int[] lda, int[] ipiv, double[] work, int[] lwork, int[] info);
+		
+		[DllImport("liblapack.dll")]
+		private static extern void dgelsd_(int[] m,
+		                                   int[] n,
+		                                   int[] nrhs,
+		                                   double[] A,
+		                                   int[] lda,
+		                                   double[] b,
+		                                   int[] ldb,
+		                                   double[] s,
+		                                   double[] rcond,
+		                                   double[] rank,
+		                                   double[] work,
+		                                   int[] lwork,
+		                                   int[] iwork,
+		                                   int[] info);
 	}
 }
 

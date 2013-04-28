@@ -588,11 +588,13 @@ cdn_math_linsolve_v_lapack_builtin (ValueType *ret,
                                     int32_t   *ipiv)
 {{
 	LP_ValueType *lpA = A;
-	LP_ValueType *lpb = b;
+	LP_ValueType *lpb = ret;
 	LP_int lpRA = RA;
 	LP_int lpCB = CB;
 	LP_int info;
 	LP_int *lpipiv = ipiv;
+
+	memcpy (ret, b, sizeof (ValueType) * RA * CB);
 
 	CDN_MATH_VALUE_TYPE_FUNC(dgesv_) (&lpRA,
 	                                  &lpCB,
@@ -603,7 +605,6 @@ cdn_math_linsolve_v_lapack_builtin (ValueType *ret,
 	                                  &lpRA,
 	                                  &info);
 
-	memcpy (ret, b, sizeof (ValueType) * RA * CB);
 	return ret;
 }}
 #endif
@@ -661,12 +662,14 @@ cdn_math_inverse_v_lapack_builtin (ValueType *ret,
                                    ValueType *work,
                                    int32_t    lwork)
 {{
-	LP_ValueType *lpA = A;
+	LP_ValueType *lpA = ret;
 	LP_int lpRA = RA;
 	LP_int *lpipiv = ipiv;
 	LP_ValueType *lpwork = work;
 	LP_int lplwork = lwork;
 	LP_int info;
+
+	memcpy (ret, A, sizeof (ValueType) * RA * RA);
 
 	CDN_MATH_VALUE_TYPE_FUNC(dgetrf_) (&lpRA,
 	                                   &lpRA,
@@ -683,7 +686,6 @@ cdn_math_inverse_v_lapack_builtin (ValueType *ret,
 	                                   &lplwork,
 	                                   &info);
 
-	memcpy (ret, A, sizeof (ValueType) * RA * RA);
 	return ret;
 }}
 #endif
@@ -705,6 +707,121 @@ cdn_math_inverse_v_builtin (ValueType *ret,
 """)
 
     print_guard_end('inverse_v')
+
+
+def print_pseudo_inverse_v():
+    print_guard('pseudoinverse_v')
+
+    print("""
+static ValueType *cdn_math_pseudoinverse_v_builtin (ValueType *ret,
+                                                     ValueType *A,
+                                                     uint32_t   RA,
+                                                     uint32_t   CA,
+                                                     ValueType *B,
+                                                     uint32_t   RB,
+                                                     ValueType *S,
+                                                     ValueType *work,
+                                                     uint32_t   lwork,
+                                                     int32_t   *iwork);
+
+#ifndef ENABLE_LAPACK
+static ValueType *
+cdn_math_pseudoinverse_v_no_lapack_builtin (ValueType *ret,
+                                             ValueType *A,
+                                             uint32_t   RA,
+                                             uint32_t   CA,
+                                             ValueType *B,
+                                             uint32_t   RB,
+                                             ValueType *S,
+                                             ValueType *work,
+                                             uint32_t   lwork,
+                                             int32_t   *iwork)
+{{
+	#error("The pinv function is not supported without LAPACK");
+}}
+#else
+
+#define fdgelsd_ sgelsd_
+#include <stdio.h>
+
+static ValueType *
+cdn_math_pseudoinverse_v_lapack_builtin (ValueType *ret,
+                                          ValueType *A,
+                                          uint32_t   RA,
+                                          uint32_t   CA,
+                                          ValueType *B,
+                                          uint32_t   RB,
+                                          ValueType *S,
+                                          ValueType *work,
+                                          uint32_t   lwork,
+                                          int32_t   *iwork)
+{{
+	LP_ValueType *lpA     = A;
+	LP_int        lpRA    = RA;
+	LP_int        lpCA    = CA;
+	LP_ValueType *lpB     = B;
+	LP_int        lpRB    = RB;
+	LP_ValueType *lpS     = S;
+	LP_ValueType  rcond   = -1;
+	LP_int        rank;
+	LP_ValueType *lpwork  = work;
+	LP_int        lplwork = lwork;
+	LP_int       *lpiwork = iwork;
+	LP_int        info;
+	uint32_t      i;
+	ValueType    *retptr;
+
+	CDN_MATH_VALUE_TYPE_FUNC(dgelsd_) (&lpRA,
+	                                   &lpCA,
+	                                   &lpRB,
+	                                   lpA,
+	                                   &lpRA,
+	                                   lpB,
+	                                   &lpRB,
+	                                   lpS,
+	                                   &rcond,
+	                                   &rank,
+	                                   lpwork,
+	                                   &lplwork,
+	                                   lpiwork,
+	                                   &info);
+
+	retptr = ret;
+
+	// copy back to ret
+	for (i = 0; i < RA; ++i)
+	{{
+		memcpy (retptr, B, sizeof (ValueType) * CA);
+
+		retptr += CA;
+		B += RB;
+	}}
+
+	return ret;
+}}
+#endif
+
+static ValueType *
+cdn_math_pseudoinverse_v_builtin (ValueType *ret,
+                                  ValueType *A,
+                                  uint32_t   RA,
+                                  uint32_t   CA,
+                                  ValueType *B,
+                                  uint32_t   RB,
+                                  ValueType *S,
+                                  ValueType *work,
+                                  uint32_t   lwork,
+                                  int32_t   *iwork)
+{{
+#ifdef ENABLE_LAPACK
+	return cdn_math_pseudoinverse_v_lapack_builtin (ret, A, RA, CA, B, RB, S, work, lwork, iwork);
+#else
+	return cdn_math_pseudoinverse_v_no_lapack_builtin (ret, A, RA, CA, B, RB, S, work, lwork, iwork);
+#endif
+}}
+""")
+
+    print_guard_end('pseudoinverse_v')
 
 def print_matrix_multiply_v():
     print_guard('matrix_multiply_v')
@@ -998,6 +1115,7 @@ print_transpose()
 print_matrix_multiply_v()
 print_linsolve_v()
 print_inverse_v()
+print_pseudo_inverse_v()
 print_diag()
 print_tri()
 
