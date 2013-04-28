@@ -54,6 +54,9 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			d_writer.WriteLine(ReadResource("Cdn.js"));
 			d_writer.WriteLine(ReadResource("Cdn.Utils.js"));
 			d_writer.WriteLine(ReadResource("Cdn.Math.js"));
+			d_writer.WriteLine(ReadResource("Cdn.Integrators.js"));
+			d_writer.WriteLine(ReadResource("Cdn.Integrators.Euler.js"));
+			d_writer.WriteLine(ReadResource("Cdn.Integrators.RungeKutta.js"));
 
 			WriteConstructor();
 			WriteClearData();
