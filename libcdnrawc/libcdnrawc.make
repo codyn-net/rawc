@@ -33,7 +33,8 @@ AL=al2
 SATELLITE_ASSEMBLY_NAME=$(notdir $(basename $(ASSEMBLY))).resources.dll
 
 PROGRAMFILES = \
-	$(LIBCDNRAWC_SHARP_DLL_MDB)
+	$(LIBCDNRAWC_SHARP_DLL_MDB) \
+	Cdn.RawC.dll.config
 
 LINUX_PKGCONFIG = \
 	$(LIBCDNRAWC_SHARP_PC)
@@ -160,7 +161,7 @@ REFERENCES =  \
 
 DLL_REFERENCES =
 
-CLEANFILES = $(PROGRAMFILES) $(LINUX_PKGCONFIG)
+CLEANFILES = $(LIBCDNRAWC_SHARP_DLL_MDB) $(LINUX_PKGCONFIG)
 
 LIBCDNRAWC_SHARP_PC = $(BUILD_DIR)/codyn-rawc-sharp-@LIBCDNRAWC_SHARP_API_VERSION@.pc
 LIBCDNRAWC_SHARP_API_PC = codyn-rawc-sharp-@LIBCDNRAWC_SHARP_API_VERSION@.pc
@@ -180,6 +181,7 @@ $(build_xamlg_list): %.xaml.g.cs: %.xaml
 
 $(ASSEMBLY) $(ASSEMBLY_MDB): $(build_sources) $(build_resources) $(build_datafiles) $(DLL_REFERENCES) $(PROJECT_REFERENCES) $(build_xamlg_list) $(build_satellite_assembly_list)
 	mkdir -p $(shell dirname $(ASSEMBLY))
-	$(ASSEMBLY_COMPILER_COMMAND) $(ASSEMBLY_COMPILER_FLAGS) -out:$(ASSEMBLY) -target:$(COMPILE_TARGET) $(build_sources_embed) $(build_resources_embed) $(build_references_ref)
+	$(ASSEMBLY_COMPILER_COMMAND) $(ASSEMBLY_COMPILER_FLAGS) -out:$(ASSEMBLY) -target:$(COMPILE_TARGET) $(build_sources_embed) $(build_resources_embed) $(build_references_ref) && \
+	cp Cdn.RawC.dll.config $(dir $(ASSEMBLY))
 
 .NOTPARALLEL:
