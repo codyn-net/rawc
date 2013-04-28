@@ -742,7 +742,6 @@ cdn_math_pseudoinverse_v_no_lapack_builtin (ValueType *ret,
 #else
 
 #define fdgelsd_ sgelsd_
-#include <stdio.h>
 
 static ValueType *
 cdn_math_pseudoinverse_v_lapack_builtin (ValueType *ret,
@@ -926,6 +925,143 @@ cdn_math_matrix_multiply_v_builtin (ValueType *ret,
 """)
 
     print_guard_end('matrix_multiply_v')
+
+def print_slinsolve_v():
+    print_guard('slinsolve_v')
+
+    print("""
+static ValueType *cdn_math_slinsolve_v_builtin (ValueType *ret,
+                                                ValueType *A,
+                                                uint32_t   RA,
+                                                ValueType *b,
+                                                uint32_t   CB,
+                                                ValueType *L);
+
+static void
+_cdn_math_slinsolve_factorize (ValueType *A,
+                               ValueType *L,
+                               int32_t    n)
+{{
+	int32_t k;
+
+	for (k = n - 1; k >= 0; --k)
+	{{
+		int32_t i = (int32_t)L[k];
+		int32_t kk = k * (n + 1);
+
+		while (i >= 0)
+		{{
+			int32_t j;
+			ValueType a;
+			int32_t ki;
+
+			ki = k + i * n;
+
+			// a = A_{ki} / A_{kk}
+			a = A[ki] / A[kk];
+
+			j = i;
+
+			while (j >= 0)
+			{{
+				int32_t jn = j * n;
+				int32_t ij = i + jn;
+				int32_t kj = k + jn;
+
+				// A_{ij} = A_{ij} - a A_{kj}
+				A[ij] -= a * A[kj];
+
+				j = (int32_t)L[j];
+			}}
+
+			// H_{ki} = a
+			A[ki] = a;
+			i = (int32_t)L[i];
+		}}
+	}}
+}}
+
+static void
+_cdn_math_slinsolve_backsubs (ValueType *ptrA,
+                              ValueType *ptrB,
+                              ValueType *ptrL,
+                              int32_t    n)
+{{
+	int32_t i;
+	int32_t diag;
+
+	diag = n * n - 1;
+
+	// First solve for b = D^-1 L^-T b
+	// see Sparce Factorization Algorithms, page 115
+	for (i = n - 1; i >= 0; --i)
+	{{
+		int32_t j;
+
+		j = (int32_t)ptrL[i];
+
+		while (j >= 0)
+		{{
+			int32_t ij = i + j * n;
+
+			// x_j = x_j - L_{ij} x_i
+			ptrB[j] -= ptrA[ij] * ptrB[i];
+			j = (int32_t)ptrL[j];
+		}}
+
+		// Apply D-1 from the diagonal elements if ptrA
+		ptrB[i] /= ptrA[diag];
+		diag -= n + 1;
+	}}
+
+	// Then finally solve for L^-1 b
+	// see Sparce Factorization Algorithms, page 115
+	for (i = 0; i < n; ++i)
+	{{
+		int32_t j;
+
+		j = (int32_t)ptrL[i];
+
+		while (j >= 0)
+		{{
+			int32_t ij = i + j * n;
+
+			// x_i = x_i - L_{ij} x_j
+			ptrB[i] -= ptrA[ij] * ptrB[j];
+			j = (int32_t)ptrL[j];
+		}}
+	}}
+}}
+
+static ValueType *
+cdn_math_slinsolve_v_builtin (ValueType *ret,
+                              ValueType *A,
+                              uint32_t   RA,
+                              ValueType *b,
+                              uint32_t   CB,
+                              ValueType *L)
+{{
+	uint32_t i;
+	ValueType *bptr;
+
+	// Factorized A in place using LTDL factorization
+	_cdn_math_slinsolve_factorize (A, L, RA);
+
+	bptr = b;
+
+	// Then backsubstitute
+	for (i = 0; i < CB; ++i)
+	{
+		_cdn_math_slinsolve_backsubs (A, bptr, L, RA);
+		bptr += RA;
+	}
+
+	memcpy (ret, b, sizeof (ValueType) * RA * CB);
+	return ret;
+}}
+""")
+
+    print_guard_end('slinsolve_v')
 
 def print_diag():
     print_guard('diag')
@@ -1114,6 +1250,7 @@ print_vcat()
 print_transpose()
 print_matrix_multiply_v()
 print_linsolve_v()
+print_slinsolve_v()
 print_inverse_v()
 print_pseudo_inverse_v()
 print_diag()

@@ -798,6 +798,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					                 ws.WorkSize[0]);
 				}
 					break;
+				case Cdn.MathFunctionType.Slinsolve:
+					writer.WriteLine("     ValueType *A,");
+					writer.WriteLine("     ValueType *b,");
+					writer.WriteLine("     uint32_t   CB,");
+					writer.WriteLine("     ValueType *L)");
+					writer.WriteLine("{");
+					writer.WriteLine("\tValueType Acp[{0}];", ws.Dimension.Size());
+					writer.WriteLine();
+					writer.WriteLine("memcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
+					writer.WriteLine("\treturn CDN_MATH_SLINSOLVE_V(ret, Acp, {0}, b, CB, L);", ws.Dimension.Rows);
+
+					break;
 				}
 				
 				writer.WriteLine("}");

@@ -44,6 +44,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			switch (type)
 			{
 			case MathFunctionType.Linsolve:
+			case MathFunctionType.Inverse:
+			case MathFunctionType.PseudoInverse:
+				if (((Formatters.C.Options)Options).NoLapack)
+				{
+					throw new NotImplementedException(String.Format("The use of `{0}' is not supported without LAPACK at this moment",
+					                              Enum.GetName(typeof(Cdn.MathFunctionType), type).ToLower()));
+				}
+				break;
+			}
+
+			switch (type)
+			{
+			case MathFunctionType.Linsolve:
 			{
 				var d2 = node.Children[1].Dimension;
 				var ret = String.Format("CDN_MATH_LINSOLVE_V_{0}", d2.Rows);
@@ -93,6 +106,23 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					};
 				}
 				
+				return ret;
+			}
+			case MathFunctionType.Slinsolve:
+			{
+				var d2 = node.Children[2].Dimension;
+				var ret = String.Format("CDN_MATH_SLINSOLVE_V_{0}", d2.Rows);
+				
+				if (!s_workspaces.ContainsKey(ret))
+				{
+					s_workspaces[ret] = new Workspace {
+						Type = type,
+						Dimension = d2,
+						WorkSize = new int[] {d2.Size()},
+						Order = new int[] {d2.Rows}
+					};
+				}
+
 				return ret;
 			}
 			default:
@@ -194,6 +224,21 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				
 				args.Add(dim1.Rows.ToString());
 				args.Add(dim2.Columns.ToString());
+			}
+				break;
+			case MathFunctionType.Slinsolve:
+			{
+				// Add columns of B argument
+				
+				// Here we also reorder the arguments.
+				var b = args[0];
+				var L = args[1];
+				var A = args[2];
+				
+				args[0] = A;
+				args[1] = b;
+				args[2] = Node.Children[0].Dimension.Columns.ToString();
+				args.Add(L);
 			}
 				break;
 			case MathFunctionType.Inverse:

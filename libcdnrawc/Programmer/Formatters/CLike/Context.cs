@@ -462,8 +462,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					val = "diag_v_m";
 				}
+				
+				return val;
 			}
-				break;
+			case MathFunctionType.Slinsolve:
+				return String.Format("{0}_v", name.ToLower());
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
