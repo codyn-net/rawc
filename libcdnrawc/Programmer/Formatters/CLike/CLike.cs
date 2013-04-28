@@ -456,5 +456,23 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				}
 			}
 		}
+
+		public bool NeedsSpaceForEvents()
+		{
+			if (Knowledge.Instance.EventsCount == 0)
+			{
+				return false;
+			}
+
+			foreach (var ev in Knowledge.Instance.Events)
+			{
+				if (ev.Approximation != Double.MaxValue)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
 	}
 }

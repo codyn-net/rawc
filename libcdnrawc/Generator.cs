@@ -89,7 +89,7 @@ namespace Cdn.RawC
 			{
 				try
 				{
-					d_validator.Validate(program);
+					d_validator.Validate(program, d_writtenFiles);
 				}
 				catch (Exception e)
 				{

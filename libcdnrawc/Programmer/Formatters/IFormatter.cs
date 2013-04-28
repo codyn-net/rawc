@@ -1,5 +1,5 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
 
 namespace Cdn.RawC.Programmer.Formatters
 {
@@ -8,7 +8,9 @@ namespace Cdn.RawC.Programmer.Formatters
 		string[] Write(Program program);
 		
 		string[] Compile(bool verbose);
-		string CompileForValidation(bool verbose);
+
+		string CompileForValidation(string[] sources, bool verbose);
+		IEnumerator<double[]> RunForValidation(string[] sources, double t, double dt);
 	}
 }
 

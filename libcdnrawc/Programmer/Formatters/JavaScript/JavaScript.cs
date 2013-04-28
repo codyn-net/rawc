@@ -22,16 +22,6 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			d_options = new Options("JavaScript Formatter");
 		}
 
-		public string[] Compile(bool verbose)
-		{
-			return null;
-		}
-
-		public string CompileForValidation(bool verbose)
-		{
-			return null;
-		}
-
 		public string[] Write(Program program)
 		{
 			d_program = program;

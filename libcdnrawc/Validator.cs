@@ -87,7 +87,7 @@ namespace Cdn.RawC
 			d_monitors = ret;
 		}
 
-		private void ReadAndCompare(DynamicNetwork dynnet, List<uint> indices, List<Cdn.Dimension> dimensions, int row, double[] data, double t)
+		private void ReadAndCompare(List<uint> indices, List<Cdn.Dimension> dimensions, int row, double[] data, double t)
 		{
 			List<string> failures = new List<string>();
 			
@@ -122,30 +122,23 @@ namespace Cdn.RawC
 			}
 		}
 
-		public void Validate(Programmer.Program program)
+		public void Validate(Programmer.Program program, string[] sources)
 		{
 			Log.WriteLine("Validating generated network...");
 
 			Options opts = Options.Instance;
-
-			string shlib = opts.Formatter.CompileForValidation(opts.Verbose);
-
-			double ts;
+			double dt;
 
 			if (opts.DelayTimeStep <= 0)
 			{
-				ts = opts.ValidateRange[1];
+				dt = opts.ValidateRange[1];
 			}
 			else
 			{
-				ts = opts.DelayTimeStep;
+				dt = opts.DelayTimeStep;
 			}
 
-			// Create dynamic binding to the shared lib API for rawc
-			var dynnet = new DynamicNetwork(shlib, program.Options.Basename);
 			double t = opts.ValidateRange[0];
-
-			dynnet.Reset(t);
 
 			var indices = d_monitors.ConvertAll<uint>(a => (uint)program.StateTable[a.Variable].DataIndex);
 			var dimensions = d_monitors.ConvertAll<Cdn.Dimension>(a => a.Variable.Dimension);
@@ -153,19 +146,51 @@ namespace Cdn.RawC
 			var dtstate = program.StateTable[Knowledge.Instance.TimeStep];
 			var len = d_data[0].Length - 1;
 
-			var shvals = dynnet.Values();
+			string shlib = opts.Formatter.CompileForValidation(sources, opts.Verbose);
+			IEnumerator<double[]> enu;
+
+			if (shlib != null)
+			{
+				enu = ValidateSharedLib(program, shlib, t, dt);
+			}
+			else
+			{
+				enu = ValidateProgram(program, sources, t, dt);
+			}
+
+			enu.MoveNext();
 
 			for (int i = 0; i < len; ++i)
 			{
-				ReadAndCompare(dynnet, indices, dimensions, i, shvals, t);
+				var data = enu.Current;
+				ReadAndCompare(indices, dimensions, i, data, t);
+				enu.MoveNext();
 
-				dynnet.Step(t, ts);
-				shvals = dynnet.Values();
-
-				t += shvals[dtstate.DataIndex];
+				t += data[dtstate.DataIndex];
 			}
-
+		
 			Log.WriteLine("Network {0} successfully validated...", d_network.Filename);
+		}
+
+		private IEnumerator<double[]> ValidateProgram(Programmer.Program program, string[] sources, double t, double dt)
+		{
+			return Options.Instance.Formatter.RunForValidation(sources, t, dt);
+		}
+
+		private IEnumerator<double[]> ValidateSharedLib(Programmer.Program program, string shlib, double t, double dt)
+		{
+			// Create dynamic binding to the shared lib API for rawc
+			var dynnet = new DynamicNetwork(shlib, program.Options.Basename);
+
+			dynnet.Reset(t);
+
+			yield return dynnet.Values();
+
+			while (true)
+			{
+				dynnet.Step(t, dt);
+				yield return dynnet.Values();
+			}
 		}
 
 		private class DynamicNetwork

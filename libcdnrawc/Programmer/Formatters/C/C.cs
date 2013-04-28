@@ -213,7 +213,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return writer.ToString();
 		}
 
-		public string CompileForValidation(bool verbose)
+		public IEnumerator<double[]> RunForValidation(string[] sources, double t, double dt)
+		{
+			// No need since we support compilation for validation
+			return null;
+		}
+
+		public string CompileForValidation(string[] sources, bool verbose)
 		{
 			return Compile(verbose, true)[0];
 		}
@@ -378,24 +384,6 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.Close();
 		}
 
-		private bool NeedsSpaceForEvents()
-		{
-			if (Knowledge.Instance.EventsCount == 0)
-			{
-				return false;
-			}
-
-			foreach (var ev in Knowledge.Instance.Events)
-			{
-				if (ev.Approximation != Double.MaxValue)
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-		
 		private void WriteHeader()
 		{
 			d_headerFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".h");
