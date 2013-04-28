@@ -455,32 +455,31 @@ cdn_math_matrix_multiply_v_builtin (ValueType *ret,
                                     uint32_t   Cx0,
                                     uint32_t   Cx1)
 {{
-	uint32_t r;
+	uint32_t c;
 	uint32_t ptr = 0;
 
-	for (r = 0; r < Rx0; ++r)
-	{{
-		uint32_t c;
+	for (c = 0; c < Cx1; ++c)
+	{
+		uint32_t r;
 
-		for (c = 0; c < Cx1; ++c)
-		{{
+		for (r = 0; r < Rx0; ++r)
+		{
 			uint32_t i;
-			uint32_t x1ptr = c;
+			uint32_t x0ptr = r;
 
 			ret[ptr] = 0;
 
 			for (i = 0; i < Cx0; ++i)
-			{{
-				ret[ptr] += x0[i] * x1[x1ptr];
-
-				x1ptr += Cx1;
-			}}
+			{
+				ret[ptr] += x0[x0ptr] * x1[i];
+				x0ptr += Rx0;
+			}
 
 			++ptr;
-		}}
+		}
 
-		x0 += Cx0;
-	}}
+		x1 += Cx0;
+	}
 
 	return ret;
 }}""")
