@@ -873,6 +873,27 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				args.Add(dim1.Columns.ToString());
 			}
 				break;
+			case MathFunctionType.Diag:
+			{
+				var dim1 = context.Node.Children[0].Dimension;
+				
+				if (dim1.Rows == 1 || dim1.Columns == 1)
+				{
+					args.Add(dim1.Size().ToString());
+				}
+				else
+				{
+					args.Add(dim1.Rows.ToString());
+				}
+			}
+				break;
+			case MathFunctionType.Triu:
+			case MathFunctionType.Tril:
+			{
+				var dim1 = context.Node.Children[0].Dimension;
+				args.Add(dim1.Rows.ToString());
+			}
+				break;
 			case MathFunctionType.Multiply:
 			{
 				var d1 = context.Node.Children[0].Dimension;

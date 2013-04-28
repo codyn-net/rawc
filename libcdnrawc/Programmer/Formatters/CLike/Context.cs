@@ -355,6 +355,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Csign:
 			case MathFunctionType.Sum:
 			case MathFunctionType.Product:
+			case MathFunctionType.Triu:
+			case MathFunctionType.Tril:
+			case MathFunctionType.Diag:
+			case MathFunctionType.Transpose:
 				val = name.ToLower();
 				break;
 			case MathFunctionType.Power:
@@ -421,6 +425,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Product:
 			case MathFunctionType.Transpose:
 			case MathFunctionType.Sign:
+			case MathFunctionType.Triu:
+			case MathFunctionType.Tril:
 				val = String.Format("{0}_v", name.ToLower());
 				break;
 			case MathFunctionType.Power:
@@ -444,6 +450,20 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				}
 				break;
 			}
+			case MathFunctionType.Diag:
+			{
+				var d1 = node.Children[0].Dimension;
+				
+				if (d1.Rows == 1 || d1.Columns == 1)
+				{
+					val = "diag_v_v";
+				}
+				else
+				{
+					val = "diag_v_m";
+				}
+			}
+				break;
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}

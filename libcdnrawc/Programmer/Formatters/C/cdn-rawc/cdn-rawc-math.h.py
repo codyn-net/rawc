@@ -353,7 +353,20 @@ cdn_math_index_v_builtin (ValueType *ret,
 
     print_guard_end('index_v')
 
-def print_transpose_v():
+def print_transpose():
+    print_guard('transpose')
+
+    print("""
+static ValueType cdn_math_transpose_builtin (ValueType x0);
+
+static ValueType
+cdn_math_tranpose_builtin (ValueType x0)
+{{
+	return x0;
+}}""")
+
+    print_guard_end('transpose')
+
     print_guard('transpose_v')
 
     print("""
@@ -486,6 +499,163 @@ cdn_math_matrix_multiply_v_builtin (ValueType *ret,
 
     print_guard_end('matrix_multiply_v')
 
+def print_diag():
+    print_guard('diag')
+
+    print("""
+static void cdn_math_diag_builtin (ValueType x0);
+
+static void
+cdn_math_diag_builtin (ValueType x0)
+{{
+	return x0;
+}}
+""")
+
+    print_guard_end('diag')
+
+    print_guard('diag_v_m')
+
+    print("""
+static ValueType *cdn_math_diag_v_m_builtin (ValueType *ret,
+                                             ValueType *x0,
+                                             uint32_t   n);
+
+static ValueType *
+cdn_math_diag_v_m_builtin (ValueType *ret,
+                           ValueType *x0,
+                           uint32_t   n)
+{{
+	uint32_t i;
+
+	for (i = 0; i < n; ++i)
+	{{
+		ret[i] = *x0;
+		x0 += n + 1;
+	}}
+
+	return ret;
+}}""")
+
+    print_guard_end('diag_v_m')
+
+    print_guard('diag_v_v')
+
+    print("""
+static ValueType *cdn_math_diag_v_v_builtin (ValueType *ret,
+                                             ValueType *x0,
+                                             uint32_t   n);
+
+static ValueType *
+cdn_math_diag_v_v_builtin (ValueType *ret,
+                           ValueType *x0,
+                           uint32_t   n)
+{{
+	uint32_t i;
+	ValueType *retptr = ret;
+
+	for (i = 0; i < n; ++i)
+	{{
+		*retptr = x0[i];
+		retptr += n + 1;
+	}}
+
+	return ret;
+}}""")
+
+    print_guard_end('diag_v_v')
+
+def print_tri():
+    print_guard('tril')
+
+    print("""
+static void cdn_math_tril_builtin (ValueType x0);
+
+static void
+cdn_math_tril_builtin (ValueType x0)
+{{
+	return x0;
+}}
+""")
+
+    print_guard_end('tri')
+
+    print_guard('triu')
+
+    print("""
+static void cdn_math_triu_builtin (ValueType x0);
+
+static void
+cdn_math_triu_builtin (ValueType x0)
+{{
+	return x0;
+}}
+""")
+
+    print_guard_end('triu')
+
+    print_guard('tril_v')
+
+    print("""
+static ValueType *cdn_math_tril_v_builtin (ValueType *ret,
+                                           ValueType *x0,
+                                           uint32_t   n);
+
+static ValueType *
+cdn_math_tril_v_builtin (ValueType *ret,
+                         ValueType *x0,
+                         uint32_t   n)
+{{
+	uint32_t c;
+	ValueType *retptr = ret;
+
+	for (c = n; c > 0; --c)
+	{{
+		memcpy (retptr, x0, sizeof (ValueType) * c);
+
+		retptr += n + 1;
+		x0 += n + 1;
+	}}
+
+	return ret;
+}}""")
+
+    print_guard_end('tril_v')
+
+    print_guard('triu_v')
+
+    print("""
+static ValueType *cdn_math_triu_v_builtin (ValueType *ret,
+                                           ValueType *x0,
+                                           uint32_t   n);
+
+static ValueType *
+cdn_math_triu_v_builtin (ValueType *ret,
+                         ValueType *x0,
+                         uint32_t   n)
+{{
+	uint32_t c;
+	ValueType *retptr = ret;
+	uint32_t lastcol;
+
+	lastcol = n * (n - 1);
+
+	retptr += lastcol;
+	x0 += lastcol;
+
+	for (c = n; c > 0; --c)
+	{{
+		memcpy (retptr, x0, sizeof (ValueType) * c);
+
+		retptr -= n;
+		x0 -= n;
+	}}
+
+	return ret;
+}}""")
+
+    print_guard_end('triu_v')
+
 # Element wise operators
 print_operator_v('uminus', 1, '-')
 print_operator_v('negate', 1, '!')
@@ -513,8 +683,10 @@ print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 
 print_index_v()
 print_vcat()
-print_transpose_v()
+print_transpose()
 print_matrix_multiply_v()
+print_diag()
+print_tri()
 
 print("#endif /* CDN_RAWC_MATH_PROTOS */")
 

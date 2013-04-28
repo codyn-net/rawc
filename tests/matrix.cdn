@@ -20,7 +20,6 @@ defines
     binary_operator_positive = "{power}"
 
     "op_{uminus,plus,minus,multiply,divide,emultiply,modulo,power}" = "{-,+,-,*,/,.*,%,^}"
-
 }
 
 "@unary_function"          = "@1(matrix)"        | out
@@ -55,5 +54,15 @@ defines
 "csign_1_m_n" = "csign(-2,      matrix)"                 | out
 "csign_m_1_p" = "csign(matrix,  3)"                      | out
 "csign_m_1_n" = "csign(matrix, -3)"                      | out
+
+# test diagonal functions
+sqmatrix = "[1, 2, 3;
+             4, 5, 6;
+             7, 8, 9]" | out
+
+diag_m = "diag(sqmatrix)" | out
+diag_v = "diag(diag(sqmatrix))" | out
+triu_m = "triu(sqmatrix)" | out
+tril_m = "tril(sqmatrix)" | out
 
 # vi:ts=4:et
