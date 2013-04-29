@@ -57,6 +57,7 @@ namespace Cdn.RawC.Tree
 				}
 				
 				node.d_children.Reverse();
+				node.Finalize();
 
 				stack.Push(node);
 			}
@@ -65,23 +66,6 @@ namespace Cdn.RawC.Tree
 			
 			ret.Sort();
 			ret.UpdateTreeId();
-			
-			InstructionCustomFunction icfunc = ret.d_instruction as InstructionCustomFunction;
-			
-			if (icfunc != null)
-			{
-				var args = icfunc.Function.Arguments;
-				int offset = 0;
-
-				for (int i = 0; i < args.Length; ++i)
-				{
-					if (args[i].Unused)
-					{
-						ret.d_children.RemoveAt(i - offset);
-						++offset;
-					}
-				}
-			}
 			
 			return ret;
 		}
@@ -98,6 +82,26 @@ namespace Cdn.RawC.Tree
 		
 		public Node() : this("")
 		{
+		}
+
+		private void Finalize()
+		{
+			InstructionCustomFunction icfunc = d_instruction as InstructionCustomFunction;
+			
+			if (icfunc != null)
+			{
+				var args = icfunc.Function.Arguments;
+				int offset = 0;
+
+				for (int i = 0; i < args.Length; ++i)
+				{
+					if (args[i].Unused)
+					{
+						d_children.RemoveAt(i - offset);
+						++offset;
+					}
+				}
+			}
 		}
 
 		public int[] Slice
