@@ -798,6 +798,23 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					                 ws.WorkSize[0]);
 				}
 					break;
+				case Cdn.MathFunctionType.Qr:
+				{
+					int mindim = System.Math.Min(ws.Dimension.Rows, ws.Dimension.Columns);
+					
+					writer.WriteLine("     ValueType *A)");
+					writer.WriteLine("{");
+					writer.WriteLine("\tValueType Acp[{0}] = {{0,}};", ws.Dimension.Size() + ws.Dimension.Rows * ws.Dimension.Rows);
+					writer.WriteLine("\tValueType tau[{0}];", mindim);
+					writer.WriteLine("\tValueType work[{0}];", ws.WorkSize[0]);
+					writer.WriteLine();
+					writer.WriteLine("\tmemcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
+					writer.WriteLine("\treturn CDN_MATH_QR_V(ret, Acp, {0}, {1}, tau, work, {2});",
+                                     ws.Dimension.Rows,
+                                     ws.Dimension.Columns,
+					                 ws.WorkSize[0]);
+				}
+					break;
 				case Cdn.MathFunctionType.Slinsolve:
 					writer.WriteLine("     ValueType *A,");
 					writer.WriteLine("     ValueType *b,");

@@ -46,6 +46,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Linsolve:
 			case MathFunctionType.Inverse:
 			case MathFunctionType.PseudoInverse:
+			case MathFunctionType.Qr:
 				if (((Formatters.C.Options)Options).NoLapack)
 				{
 					throw new NotImplementedException(String.Format("The use of `{0}' is not supported without LAPACK at this moment",
@@ -102,6 +103,25 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						Type = type,
 						Dimension = d2,
 						WorkSize = ws,
+						Order = new int[] {d2.Rows, d2.Columns},
+					};
+				}
+				
+				return ret;
+			}
+			case MathFunctionType.Qr:
+			{
+				var d2 = node.Children[0].Dimension;
+				var ret = String.Format("CDN_MATH_QR_V_{0}_{1}", d2.Rows, d2.Columns);
+				
+				if (!s_workspaces.ContainsKey(ret))
+				{
+					int ws = Lapack.QrWorkspace(d2);
+					
+					s_workspaces[ret] = new Workspace {
+						Type = type,
+						Dimension = d2,
+						WorkSize = new int[] {ws},
 						Order = new int[] {d2.Rows, d2.Columns},
 					};
 				}
@@ -243,6 +263,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				break;
 			case MathFunctionType.Inverse:
 			case MathFunctionType.PseudoInverse:
+			case MathFunctionType.Qr:
 				break;
 			default:
 				base.TranslateFunctionDimensionArguments(instruction, args, cnt);

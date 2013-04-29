@@ -26,6 +26,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 		}
 		
+		public static int QrWorkspace(Cdn.Dimension d)
+		{
+			int[] m = new int[] {d.Rows};
+			int[] n = new int[] {d.Columns};
+			double[] A = new double[d.Size()];
+			double[] tau = new double[d.Rows < d.Columns ? d.Rows : d.Columns];
+			double[] work = new double[1];
+			int[] lwork = new int[] {-1};
+			int[] info = new int[1];
+			
+			try
+			{
+				dgeqrf_(m, n, A, m, tau, work, lwork, info);
+				return (int)work[0];
+			}
+			catch
+			{
+				return d.Columns * 64;
+			}
+		}
+		
 		public static int[] PseudoInverseWorkspace(Cdn.Dimension d)
 		{
 			int[] m = new int[] {d.Rows};
@@ -77,6 +98,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		                                   int[] lwork,
 		                                   int[] iwork,
 		                                   int[] info);
+	
+		[DllImport("liblapack.dll")]
+		private static extern void dgeqrf_(int[] m,
+		                                   int[] n,
+		                                   double[] A,
+		                                   int[] lda,
+		                                   double[] tau,
+		                                   double[] work,
+		                                   int[] lwork,
+		                                   int[] info);	
 	}
 }
 

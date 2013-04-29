@@ -73,6 +73,26 @@ extern void dgesv_ (LP_int *,
                     LP_int *,
                     LP_int *);
 
+extern void dgeqrf_ (LP_int *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_double *,
+                     LP_double *,
+                     LP_int *,
+                     LP_int *);
+
+extern void dorgqr_ (LP_int *,
+                     LP_int *,
+                     LP_int *,
+                     LP_double *,
+                     LP_int *,
+                     LP_double *,
+                     LP_double *,
+                     LP_int *,
+                     LP_int *);
+
+
 
 extern void sgetrf_ (LP_int *,
                      LP_int *,
@@ -112,6 +132,25 @@ extern void sgesv_ (LP_int *,
                     LP_float *,
                     LP_int *,
                     LP_int *);
+
+extern void sgeqrf_ (LP_int *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_float *,
+                     LP_float *,
+                     LP_int *,
+                     LP_int *);
+
+extern void sorgqr_ (LP_int *,
+                     LP_int *,
+                     LP_int *,
+                     LP_float *,
+                     LP_int *,
+                     LP_float *,
+                     LP_float *,
+                     LP_int *,
+                     LP_int *);
 
 #endif
 
@@ -822,6 +861,115 @@ cdn_math_pseudoinverse_v_builtin (ValueType *ret,
 
     print_guard_end('pseudoinverse_v')
 
+def print_qr_v():
+    print_guard('qr_v')
+
+    print("""
+static ValueType *cdn_math_qr_v_builtin (ValueType *ret,
+                                         ValueType *A,
+                                         uint32_t   RA,
+                                         uint32_t   CA,
+                                         ValueType *tau,
+                                         ValueType *work,
+                                         uint32_t   lwork);
+
+#ifndef ENABLE_LAPACK
+static ValueType *
+cdn_math_qr_v_no_lapack_builtin (ValueType *ret,
+                                 ValueType *A,
+                                 uint32_t   RA,
+                                 uint32_t   CA,
+                                 ValueType *tau,
+                                 ValueType *work,
+                                 uint32_t   lwork)
+{{
+	#error("The `qr' function is not supported without LAPACK");
+}}
+#else
+
+#define fdgeqrf_ sgeqrf_
+#define fdorgqr_ sorgqr_
+
+static ValueType *
+cdn_math_qr_v_lapack_builtin (ValueType *ret,
+                              ValueType *A,
+                              uint32_t   RA,
+                              uint32_t   CA,
+                              ValueType *tau,
+                              ValueType *work,
+                              uint32_t   lwork)
+{{
+	LP_ValueType *lpA     = A;
+	LP_int        lpRA    = RA;
+	LP_int        lpCA    = CA;
+	LP_ValueType *lptau   = tau;
+	LP_ValueType *lpwork  = work;
+	LP_int        lplwork = lwork;
+	LP_int        info;
+	uint32_t      i;
+	ValueType    *retptr;
+	ValueType    *ptrA;
+
+	CDN_MATH_VALUE_TYPE_FUNC(dgeqrf_) (&lpRA,
+	                                   &lpCA,
+	                                   lpA,
+	                                   &lpRA,
+	                                   lptau,
+	                                   lpwork,
+	                                   &lplwork,
+	                                   &info);
+
+	retptr = ret + RA * RA;
+	ptrA = A;
+
+	memset (retptr, 0, sizeof(ValueType) * RA * CA);
+
+	// copy R to ret
+	for (i = 1; i <= CA; ++i)
+	{
+		memcpy (retptr, ptrA, sizeof(ValueType) * i);
+
+		retptr += RA;
+		ptrA += RA;
+	}
+
+	// compute q
+	dorgqr_ (&lpRA,
+	         &lpRA,
+	         &lpCA,
+	         lpA,
+	         &lpRA,
+	         lptau,
+	         lpwork,
+	         &lplwork,
+	         &info);
+
+	// copy from A to ret
+	memcpy (ret, A, sizeof(ValueType) * RA * RA);
+
+	return ret;
+}}
+#endif
+
+static ValueType *
+cdn_math_qr_v_builtin (ValueType *ret,
+                       ValueType *A,
+                       uint32_t   RA,
+                       uint32_t   CA,
+                       ValueType *tau,
+                       ValueType *work,
+                       uint32_t   lwork)
+{{
+#ifdef ENABLE_LAPACK
+	return cdn_math_qr_v_lapack_builtin (ret, A, RA, CA, tau, work, lwork);
+#else
+	return cdn_math_qr_v_no_lapack_builtin (ret, A, RA, CA, tau, work, lwork);
+#endif
+}}
+""")
+
+    print_guard_end('qr_v')
+
 def print_matrix_multiply_v():
     print_guard('matrix_multiply_v')
 
@@ -1248,6 +1396,7 @@ print_vcat()
 print_transpose()
 print_matrix_multiply_v()
 print_linsolve_v()
+print_qr_v()
 print_slinsolve_v()
 print_inverse_v()
 print_pseudo_inverse_v()
