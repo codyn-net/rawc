@@ -1044,19 +1044,21 @@ cdn_math_matrix_multiply_v_blas_builtin (ValueType *ret,
                                          uint32_t   Cx1)
 {{
 	CDN_MATH_VALUE_TYPE_FUNC(cblas_dgemm)(CblasColMajor,
-	             CblasNoTrans,
-	             CblasNoTrans,
-	             Rx0,
-	             Cx1,
-	             Cx0,
-	             1,
-	             x0,
-	             Rx0,
-	             x1,
-	             Cx0,
-	             0,
-	             ret,
-	             Rx0);
+	                                      CblasNoTrans,
+	                                      CblasNoTrans,
+	                                      Rx0,
+	                                      Cx1,
+	                                      Cx0,
+	                                      1,
+	                                      x0,
+	                                      Rx0,
+	                                      x1,
+	                                      Cx0,
+	                                      0,
+	                                      ret,
+	                                      Rx0);
+
+	return ret;
 }}
 #endif
 
