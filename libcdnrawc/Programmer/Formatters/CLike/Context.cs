@@ -779,6 +779,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				var dim1 = Node.Children[0].Dimension;
 				args.Add(dim1.Rows.ToString());
+				args.Add(dim1.Columns.ToString());
 			}
 				break;
 			case MathFunctionType.Multiply:

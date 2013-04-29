@@ -62,8 +62,15 @@ sqmatrix = "[1, 2, 3;
 
 diag_m = "diag(sqmatrix)" | out
 diag_v = "diag(diag(sqmatrix))" | out
-triu_m = "triu(sqmatrix)" | out
-tril_m = "tril(sqmatrix)" | out
+
+triu_m_1 = "triu(sqmatrix)" | out
+tril_m_1 = "tril(sqmatrix)" | out
+
+triu_m_2 = "triu([1, 2, 3; 4, 5, 6])" | out
+tril_m_2 = "tril([1, 2, 3; 4, 5, 6])" | out
+
+triu_m_3 = "triu([1, 2; 3, 4; 5, 6])" | out
+tril_m_3 = "tril([1, 2; 3, 4; 5, 6])" | out
 
 linsolve = "linsolve([8 1 6; 3 5 7; 4 9 2], [1; 2; 3])" | out
 inverse = "inv([4, 3; 3, 2])" | out

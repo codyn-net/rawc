@@ -1163,22 +1163,24 @@ cdn_math_triu_builtin (ValueType x0)
     print("""
 static ValueType *cdn_math_tril_v_builtin (ValueType *ret,
                                            ValueType *x0,
-                                           uint32_t   n);
+                                           uint32_t   rows,
+                                           uint32_t   columns);
 
 static ValueType *
 cdn_math_tril_v_builtin (ValueType *ret,
                          ValueType *x0,
-                         uint32_t   n)
+                         uint32_t   rows,
+                         uint32_t   columns)
 {{
 	uint32_t c;
 	ValueType *retptr = ret;
 
-	for (c = n; c > 0; --c)
+	for (c = 0; c < columns && c < rows; ++c)
 	{{
-		memcpy (retptr, x0, sizeof (ValueType) * c);
+		memcpy (retptr, x0, sizeof (ValueType) * (rows - c));
 
-		retptr += n + 1;
-		x0 += n + 1;
+		retptr += rows + 1;
+		x0 += rows + 1;
 	}}
 
 	return ret;
@@ -1191,28 +1193,24 @@ cdn_math_tril_v_builtin (ValueType *ret,
     print("""
 static ValueType *cdn_math_triu_v_builtin (ValueType *ret,
                                            ValueType *x0,
-                                           uint32_t   n);
+                                           uint32_t   rows,
+                                           uint32_t   columns);
 
 static ValueType *
 cdn_math_triu_v_builtin (ValueType *ret,
                          ValueType *x0,
-                         uint32_t   n)
+                         uint32_t   rows,
+                         uint32_t   columns)
 {{
 	uint32_t c;
 	ValueType *retptr = ret;
-	uint32_t lastcol;
 
-	lastcol = n * (n - 1);
-
-	retptr += lastcol;
-	x0 += lastcol;
-
-	for (c = n; c > 0; --c)
+	for (c = 1; c <= columns; ++c)
 	{{
-		memcpy (retptr, x0, sizeof (ValueType) * c);
+		memcpy (retptr, x0, sizeof (ValueType) * (c > rows ? rows : c));
 
-		retptr -= n;
-		x0 -= n;
+		retptr += rows;
+		x0 += rows;
 	}}
 
 	return ret;
