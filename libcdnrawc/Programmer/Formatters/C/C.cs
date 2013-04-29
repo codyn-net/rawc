@@ -790,8 +790,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					writer.WriteLine("\tValueType work[{0}];", ws.WorkSize[0]);
 					writer.WriteLine("\tint32_t   iwork[{0}];", ws.WorkSize[1]);
 					writer.WriteLine();
-					writer.WriteLine("memcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
-					writer.WriteLine("\treturn CDN_MATH_PSEUDOINVERSE_V(ret, A, {0}, {1}, b, {2}, s, work, {3}, iwork);",
+					writer.WriteLine("\tmemcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
+					writer.WriteLine("\treturn CDN_MATH_PSEUDOINVERSE_V(ret, Acp, {0}, {1}, b, {2}, s, work, {3}, iwork);",
                                      ws.Dimension.Rows,
                                      ws.Dimension.Columns,
 					                 maxdim,
@@ -823,7 +823,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					writer.WriteLine("{");
 					writer.WriteLine("\tValueType Acp[{0}];", ws.Dimension.Size());
 					writer.WriteLine();
-					writer.WriteLine("memcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
+					writer.WriteLine("\tmemcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
 					writer.WriteLine("\treturn CDN_MATH_SLINSOLVE_V(ret, Acp, {0}, b, CB, L);", ws.Dimension.Rows);
 
 					break;
