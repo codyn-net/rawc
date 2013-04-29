@@ -4,6 +4,10 @@ print("""
 #ifndef CDN_MATH_DEFINE_PROTOS
 #define CDN_MATH_DEFINE_PROTOS
 
+#ifdef CDN_MATH_MATRIX_MULTIPLY_REQUIRED
+#define CDN_MATH_MATRIX_MULTIPLY_V_REQUIRED
+#endif
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -1073,6 +1077,32 @@ cdn_math_matrix_multiply_v_builtin (ValueType *ret,
 """)
 
     print_guard_end('matrix_multiply_v')
+
+    print_guard('matrix_multiply')
+
+    print("""
+static ValueType cdn_math_matrix_multiply_builtin (ValueType *x0,
+                                                   ValueType *x1,
+                                                   uint32_t   Rx0,
+                                                   uint32_t   Cx0,
+                                                   uint32_t   Cx1);
+
+static ValueType
+cdn_math_matrix_multiply_builtin (ValueType *x0,
+                                  ValueType *x1,
+                                  uint32_t   Rx0,
+                                  uint32_t   Cx0,
+                                  uint32_t   Cx1)
+{{
+	ValueType retval;
+
+	CDN_MATH_MATRIX_MULTIPLY_V (&retval, x0, x1, Rx0, Cx0, Cx1);
+	return retval;
+}}
+
+""")
+
+    print_guard_end('matrix_multiply')
 
 def print_slinsolve_v():
     print_guard('slinsolve_v')
