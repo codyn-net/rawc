@@ -982,7 +982,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			string ret = null;
 			
-			if (!InstructionHasStorage(instruction, context))
+			if (!context.Node.Dimension.IsOne && !InstructionHasStorage(instruction, context))
 			{
 				// The return value is given as the first argument to the function
 				ret = context.PeekRet();
