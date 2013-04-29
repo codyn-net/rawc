@@ -86,32 +86,38 @@ namespace Cdn.RawC.Application
 						Log.WriteLine("Generated {0} from `{1}'...", s, filename);
 					}
 				}
-				catch (Cdn.RawC.Exception e)
-				{
-					Console.Error.WriteLine(e.Message);
-					Environment.Exit(1);
-				}
 				catch (System.Exception e)
 				{
 					System.Exception b = e.GetBaseException();
-					
-					if (!(b is NotImplementedException))
+
+					if (!(b is NotImplementedException) && !(b is Cdn.RawC.Exception))
 					{
-						throw e;
+						throw b;
 					}
 
-					Console.Error.WriteLine("You are using a feature which is not yet implemented in rawc:");
-					Console.Error.WriteLine();
-					Console.Error.WriteLine("“{0}”", b.Message);
+					if (b is Cdn.RawC.Exception)
+					{
+						Console.Error.WriteLine("\nAn exceptional error occurred while processing the network:\n\n{0}\n", b.Message);
+					}
+					else
+					{
+						Console.Error.WriteLine("\nYou are using a feature which is not yet implemented in rawc:");
+						Console.Error.WriteLine();
+						Console.Error.WriteLine("“{0}”\n", b.Message);
+					}
 
 					if (options.Verbose)
 					{
-						Console.Error.WriteLine();
-						Console.Error.WriteLine();
 						Console.Error.WriteLine("Trace:");
 						Console.Error.WriteLine("======");
 						Console.Error.WriteLine("  - {0}", String.Join("\n  - ", b.StackTrace.Split('\n')));
 					}
+					else
+					{
+						Console.Error.WriteLine("Use --verbose to see a stack trace of where the problem occurred");
+					}
+
+					Console.Error.WriteLine();
 
 					Environment.Exit(1);
 				}

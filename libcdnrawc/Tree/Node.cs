@@ -578,12 +578,14 @@ namespace Cdn.RawC.Tree
 			InstructionCustomOperator icop;
 			InstructionVariable iprop;
 			InstructionNumber inum;
+			Programmer.Instructions.Function ipf;
 
 			ifunc = d_instruction as InstructionFunction;
 			icfunc = d_instruction as InstructionCustomFunction;
 			icop = d_instruction as InstructionCustomOperator;
 			iprop = d_instruction as InstructionVariable;
 			inum = d_instruction as InstructionNumber;
+			ipf = d_instruction as Programmer.Instructions.Function;
 			
 			if (ifunc != null)
 			{
@@ -608,6 +610,10 @@ namespace Cdn.RawC.Tree
 			else if (d_instruction is InstructionRand)
 			{
 				lbl = "rand";
+			}
+			else if (ipf != null)
+			{
+				lbl = ipf.FunctionCall.Name;
 			}
 			
 			string par = "";

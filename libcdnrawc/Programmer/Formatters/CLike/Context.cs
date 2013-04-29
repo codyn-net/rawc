@@ -156,7 +156,21 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			if (d_ret.Count == 0)
 			{
-				Log.WriteLine("Empty return value stack while processing: {0}", Node);
+				var s = Node.State.Object as Cdn.Variable;
+
+				if (s != null)
+				{
+					var iter = new Cdn.ExpressionTreeIter(Node.State.Expression);
+					throw new RawC.Exception("Empty return value stack while processing: {0} => {1}, {2} (at {3}).\n\nThis is an internal rawc error which indicates a problem inside rawc (rather than your network). Please report this issue.",
+					                         Node.State.ToString(),
+					                         s.FullNameForDisplay,
+					                         iter.ToStringDbg(),
+					                         Node.ToString(false));
+				}
+				else
+				{
+					throw new RawC.Exception("Empty return value stack while processing: {0}", Node.ToString(true));
+				}
 			}
 
 			return d_ret.Peek();
