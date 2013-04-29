@@ -49,6 +49,7 @@ defines
 matrix_multiply_1 = "matrix * transpose(matrix)" | out
 matrix_multiply_2 = "eye(4) * [1; 2; 3; 4]" | out
 matrix_multiply_3 = "[1, 2, 3, 4] * [1; 2; 3; 4]" | out
+matrix_multiply_4 = "[1; 2; 3; 4] * [2]" | out
 
 # test csign with some more interesting arguments than the general ones
 "csign_m_m"   = "csign(matrix,  [2, -3, -4; -2, 4, -4])" | out
