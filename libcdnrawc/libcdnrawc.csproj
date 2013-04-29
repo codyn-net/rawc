@@ -109,8 +109,6 @@
     <Compile Include="Programmer\Computation\Block.cs" />
     <Compile Include="Programmer\Computation\ZeroMemory.cs" />
     <Compile Include="Programmer\Instructions\IInstruction.cs" />
-    <Compile Include="UnidecodeSharp\Characters.cs" />
-    <Compile Include="UnidecodeSharp\Unidecoder.cs" />
     <Compile Include="Programmer\Formatters\CLike\CLike.cs" />
     <Compile Include="Programmer\Formatters\CLike\ComputationNodeTranslator.cs" />
     <Compile Include="Programmer\Formatters\CLike\Context.cs" />
@@ -127,6 +125,7 @@
     <Compile Include="Programmer\Formatters\JavaScript\InitialValueTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\Lapack.cs" />
     <Compile Include="Profile.cs" />
+    <Compile Include="Asciifyer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

@@ -130,8 +130,7 @@ FILES = \
 	Config.cs \
 	Profile.cs \
 	Validator.cs \
-	UnidecodeSharp/Characters.cs \
-	UnidecodeSharp/Unidecoder.cs
+	Asciifyer.cs
 
 DATA_FILES =
 

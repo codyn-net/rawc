@@ -4,7 +4,6 @@ using System.Text;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
-using BinaryAnalysis.UnidecodeSharp;
 
 namespace Cdn.RawC.Programmer.Formatters.C
 {

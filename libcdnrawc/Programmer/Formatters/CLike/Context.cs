@@ -652,7 +652,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 		public static string ToAsciiOnly(string t)
 		{
-			var ascii = BinaryAnalysis.UnidecodeSharp.Unidecoder.Unidecode(t);
+			var ascii = Asciifyer.Translate(t);
 			StringBuilder builder = new StringBuilder();
 
 			foreach (char c in ascii)
