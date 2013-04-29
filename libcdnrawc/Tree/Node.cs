@@ -57,7 +57,7 @@ namespace Cdn.RawC.Tree
 				}
 				
 				node.d_children.Reverse();
-				node.Finalize();
+				node.Constructed();
 
 				stack.Push(node);
 			}
@@ -84,7 +84,7 @@ namespace Cdn.RawC.Tree
 		{
 		}
 
-		private void Finalize()
+		private void Constructed()
 		{
 			InstructionCustomFunction icfunc = d_instruction as InstructionCustomFunction;
 			
