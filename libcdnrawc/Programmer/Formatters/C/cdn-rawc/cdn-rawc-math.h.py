@@ -1278,34 +1278,6 @@ cdn_math_diag_v_v_builtin (ValueType *ret,
     print_guard_end('diag_v_v')
 
 def print_tri():
-    print_guard('tril')
-
-    print("""
-static void cdn_math_tril_builtin (ValueType x0);
-
-static void
-cdn_math_tril_builtin (ValueType x0)
-{{
-	return x0;
-}}
-""")
-
-    print_guard_end('tri')
-
-    print_guard('triu')
-
-    print("""
-static void cdn_math_triu_builtin (ValueType x0);
-
-static void
-cdn_math_triu_builtin (ValueType x0)
-{{
-	return x0;
-}}
-""")
-
-    print_guard_end('triu')
-
     print_guard('tril_v')
 
     print("""
