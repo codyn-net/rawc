@@ -8,6 +8,8 @@ namespace Cdn.RawC.Application
 		{
 			GLib.GType.Init();
 
+			Profile.Initialize();
+
 			Options options;
 
 			try
@@ -122,6 +124,8 @@ namespace Cdn.RawC.Application
 					Environment.Exit(1);
 				}
 			}
+
+			Profile.Report(Console.Error);
 		}
 		
 		private static void ListPlugins(Type[] types)

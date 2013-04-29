@@ -51,11 +51,14 @@ namespace Cdn.RawC
 		private bool d_showFormatters;
 		private static Options s_instance;
 
+		public static bool EnableProfile;
+
 		public static Options Initialize(string[] args)
 		{
 			s_instance = new Options();
 			s_instance.Parse(ref args);
 
+			EnableProfile = Environment.GetEnvironmentVariable("ENABLE_PROFILE") == "1";
 			return s_instance;
 		}
 		

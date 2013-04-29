@@ -128,6 +128,7 @@ FILES = \
 	Sort.cs \
 	Log.cs \
 	Config.cs \
+	Profile.cs \
 	Validator.cs \
 	UnidecodeSharp/Characters.cs \
 	UnidecodeSharp/Unidecoder.cs

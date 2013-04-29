@@ -34,17 +34,31 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		
 		public string[] Write(Program program)
 		{
-			Initialize(program, d_options);
+			Profile.Do("c init", () => {
+				Initialize(program, d_options);
+			});
 
 			d_program = program;
 			
 			List<string > written = new List<string>();
 
-			WriteHeader();
-			WriteSource();
+			Profile.Do("c header", () => {
+				WriteHeader();
+			});
 
-			WriteRunHeader();
-			WriteRunSource();
+			Profile.Do("c source", () => {
+				WriteSource();
+			});
+
+			Profile.Do("c run", () => {
+				Profile.Do("header", () => {
+					WriteRunHeader();
+				});
+
+				Profile.Do("source", () => {
+					WriteRunSource();
+				});
+			});
 			
 			written.Add(d_headerFilename);
 			written.Add(d_sourceFilename);
@@ -98,7 +112,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			
 			if (!d_options.NoMakefile)
 			{
+				var t = Profile.Begin("c makefile");
 				var filename = WriteMakefile();
+				t.End();
 				written.Add(filename);
 			}
 

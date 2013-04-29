@@ -23,8 +23,10 @@ namespace Cdn.RawC
 			{
 				Log.WriteLine("Generating code for network...");
 			}
-			
-			LoadNetwork();
+
+			Profile.Do("load network", () => {
+				LoadNetwork();
+			});
 
 			if (Options.Instance.Validate)
 			{
@@ -41,20 +43,39 @@ namespace Cdn.RawC
 				d_network.Integrator.AddVariable(new Cdn.Variable("delay_dt", expr, Cdn.VariableFlags.Out));
 			}
 
-			// Initialize the knowledge
-			Knowledge.Initialize(d_network);
-			
+			Profile.Do("initialize knowledge", () => {
+				// Initialize the knowledge
+				Knowledge.Initialize(d_network);
+			});
+
+			var t = Profile.Begin("collect");
+
 			// Collect all the equations
 			Tree.Collectors.Result collection = Collect();
+
+			t.End();
+
+			t = Profile.Begin("filter");
 			
 			// Filter conflicts and resolve final embeddings
 			Tree.Embedding[] embeddings = Filter(collection);
 
+			t.End();
+
+			t = Profile.Begin("resolve equations");
+
 			// Resolve final equations
 			Dictionary<State, Tree.Node> equations = ResolveEquations(embeddings);
+
+			t.End();
 			
 			// Create program
+			t = Profile.Begin("create program");
+
 			Programmer.Program program = new Programmer.Program(ProgrammerOptions(), embeddings, equations);
+
+			t.End();
+
 			bool outistemp = false;
 			
 			// Write program
@@ -74,7 +95,11 @@ namespace Cdn.RawC
 				Directory.CreateDirectory(program.Options.Output);
 			}
 
+			t = Profile.Begin("write program");
+
 			d_writtenFiles = Options.Instance.Formatter.Write(program);
+
+			t.End();
 			
 			if (Options.Instance.PrintCompileSource)
 			{

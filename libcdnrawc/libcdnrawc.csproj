@@ -126,6 +126,7 @@
     <Compile Include="Programmer\Formatters\JavaScript\NumberTranslator.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\InitialValueTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\Lapack.cs" />
+    <Compile Include="Profile.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
