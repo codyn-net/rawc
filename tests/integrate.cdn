@@ -1,0 +1,12 @@
+node "n"
+{
+    q' = "dq"
+    dq = 0
+}
+
+edge on "n" {
+    dq <= "t"
+}
+
+# vi:ts=4:et
+

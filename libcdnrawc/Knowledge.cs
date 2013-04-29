@@ -424,7 +424,9 @@ namespace Cdn.RawC
 				if (!unique.Contains(v.Key))
 				{
 					var s = ExpandedState(v.Key);
+
 					AddState(unique, s);
+					AddAux(s, auxset);
 				}
 			}
 
