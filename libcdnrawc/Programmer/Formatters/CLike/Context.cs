@@ -440,7 +440,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var d1 = node.Children[0].Dimension;
 				var d2 = node.Children[1].Dimension;
 
-				if (d1.Rows == d2.Columns && d1.Columns == d2.Rows)
+				if (d1.Columns == d2.Rows)
 				{
 					return "matrix_multiply_v";
 				}
@@ -787,7 +787,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var d1 = Node.Children[0].Dimension;
 				var d2 = Node.Children[1].Dimension;
 
-				if (d1.Rows == d2.Columns && d1.Columns == d2.Rows)
+				if (d1.Columns == d2.Rows)
 				{
 					// Matrix multiply
 					args.Add(d1.Rows.ToString());

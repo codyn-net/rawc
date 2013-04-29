@@ -46,7 +46,8 @@ defines
 "@[binary_operator_positive]_1_m"   = "4.4    @[op_@1] matrix"  | out
 "@[binary_operator_positive]_m_1"   = "matrix @[op_@1] 5.2"     | out
 
-"matrix_multiply" = "matrix * transpose(matrix)" | out
+matrix_multiply_1 = "matrix * transpose(matrix)" | out
+matrix_multiply_2 = "eye(4) * [1; 2; 3; 4]" | out
 
 # test csign with some more interesting arguments than the general ones
 "csign_m_m"   = "csign(matrix,  [2, -3, -4; -2, 4, -4])" | out
