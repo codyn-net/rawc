@@ -547,24 +547,24 @@ cdn_math_transpose_v_builtin (ValueType *ret,
 
     print_guard_end('transpose_v')
 
-def print_vcat():
-    print_guard('vcat')
+def print_vcat_v():
+    print_guard('vcat_v')
 
     print("""
-static ValueType *cdn_math_vcat_builtin (ValueType *ret,
-                                         ValueType *x0,
-                                         ValueType *x1,
-                                         uint32_t   rows1,
-                                         uint32_t   rows2,
-                                         uint32_t   columns);
+static ValueType *cdn_math_vcat_v_builtin (ValueType *ret,
+                                           ValueType *x0,
+                                           ValueType *x1,
+                                           uint32_t   rows1,
+                                           uint32_t   rows2,
+                                           uint32_t   columns);
 
 static ValueType *
-cdn_math_vcat_builtin (ValueType *ret,
-                       ValueType *x0,
-                       ValueType *x1,
-                       uint32_t   rows1,
-                       uint32_t   rows2,
-                       uint32_t   columns)
+cdn_math_vcat_v_builtin (ValueType *ret,
+                        ValueType *x0,
+                        ValueType *x1,
+                        uint32_t   rows1,
+                        uint32_t   rows2,
+                        uint32_t   columns)
 {{
 	uint32_t c;
 	uint32_t i1 = 0;
@@ -589,7 +589,7 @@ cdn_math_vcat_builtin (ValueType *ret,
 	return ret;
 }}""")
 
-    print_guard_end('vcat')
+    print_guard_end('vcat_v')
 
 def print_linsolve_v():
     print_guard('linsolve_v')
@@ -1394,7 +1394,7 @@ print_accumulator_v('product', 'ret *= x0[i];')
 print_accumulator_v('sqsum', 'ret += x0[i] * x0[i];', 'x0[0] * x0[0]')
 
 print_index_v()
-print_vcat()
+print_vcat_v()
 print_transpose()
 print_matrix_multiply_v()
 print_linsolve_v()

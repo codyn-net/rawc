@@ -433,7 +433,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Greater:
 			case MathFunctionType.Equal:
 			case MathFunctionType.Nequal:
-			case MathFunctionType.Vcat:
 			case MathFunctionType.Csign:
 			case MathFunctionType.Sum:
 			case MathFunctionType.Product:
@@ -443,6 +442,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Tril:
 				val = String.Format("{0}_v", name.ToLower());
 				break;
+			case MathFunctionType.Vcat:
+				return "vcat_v";
 			case MathFunctionType.Power:
 				val = "pow_v";
 				break;
