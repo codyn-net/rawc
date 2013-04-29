@@ -516,8 +516,11 @@ namespace Cdn.RawC.Programmer
 				
 				foreach (Cdn.FunctionArgument arg in function.Arguments)
 				{
-					arguments.Add(function.Variable(arg.Name));
-					aa.Add(arg);
+					if (!arg.Unused)
+					{
+						arguments.Add(function.Variable(arg.Name));
+						aa.Add(arg);
+					}
 				}
 				
 				List<Tree.Embedding.Argument> args = new List<Tree.Embedding.Argument>();
