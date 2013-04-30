@@ -1127,35 +1127,35 @@ _cdn_math_slinsolve_factorize (ValueType *A,
 	for (k = n - 1; k >= 0; --k)
 	{{
 		int32_t i = (int32_t)L[k];
-		int32_t kk = k * (n + 1);
+		int32_t ikk = k * (n + 1);
 
 		while (i >= 0)
 		{{
 			int32_t j;
 			ValueType a;
-			int32_t ki;
+			int32_t iki;
 
-			ki = k + i * n;
+			iki = k + i * n;
 
-			// a = A_{ki} / A_{kk}
-			a = A[ki] / A[kk];
+			// a = A_{iki} / A_{ikk}
+			a = A[iki] / A[ikk];
 
 			j = i;
 
 			while (j >= 0)
 			{{
-				int32_t jn = j * n;
-				int32_t ij = i + jn;
-				int32_t kj = k + jn;
+				int32_t ijn = j * n;
+				int32_t iij = i + ijn;
+				int32_t ikj = k + ijn;
 
-				// A_{ij} = A_{ij} - a A_{kj}
-				A[ij] -= a * A[kj];
+				// A_{ij} = A_{iij} - a A_{ikj}
+				A[iij] -= a * A[ikj];
 
 				j = (int32_t)L[j];
 			}}
 
 			// H_{ki} = a
-			A[ki] = a;
+			A[iki] = a;
 			i = (int32_t)L[i];
 		}}
 	}}
@@ -1182,10 +1182,10 @@ _cdn_math_slinsolve_backsubs (ValueType *ptrA,
 
 		while (j >= 0)
 		{{
-			int32_t ij = i + j * n;
+			int32_t iij = i + j * n;
 
 			// x_j = x_j - L_{ij} x_i
-			ptrB[j] -= ptrA[ij] * ptrB[i];
+			ptrB[j] -= ptrA[iij] * ptrB[i];
 			j = (int32_t)ptrL[j];
 		}}
 
@@ -1204,10 +1204,10 @@ _cdn_math_slinsolve_backsubs (ValueType *ptrA,
 
 		while (j >= 0)
 		{{
-			int32_t ij = i + j * n;
+			int32_t iij = i + j * n;
 
 			// x_i = x_i - L_{ij} x_j
-			ptrB[i] -= ptrA[ij] * ptrB[j];
+			ptrB[i] -= ptrA[iij] * ptrB[j];
 			j = (int32_t)ptrL[j];
 		}}
 	}}
