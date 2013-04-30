@@ -1,6 +1,7 @@
 #include "cdn-rawc-network.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 void
 cdn_rawc_network_prepare (CdnRawcNetwork *network,
@@ -127,6 +128,83 @@ uint8_t
 cdn_rawc_network_get_type_size (CdnRawcNetwork *network)
 {
 	return network->type_size;
+}
+
+static uint8_t
+compare_names (char const *name, char const *cmpto, int len)
+{
+	if (len == -1)
+	{
+		return strcmp (name, cmpto) == 0 ? 1 : 0;
+	}
+	else
+	{
+		return (strlen (cmpto) == len && strncmp (name, cmpto, len) == 0) ? 1 : 0;
+	}
+}
+
+int32_t
+cdn_rawc_network_find_variable (CdnRawcNetwork *network,
+                                char const     *name)
+{
+	uint32_t nodepos;
+
+	nodepos = 1;
+
+	// Only support simple . syntax
+	do
+	{
+		char const *dotpos;
+		int len = -1;
+		uint32_t child;
+
+		// Check if we are still in range
+		if (nodepos >= network->meta.nodes_size)
+		{
+			return 0;
+		}
+
+		dotpos = strchr (name, '.');
+
+		if (dotpos != NULL)
+		{
+			len = name - dotpos;
+		}
+
+		// Lookup the corresponding child in 'nodepos'
+		child = network->meta.nodes[nodepos].first_child;
+		nodepos = 0;
+
+		while (child > 0)
+		{
+			CdnRawcChildMeta const *cmeta;
+
+			cmeta = &network->meta.children[child];
+
+			if (cmeta->is_node)
+			{
+				if (compare_names (name, network->meta.nodes[cmeta->index].name, len))
+				{
+					nodepos = cmeta->index;
+					break;
+				}
+			}
+			else
+			{
+				if (compare_names (name, network->meta.states[cmeta->index].name, len))
+				{
+					if (len == -1)
+					{
+						return (int32_t)network->meta.states[cmeta->index].index;
+					}
+				}
+			}
+
+			child = cmeta->next;
+		}
+	} while (1);
+
+	return 0;
 }
 
 #ifdef ENABLE_MALLOC

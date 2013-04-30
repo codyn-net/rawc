@@ -57,6 +57,9 @@ CdnRawcDimension const *
                                              void           *data,
                                              uint32_t        i);
 
+int32_t cdn_rawc_network_find_variable      (CdnRawcNetwork *network,
+                                             char const     *name);
+
 uint8_t cdn_rawc_network_get_type_size      (CdnRawcNetwork *network);
 uint32_t cdn_rawc_network_get_data_size     (CdnRawcNetwork *network);
 uint32_t cdn_rawc_network_get_data_count    (CdnRawcNetwork *network);
