@@ -246,6 +246,35 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return Compile(verbose, false);
 		}
 
+		[System.Runtime.InteropServices.DllImport("libc")]
+		private static extern int uname(IntPtr buf);
+
+		private bool IsOnOSX()
+		{
+			IntPtr buf = IntPtr.Zero;
+
+			try
+			{
+				buf = System.Runtime.InteropServices.Marshal.AllocHGlobal(8192);
+
+				if (uname(buf) == 0)
+				{
+					string os = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(buf);
+					return (os == "Darwin");
+				}
+			}
+			catch {}
+			finally
+			{
+				if (buf != IntPtr.Zero)
+				{
+					System.Runtime.InteropServices.Marshal.FreeHGlobal(buf);
+				}
+			}
+
+			return false;
+		}
+
 		private string[] Compile(bool verbose, bool validating)
 		{
 			if (String.IsNullOrEmpty(d_sourceFilename))
@@ -275,8 +304,34 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			if (all || d_options.CompileShared || validating)
 			{
+				string dyext;
+
 				args.Append(" shared");
-				ret.Add(Path.Combine(ddir, "lib" + CPrefixDown + ".so"));
+
+				switch (Environment.OSVersion.Platform)
+				{
+				case PlatformID.MacOSX:
+					dyext = ".dylib";
+					break;
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					dyext = ".dll";
+					break;
+				default:
+					if (IsOnOSX())
+					{
+						dyext = ".dylib";
+					}
+					else
+					{
+						dyext = ".so;";
+					}
+					break;
+				}
+
+				ret.Add(Path.Combine(ddir, "lib" + CPrefixDown + dyext));
 			}
 
 			if ((all || d_options.CompileStatic) && !validating)
