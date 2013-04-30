@@ -28,8 +28,13 @@ ${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cfla
 ${NAME}_LDFLAGS = -lm ${libs}
 
 ifeq ($(UNAME),Darwin)
-${NAME}_CFLAGS += -arch i386 -arch x86_64 -DPLATFORM_OSX
+${NAME}_CFLAGS += -DPLATFORM_OSX
+
+ifeq ($(findstring -arch,$(CFLAGS)),)
+${NAME}_CFLAGS += -arch i386 -arch x86_64
 ${NAME}_LDFLAGS += -arch i386 -arch x86_64
+endif
+
 endif
 
 # Enable debug symbols if defined
