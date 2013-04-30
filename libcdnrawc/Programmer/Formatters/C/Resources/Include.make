@@ -12,8 +12,8 @@ SHARED_EXT = so
 endif
 
 # Compiler flags
-CFLAGS =
-LDFLAGS =
+CFLAGS ?=
+LDFLAGS ?=
 
 WARNINGS = 				\
 	inline				\
