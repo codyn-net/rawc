@@ -19,7 +19,7 @@ namespace Cdn.RawC
 
 		public void Generate()
 		{
-			if ((Options.Instance.Compile == null && !Options.Instance.Validate) || Options.Instance.Verbose)
+			if ((!Options.Instance.Compile && !Options.Instance.Validate) || Options.Instance.Verbose)
 			{
 				Log.WriteLine("Generating code for network...");
 			}
@@ -79,7 +79,7 @@ namespace Cdn.RawC
 			bool outistemp = false;
 			
 			// Write program
-			if (Options.Instance.Validate || Options.Instance.Compile != null)
+			if (Options.Instance.Validate || Options.Instance.Compile)
 			{
 				// Create a new temporary directory for the output files
 				string path = Path.GetTempFileName();
@@ -124,7 +124,7 @@ namespace Cdn.RawC
 					Environment.Exit(1);
 				}
 			}
-			else if (Options.Instance.Compile != null)
+			else if (Options.Instance.Compile)
 			{
 				var files = Options.Instance.Formatter.Compile(Options.Instance.Verbose);
 
@@ -135,7 +135,7 @@ namespace Cdn.RawC
 
 				foreach (var f in files)
 				{
-					var dest = Path.Combine(Options.Instance.Compile, Path.GetFileName(f));
+					var dest = Path.GetFileName(f);
 
 					try
 					{

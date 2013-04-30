@@ -61,7 +61,7 @@ namespace Cdn.RawC.Application
 				{
 					generator.Generate();
 					
-					if (!options.Validate && options.Compile == null)
+					if (!options.Validate && !options.Compile)
 					{
 						string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, (a) => {
 							if (a.StartsWith(Environment.CurrentDirectory + "/"))
