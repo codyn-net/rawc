@@ -524,7 +524,7 @@ class Network:
 
     def _parse_meta_node(self, node, meta_node, meta_info, fullname=None):
         # Fill node info
-        node.name = meta_node.name
+        node.name = meta_node.name.decode('utf-8')
 
         # Traverse children
         child = meta_node.first_child
@@ -554,7 +554,7 @@ class Network:
                 v = MetaVariable(self)
                 vm = meta_info.states[cm.index]
 
-                v.name = vm.name
+                v.name = vm.name.decode('utf-8')
                 v.parent = node
                 v.index = vm.index
 
