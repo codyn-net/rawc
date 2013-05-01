@@ -131,10 +131,11 @@ CdnRawcIntegrator._fields_ = [('step', IntegratorFunc),
                               ('order', ctypes.c_uint32)]
 
 class API:
-    def __init__(self, lib, name):
+    def __init__(self, lib, name, libname):
         # Raw CdnRawcIntegrator API
         self.lib = lib
         self.name = name
+        self.libname = libname
 
         # Try loading integrators
         for integrator in ['euler', 'runge_kutta']:
@@ -357,7 +358,7 @@ def load(name, libname=None):
         libname = "lib" + name + ".so"
 
     lib = ctypes.cdll.LoadLibrary(libname)
-    return API(lib, name)
+    return API(lib, name, libname)
 
 # Pythonic bindings
 class Network:
