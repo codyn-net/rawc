@@ -281,14 +281,16 @@ class MetaVariable:
             return val
 
     def _make_matrix(self, v, dim):
-        ret = [None] * dim.columns
-        start = 0
+        ret = [None] * dim.rows
+        i = 0
 
-        for i in range(0, dim.columns):
-            end = start + dim.rows
+        for c in range(0, dim.columns):
+            for r in range(0, dim.rows):
+                if c == 0:
+                    ret[r] = [0] * dim.columns
 
-            ret[i] = v[start:end]
-            start = end
+                ret[r][c] = v[i]
+                i += 1
 
         return ret
 
