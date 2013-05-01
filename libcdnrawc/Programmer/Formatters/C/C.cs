@@ -326,7 +326,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					}
 					else
 					{
-						dyext = ".so;";
+						dyext = ".so";
 					}
 					break;
 				}
