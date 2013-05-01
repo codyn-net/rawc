@@ -259,6 +259,97 @@ class API:
     def RungeKutta(self):
         return self.Integrator('runge_kutta')
 
+class MetaVariable:
+    def __init__(self, network):
+        self._network = network
+        self.name = None
+        self.parent = None
+        self.index = 0
+
+    @property
+    def value(self):
+        start = self.index
+
+        dim = self._network.get_dimension(start)
+        end = start + dim.size
+
+        val = self._network.data[start:end]
+
+        if dim.rows > 1 and dim.columns > 1:
+            return self._make_matrix(val, dim)
+        else:
+            return val
+
+    def _make_matrix(self, v, dim):
+        ret = [None] * dim.columns
+        start = 0
+
+        for i in range(0, dim.columns):
+            end = start + dim.rows
+
+            ret[i] = v[start:end]
+            start = end
+
+        return ret
+
+    @property
+    def fullname(self):
+        if not self.parent.parent is None:
+            return '{0}.{1}'.format(self.parent.fullname, self.name)
+        else:
+            return self.name
+
+    def __repr__(self):
+        return '<{0} instance at 0x{1:x}, {2}: {3}>'.format(self.__class__,
+                                                            id(self),
+                                                            self.fullname,
+                                                            self.value)
+
+class MetaNode:
+    def __init__(self, network):
+        self._network = network
+        self.name = None
+        self.parent = None
+        self.templates = []
+        self.children = []
+        self.variables = []
+        self.name_to_child = {}
+
+    def __getitem__(self, key):
+        return self.name_to_child[key]
+
+    @property
+    def fullname(self):
+        if not self.parent is None and not self.parent.parent is None:
+            return '{0}.{1}'.format(self.parent.fullname, self.name)
+        else:
+            return self.name
+
+    def pretty_print(self, out, indent=0):
+        out.write(' ' * indent)
+        out.write('[Node "{0}"'.format(self.name))
+
+        if len(self.templates) > 0:
+            out.write(' : ')
+
+        out.write(', '.join(self.templates))
+        out.write(']\n')
+
+        for v in self.variables:
+            out.write(' ' * (indent + 2))
+            out.write('{0}\n'.format(v.name))
+
+        for c in self.children:
+            c.pretty_print(out, indent + 2)
+
+class MetaRoot:
+    def __init__(self, network):
+        self.network = MetaNode(network)
+        self.network.name = "(cdn)"
+
+        self.template_to_nodes = {}
+        self.fullname_to_node = {}
+
 def load(name, libname=None):
     if not libname:
         libname = "lib" + name + ".so"
@@ -276,6 +367,8 @@ class Network:
 
         self.network = self.api.cdn_rawc_network()
         self.set_integrator(Integrator(self.api.cdn_rawc_integrator()))
+
+        self._parse_meta()
 
     class DataIter:
         def __init__(self, network, slic=None):
@@ -417,6 +510,96 @@ class Network:
 
     def find_meta_node(self, name, rootid=1):
         return self.api.cdn_rawc_network_find_meta_node(self.network, rootid, name)
+
+    def _parse_meta_node(self, node, meta_node, meta_info, fullname=None):
+        # Fill node info
+        node.name = meta_node.name
+
+        # Traverse children
+        child = meta_node.first_child
+
+        if not fullname is None:
+            fullname = list(fullname)
+            fullname.append(node.name)
+
+            meta_info.fullname_to_node[".".join(fullname)] = node
+        else:
+            fullname = []
+
+        while child > 0:
+            cm = meta_info.children[child]
+
+            if cm.is_node:
+                n = MetaNode(self)
+                nm = meta_info.nodes[cm.index]
+
+                n.parent = node
+
+                self._parse_meta_node(n, nm, meta_info, fullname)
+
+                node.children.append(n)
+                node.name_to_child[n.name] = n
+            else:
+                v = MetaVariable(self)
+                vm = meta_info.states[cm.index]
+
+                v.name = vm.name
+                v.parent = node
+                v.index = vm.index
+
+                node.variables.append(v)
+                node.name_to_child[v.name] = v
+
+            child = cm.next
+
+        # Traverse templates
+        template = meta_node.first_template
+
+        while template > 0:
+            tm = meta_info.templates[template]
+
+            node.templates.append(tm.name)
+
+            if tm.name in meta_info.template_to_nodes:
+                meta_info.template_to_nodes[tm.name].append(node)
+            else:
+                meta_info.template_to_nodes[tm.name] = [node]
+
+            template = tm.next
+
+    def _parse_meta(self):
+        self.topology = MetaRoot(self)
+
+        class MetaInfo:
+            def __init__(self):
+                self.nodes = None
+                self.states = None
+                self.children = None
+                self.templates = None
+
+                self.template_to_nodes = {}
+                self.fullname_to_node = {}
+
+        info = MetaInfo()
+
+        NodesType = ctypes.POINTER(CdnRawcNodeMeta * self.network.contents.meta.nodes_size)
+        info.nodes = ctypes.cast(self.network.contents.meta.nodes, NodesType).contents
+
+        ChildrenType = ctypes.POINTER(CdnRawcChildMeta * self.network.contents.meta.children_size)
+        info.children = ctypes.cast(self.network.contents.meta.children, ChildrenType).contents
+
+        TemplatesType = ctypes.POINTER(CdnRawcTemplateMeta * self.network.contents.meta.templates_size)
+        info.templates = ctypes.cast(self.network.contents.meta.templates, TemplatesType).contents
+
+        StatesType = ctypes.POINTER(CdnRawcStateMeta * self.network.contents.meta.states_size)
+        info.states = ctypes.cast(self.network.contents.meta.states, StatesType).contents
+
+        # Start at the root node and traverse
+        if len(info.nodes) > 1:
+            self._parse_meta_node(self.topology.network, info.nodes[1], info)
+
+        self.topology.template_to_nodes = info.template_to_nodes
+        self.topology.fullname_to_node = info.fullname_to_node
 
 class Integrator:
     def __init__(self, integrator):
