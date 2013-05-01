@@ -374,13 +374,13 @@ class Network:
         # Create enough data
         self.storage = self.api.cdn_rawc_network_alloc(self.network, self.integrator.order)
 
-    def init(self, t):
+    def init(self, t=0):
         self.api.cdn_rawc_network_init(self.network, self.storage, t)
 
-    def prepare(self, t):
+    def prepare(self, t=0):
         self.api.cdn_rawc_network_prepare(self.network, self.storage, t)
 
-    def reset(self, t):
+    def reset(self, t=0):
         self.api.cdn_rawc_network_reset(self.network, self.storage, t)
 
     def pre(self, t, dt):
