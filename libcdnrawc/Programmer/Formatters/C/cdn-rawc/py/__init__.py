@@ -1,4 +1,4 @@
-import ctypes
+import ctypes, platform
 
 valuetype = ctypes.c_double
 valuetypeptr = ctypes.POINTER(valuetype)
@@ -355,7 +355,14 @@ class MetaRoot:
 
 def load(name, libname=None):
     if not libname:
-        libname = "lib" + name + ".so"
+        if platform.system() == 'Darwin':
+            ext = '.dylib'
+        elif platform.system() == 'Windows':
+            ext = '.dll'
+        else:
+            ext = '.so'
+
+        libname = "lib" + name + ext
 
     lib = ctypes.cdll.LoadLibrary(libname)
     return API(lib, name, libname)
