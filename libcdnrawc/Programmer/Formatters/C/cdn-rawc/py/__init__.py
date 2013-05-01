@@ -375,6 +375,7 @@ class Network:
         else:
             self.api = load(api, libname)
 
+        self.libname = self.api.libname
         self.network = self.api.cdn_rawc_network()
         self.set_integrator(Integrator(self.api.cdn_rawc_integrator()))
 
