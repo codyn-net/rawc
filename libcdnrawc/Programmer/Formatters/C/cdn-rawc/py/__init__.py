@@ -275,12 +275,17 @@ class MetaVariable:
 
         return self._dimension
 
+    @property
+    def flat_value(self):
         start = self.index
+        end = start + self.dimension.size
 
-        dim = self._network.get_dimension(start)
-        end = start + dim.size
+        return self._network.data[start:end]
 
-        val = self._network.data[start:end]
+    @property
+    def value(self):
+        dim = self.dimension
+        val = self.flat_value
 
         if dim.rows > 1 and dim.columns > 1:
             return self._make_matrix(val, dim)
