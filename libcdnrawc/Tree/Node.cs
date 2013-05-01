@@ -30,15 +30,15 @@ namespace Cdn.RawC.Tree
 		public static Node Create(State state, Cdn.Instruction[] instructions)
 		{
 			Stack<Node > stack = new Stack<Node>();
-			
+
 			for (int i = 0; i < instructions.Length; ++i)
 			{
 				Instruction inst = instructions[i];
-				
+
 				Node node = new Node(state, inst);
 
 				int numargs = 0;
-				
+
 				InstructionCustomOperator icop = inst as InstructionCustomOperator;
 				numargs = (int)inst.GetStackManipulation().Pop.Num;
 
@@ -46,7 +46,7 @@ namespace Cdn.RawC.Tree
 				{
 					node.Add(stack.Pop());
 				}
-				
+
 				if (icop != null && !(icop.Operator is OperatorDelayed))
 				{
 					// TODO Support for operators...
@@ -55,18 +55,18 @@ namespace Cdn.RawC.Tree
 						node.Add(Create(state, ex.Instructions));
 					}*/
 				}
-				
+
 				node.d_children.Reverse();
 				node.Constructed();
 
 				stack.Push(node);
 			}
-			
+
 			Node ret = stack.Pop();
-			
+
 			ret.Sort();
 			ret.UpdateTreeId();
-			
+
 			return ret;
 		}
 
@@ -79,7 +79,7 @@ namespace Cdn.RawC.Tree
 		{
 			d_label = label;
 		}
-		
+
 		public Node() : this("")
 		{
 		}
@@ -87,7 +87,7 @@ namespace Cdn.RawC.Tree
 		private void Constructed()
 		{
 			InstructionCustomFunction icfunc = d_instruction as InstructionCustomFunction;
-			
+
 			if (icfunc != null)
 			{
 				var args = icfunc.Function.Arguments;
@@ -116,19 +116,19 @@ namespace Cdn.RawC.Tree
 				return null;
 			}
 		}
-		
+
 		public ulong TreeId
 		{
 			get { return d_treeId; }
-			set { d_treeId = value; }			
+			set { d_treeId = value; }
 		}
-		
+
 		public Node(State state, Instruction instruction)
 		{
 			uint size = 0;
-			
+
 			d_label = "";
-			
+
 			d_state = state;
 
 			d_instruction = instruction;
@@ -146,7 +146,7 @@ namespace Cdn.RawC.Tree
 			}
 
 			d_isLeaf = size == 0;
-			
+
 			d_children = new List<Node>((int)size);
 			d_leafs = new SortedList<Node>();
 		}
@@ -161,7 +161,7 @@ namespace Cdn.RawC.Tree
 				}
 
 				InstructionVariable prop = Instruction as InstructionVariable;
-				
+
 				if (prop != null)
 				{
 					return prop.Variable;
@@ -173,9 +173,9 @@ namespace Cdn.RawC.Tree
 				{
 					return st.Item.Key;
 				}
-				
+
 				InstructionCustomOperator op = Instruction as InstructionCustomOperator;
-				
+
 				if (op != null && op.Operator is OperatorDelayed)
 				{
 					OperatorDelayed opdel = (OperatorDelayed)op.Operator;
@@ -186,7 +186,7 @@ namespace Cdn.RawC.Tree
 				}
 
 				InstructionNumber opnum = Instruction as InstructionNumber;
-				
+
 				if (opnum != null)
 				{
 					return opnum.Value;
@@ -200,13 +200,13 @@ namespace Cdn.RawC.Tree
 				return null;
 			}
 		}
-		
+
 		public void UpdateTreeId()
 		{
 			ulong treeid = 0;
 			PropagateTreeId(ref treeid);
 		}
-		
+
 		public Cdn.Dimension Dimension
 		{
 			get
@@ -219,7 +219,7 @@ namespace Cdn.RawC.Tree
 				}
 
 				var smanip = d_instruction.GetStackManipulation();
-				
+
 				if (smanip != null)
 				{
 					return smanip.Push.Dimension;
@@ -230,17 +230,17 @@ namespace Cdn.RawC.Tree
 				}
 			}
 		}
-		
+
 		private void PropagateTreeId(ref ulong treeid)
 		{
 			d_treeId = treeid++;
-			
+
 			foreach (Node child in d_children)
 			{
 				child.PropagateTreeId(ref treeid);
 			}
 		}
-		
+
 		private void CollectDescendants(List<Node> ret)
 		{
 			foreach (Node child in d_children)
@@ -249,18 +249,18 @@ namespace Cdn.RawC.Tree
 				child.CollectDescendants(ret);
 			}
 		}
-		
+
 		public Node[] Descendants
 		{
 			get
 			{
 				List<Node > ret = new List<Node>();
-				
+
 				CollectDescendants(ret);
 				return ret.ToArray();
 			}
 		}
-		
+
 		private void Copy(Node other, bool children)
 		{
 			d_instruction = other.d_instruction;
@@ -272,39 +272,39 @@ namespace Cdn.RawC.Tree
 			d_state = other.d_state;
 			d_descendants = other.d_descendants;
 			d_treeId = other.d_treeId;
-			
+
 			if (children)
 			{
 				d_children = new List<Node>(other.d_children);
 			}
 		}
-		
+
 		public object Clone()
 		{
 			Node node = new Node(d_label);
 			node.Copy(this, false);
-			
+
 			foreach (Node child in d_children)
 			{
 				Node newchild = (Node)child.Clone();
-				
+
 				node.d_children.Add(newchild);
 				newchild.d_parent = node;
-				
+
 				foreach (Node leaf in newchild.Leafs)
 				{
 					d_leafs.Add(leaf);
 				}
-				
+
 				if (newchild.IsLeaf)
 				{
 					d_leafs.Add(newchild);
 				}
 			}
-			
+
 			return node;
 		}
-		
+
 		public NodePath RelPath(Node parent)
 		{
 			if (d_parent == null || this == parent)
@@ -315,7 +315,7 @@ namespace Cdn.RawC.Tree
 			{
 				NodePath path = d_parent.RelPath(parent);
 				path.Push((uint)d_parent.Children.IndexOf(this));
-				
+
 				return path;
 			}
 		}
@@ -327,7 +327,7 @@ namespace Cdn.RawC.Tree
 				return RelPath(null);
 			}
 		}
-		
+
 		public Node FromPath(NodePath path)
 		{
 			Node node = this;
@@ -336,15 +336,15 @@ namespace Cdn.RawC.Tree
 			while (path.Count != 0)
 			{
 				uint idx = path.Pop();
-				
+
 				if (idx >= (uint)node.Children.Count)
 				{
 					return null;
 				}
-				
+
 				node = node.Children[(int)idx];
 			}
-			
+
 			return node;
 		}
 
@@ -352,7 +352,7 @@ namespace Cdn.RawC.Tree
 		{
 			get	{ return d_state; }
 		}
-		
+
 		public List<Node> Leafs
 		{
 			get { return d_leafs; }
@@ -363,33 +363,33 @@ namespace Cdn.RawC.Tree
 			get { return d_isLeaf; }
 			set { d_isLeaf = value; }
 		}
-		
+
 		public bool IsCommutative
 		{
 			get { return d_isCommutative; }
 		}
-		
+
 		public uint Degree
 		{
 			get { return d_degree; }
 		}
-		
+
 		public uint DescendantsCount
 		{
 			get { return d_descendants; }
 		}
-		
+
 		public uint ChildCount
 		{
 			get { return d_childCount; }
 			set { d_childCount = value; }
 		}
-		
+
 		public string Label
 		{
 			get { return d_label; }
 		}
-		
+
 		public List<Node> Children
 		{
 			get { return d_children; }
@@ -400,7 +400,7 @@ namespace Cdn.RawC.Tree
 			get { return d_instruction; }
 			set { d_instruction = value; }
 		}
-		
+
 		private void PropagateHeight()
 		{
 			if (d_parent == null)
@@ -420,7 +420,7 @@ namespace Cdn.RawC.Tree
 			set
 			{
 				d_height = value;
-				
+
 				PropagateHeight();
 			}
 		}
@@ -431,7 +431,7 @@ namespace Cdn.RawC.Tree
 			private set
 			{
 				d_parent = value;
-				
+
 				PropagateHeight();
 			}
 		}
@@ -440,34 +440,34 @@ namespace Cdn.RawC.Tree
 		{
 			return d_children.GetEnumerator();
 		}
-		
+
 		public IEnumerator<Node> GetEnumerator()
 		{
 			return d_children.GetEnumerator();
 		}
-		
+
 		public void Add(Node child)
 		{
 			Add(child, true);
 		}
-		
+
 		private void Unleaf(Node child)
 		{
 			d_leafs.Remove(child);
-			
+
 			if (d_parent != null)
 			{
 				d_parent.Unleaf(child);
 			}
 		}
-		
+
 		public void Add(Node child, bool setParent)
 		{
 			if (setParent)
 			{
 				child.Parent = this;
 			}
-			
+
 			// This node is no longer a leaf because it has a child now
 			if (d_parent != null && d_children.Count == 0)
 			{
@@ -475,12 +475,12 @@ namespace Cdn.RawC.Tree
 			}
 
 			d_children.Add(child);
-			
+
 			++d_degree;
 			++d_childCount;
-			
+
 			d_descendants += child.DescendantsCount + 1;
-			
+
 			foreach (Node leaf in child.Leafs)
 			{
 				if (d_leafs.Find(leaf) == null)
@@ -488,13 +488,13 @@ namespace Cdn.RawC.Tree
 					d_leafs.Add(leaf);
 				}
 			}
-			
+
 			if (child.IsLeaf)
 			{
 				d_leafs.Add(child);
 			}
 		}
-		
+
 		public Node Top
 		{
 			get
@@ -509,22 +509,22 @@ namespace Cdn.RawC.Tree
 				}
 			}
 		}
-		
+
 		public void Replace(Node node)
 		{
 			Copy(node, false);
 		}
-		
+
 		public void Replace(NodePath path, Node node)
 		{
 			Replace(path, node, false);
 		}
-		
+
 		public void Replace(NodePath path, Node node, bool reconnect)
 		{
 			Node parent;
 			int idx;
-			
+
 			if (path.Count == 0)
 			{
 				parent = Parent;
@@ -539,10 +539,10 @@ namespace Cdn.RawC.Tree
 			}
 
 			Node orig = parent.Children[idx];
-			
+
 			parent.Children[idx] = node;
 			node.Parent = parent;
-			
+
 			if (reconnect)
 			{
 				foreach (Node child in orig.Children)
@@ -551,7 +551,7 @@ namespace Cdn.RawC.Tree
 				}
 			}
 		}
-		
+
 		public void Sort()
 		{
 			// Sort the node
@@ -559,12 +559,12 @@ namespace Cdn.RawC.Tree
 			{
 				child.Sort();
 			}
-			
+
 			if (!d_isCommutative)
 			{
 				return;
 			}
-			
+
 			Cdn.RawC.Sort.Insertion(d_children);
 		}
 
@@ -572,7 +572,7 @@ namespace Cdn.RawC.Tree
 		{
 			return ToString(true);
 		}
-		
+
 		public string ToString(bool withstate)
 		{
 			string lbl = "?";
@@ -590,7 +590,7 @@ namespace Cdn.RawC.Tree
 			iprop = d_instruction as InstructionVariable;
 			inum = d_instruction as InstructionNumber;
 			ipf = d_instruction as Programmer.Instructions.Function;
-			
+
 			if (ifunc != null)
 			{
 				lbl = ifunc.Name;
@@ -619,11 +619,11 @@ namespace Cdn.RawC.Tree
 			{
 				lbl = ipf.FunctionCall.Name;
 			}
-			
+
 			string par = "";
-			
+
 			Node top = Top;
-			
+
 			if (top != null && top.State != null && withstate)
 			{
 				Variable v = top.State.Object as Variable;
@@ -650,36 +650,36 @@ namespace Cdn.RawC.Tree
 			{
 				return 1;
 			}
-			
+
 			int ret = d_label.CompareTo(other.Label);
-			
+
 			if (ret != 0)
 			{
 				return ret;
 			}
-			
+
 			// Equal, compare deeper
 			ret = d_children.Count.CompareTo(other.Children.Count);
-			
+
 			if (ret != 0)
 			{
 				return ret;
 			}
-			
+
 			// Same number of children, compare them left to right
 			for (int i = 0; i < d_children.Count; ++i)
 			{
 				ret = d_children[i].CompareTo(other.Children[i]);
-				
+
 				if (ret != 0)
 				{
 					return ret;
 				}
 			}
-			
+
 			return 0;
 		}
-		
+
 		public IEnumerable<Node> Collect<T>()
 		{
 			if (d_instruction is T)
@@ -695,7 +695,7 @@ namespace Cdn.RawC.Tree
 				}
 			}
 		}
-		
+
 		public IEnumerable<Node> Collect(Node other)
 		{
 			yield return other;
@@ -709,7 +709,7 @@ namespace Cdn.RawC.Tree
 				}
 			}
 		}
-		
+
 		public string Serialize()
 		{
 			StringBuilder ret = new StringBuilder();
@@ -723,33 +723,33 @@ namespace Cdn.RawC.Tree
 				ret.Append(String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
 				ret.Append("]");
 			}
-			
+
 			ret.Append("(");
-			
+
 			for (int i = 0; i < d_children.Count; ++i)
 			{
 				if (i != 0)
 				{
 					ret.Append(", ");
 				}
-				
+
 				ret.Append(d_children[i].Serialize());
 			}
-			
+
 			ret.Append(")");
-			
+
 			return ret.ToString();
 		}
 
 		private static Dictionary<string, uint> s_hashMapping;
 		private static uint s_nextMap;
-		
+
 		static Node()
 		{
 			s_hashMapping = new Dictionary<string, uint>();
 			s_nextMap = (uint)MathFunctionType.Num + (uint)MathFunctionType.Num + 1;
 		}
-		
+
 		private static uint HashMap(string id)
 		{
 			uint ret;
@@ -759,10 +759,10 @@ namespace Cdn.RawC.Tree
 				ret = s_nextMap++;
 				s_hashMapping[id] = ret;
 			}
-			
+
 			return ret;
 		}
-		
+
 		private static bool InstructionIs<T>(Instruction inst, out T t)
 		{
 			if (inst is T)
@@ -774,7 +774,7 @@ namespace Cdn.RawC.Tree
 			{
 				t = default(T);
 			}
-			
+
 			return false;
 		}
 
@@ -802,21 +802,21 @@ namespace Cdn.RawC.Tree
 		{
 			return InstructionIdentifier(label.ToString(), inst);
 		}
-		
+
 		private static string InstructionIdentifier(string label, Instruction inst)
 		{
 			var smanip = inst.GetStackManipulation();
-			
+
 			if (smanip == null)
 			{
 				return label + "[0,0]";
 			}
-			
+
 			var dim = smanip.Push.Dimension;
 
 			return String.Format("{0}[{1},{2}]", label, dim.Rows, dim.Columns);
 		}
-		
+
 		public static IEnumerable<string> InstructionCodes(Instruction inst, bool strict)
 		{
 			InstructionFunction ifunc;
@@ -949,12 +949,12 @@ namespace Cdn.RawC.Tree
 				yield return InstructionIdentifier(PlaceholderCodeLabel, inst);
 			}
 		}
-		
+
 		public static bool IsPlaceholder(Cdn.Instruction instruction)
 		{
 			return InstructionCode(instruction)[0] == PlaceholderCode;
 		}
-		
+
 		public const char PlaceholderCode = '0';
 		private const uint PlaceholderCodeLabel = 0;
 	}

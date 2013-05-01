@@ -104,7 +104,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		public static string Translate(Cdn.Variable property, Context context)
 		{
 			Instruction[] instructions = property.Expression.Instructions;
-			
+
 			if (instructions.Length == 1 && instructions[0] is InstructionNumber)
 			{
 				string val = ((InstructionNumber)instructions[0]).Representation;
@@ -119,7 +119,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				}
 
 				int pos = val.IndexOf('.');
-				
+
 				if (pos == -1)
 				{
 					return Translate(property.Value, context);

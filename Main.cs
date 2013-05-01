@@ -24,30 +24,30 @@ namespace Cdn.RawC.Application
 			}
 
 			bool doexit = false;
-			
+
 			if (options.Collector == "")
 			{
 				ListCollectors();
 				doexit = true;
 			}
-			
+
 			if (options.Filter == "")
 			{
 				ListFilters();
 				doexit = true;
 			}
-			
+
 			if (options.ShowFormatters)
 			{
 				ListFormat();
 				doexit = true;
 			}
-			
+
 			if (doexit)
 			{
 				return;
 			}
-			
+
 			if (options.Quiet)
 			{
 				Log.Base = null;
@@ -56,11 +56,11 @@ namespace Cdn.RawC.Application
 			foreach (string filename in options.Files)
 			{
 				Generator generator = new Generator(filename);
-				
+
 				try
 				{
 					generator.Generate();
-					
+
 					if (!options.Validate && !options.Compile)
 					{
 						string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, (a) => {
@@ -73,9 +73,9 @@ namespace Cdn.RawC.Application
 								return String.Format("`{0}'", System.IO.Path.GetFileName(a));
 							}
 						});
-	
+
 						string s;
-						
+
 						if (files.Length <= 1)
 						{
 							s = String.Join(", ", files);
@@ -127,7 +127,7 @@ namespace Cdn.RawC.Application
 
 			Profile.Report(Console.Error);
 		}
-		
+
 		private static void ListPlugins(Type[] types)
 		{
 			Plugins.Plugins plugins = Plugins.Plugins.Instance;
@@ -135,7 +135,7 @@ namespace Cdn.RawC.Application
 			foreach (Type plugin in types)
 			{
 				Plugins.Attributes.PluginAttribute info = plugins.GetInfo(plugin);
-				
+
 				if (info != null)
 				{
 					Console.WriteLine("{0}: {1}", info.Name.ToLower(), info.Description);
@@ -144,7 +144,7 @@ namespace Cdn.RawC.Application
 				}
 			}
 		}
-		
+
 		private static void ListCollectors()
 		{
 			Plugins.Plugins plugins = Plugins.Plugins.Instance;
@@ -155,26 +155,26 @@ namespace Cdn.RawC.Application
 
 			ListPlugins(plugins.Find(typeof(Tree.Collectors.ICollector)));
 		}
-		
+
 		private static void ListFilters()
 		{
 			Plugins.Plugins plugins = Plugins.Plugins.Instance;
-			
+
 			Console.WriteLine("List of available filters:");
 			Console.WriteLine("==========================");
 			Console.WriteLine();
-			
+
 			ListPlugins(plugins.Find(typeof(Tree.Filters.IFilter)));
 		}
-		
+
 		private static void ListFormat()
 		{
 			Plugins.Plugins plugins = Plugins.Plugins.Instance;
-			
+
 			Console.WriteLine("List of available formats:");
 			Console.WriteLine("==========================");
 			Console.WriteLine();
-			
+
 			ListPlugins(plugins.Find(typeof(Programmer.Formatters.IFormatter)));
 		}
 	}

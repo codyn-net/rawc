@@ -22,7 +22,7 @@ namespace Cdn.RawC.Plugins.Attributes
 		public SettingAttribute() : this("")
 		{
 		}
-		
+
 		public string Name
 		{
 			get
@@ -34,7 +34,7 @@ namespace Cdn.RawC.Plugins.Attributes
 				d_name = value;
 			}
 		}
-		
+
 		public string Description
 		{
 			get
@@ -46,7 +46,7 @@ namespace Cdn.RawC.Plugins.Attributes
 				d_description = value;
 			}
 		}
-		
+
 		public object Default
 		{
 			get
@@ -78,7 +78,7 @@ namespace Cdn.RawC.Plugins.Attributes
 				d_name = value;
 			}
 		}
-		
+
 		public string Description
 		{
 			get
@@ -90,7 +90,7 @@ namespace Cdn.RawC.Plugins.Attributes
 				d_description = value;
 			}
 		}
-		
+
 		public string Author
 		{
 			get

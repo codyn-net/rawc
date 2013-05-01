@@ -93,7 +93,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				for (int i = 0; i < node.Else.Count; ++i)
 				{
 					var child = node.Else[i];
-	
+
 					if (i != node.Else.Count - 1 || !(child is Computation.Empty))
 					{
 						ret.AppendLine(Context.Reindent(Translate(child, context), "\t\t"));
@@ -145,7 +145,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		protected virtual string Translate(Computation.Loop node, Context context)
 		{
 			StringBuilder ret = new StringBuilder();
-			
+
 			Context ctx = context.Clone(context.Program, context.Options, node.Expression, node.Mapping);
 
 			ret.AppendFormat("for ({0} = 0; i < {1}; ++i)",
@@ -172,7 +172,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					Tree.Node subnode = eq.FromPath(arg.Path);
 					DataTable.DataItem it = context.Program.StateTable[subnode];
-				
+
 					ret.AppendFormat(", {0}[{1}]",
 					                 context.This(context.Program.StateTable),
 					                 it.AliasOrIndex.Replace(context.BeginComment, "//").Replace(context.EndComment, "//"));
@@ -188,7 +188,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			                                                    ctx),
 			                                "\t"));
 			ret.Append("}");
-			
+
 			return ret.ToString();
 		}
 
@@ -279,7 +279,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return ret.ToString();
 		}
-		
+
 		protected virtual string Translate(Computation.IncrementDelayedCounters node, Context context)
 		{
 			StringBuilder ret = new StringBuilder();
@@ -302,24 +302,24 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			ret.AppendLine();
 			ret.AppendLine("\t}");
 			ret.Append("}");
-			
+
 			Dictionary<DataTable, bool > seen = new Dictionary<DataTable, bool>();
 			bool first = true;
-			
+
 			// Update counter loop indices
 			foreach (Computation.Loop loop in context.Program.Loops)
 			{
 				DataTable table = loop.IndexTable;
-				
+
 				if (seen.ContainsKey(table))
 				{
 					continue;
 				}
-				
+
 				for (int i = 0; i < table.Count; ++i)
 				{
 					DataTable.DataItem item = table[i];
-					
+
 					if (item.HasType(DataTable.DataItem.Flags.Delayed))
 					{
 						int r = i % table.Columns;
@@ -329,7 +329,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						DataTable.DataItem state = context.Program.StateTable[(int)sidx.Value];
 						DelayedState.Key delayed = (DelayedState.Key)state.Key;
 						DataTable.DataItem idx = context.Program.DelayedCounters[delayed.Size];
-						
+
 						if (first)
 						{
 							ret.AppendLine();
@@ -343,19 +343,19 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						                 context.This(context.Program.DelayedCounters), idx.DataIndex);
 					}
 				}
-				
+
 				seen[table] = true;
 			}
-			
+
 			return ret.ToString();
 		}
-		
+
 		protected virtual string TranslateDelayAssignment(Computation.Assignment node, Context context)
 		{
 			string eq = InstructionTranslator.QuickTranslate((Context)context.Base().Push(node.State, node.Equation));
 
 			StringBuilder ret = new StringBuilder();
-			
+
 			var ds = (DelayedState)node.State;
 
 			uint size = (uint)System.Math.Round(ds.Delay / Cdn.RawC.Options.Instance.DelayTimeStep);
@@ -499,7 +499,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						}
 
 						sret.Append(ret);
-						
+
 						// Copy temporary to slice
 						for (int i = 0; i < slice.Length; ++i)
 						{
@@ -524,7 +524,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 							                  retval,
 							                  i);
 						}
-	
+
 						sret.Append(");");
 						ret = sret.ToString();
 					}
@@ -590,7 +590,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return WriteWithTemporaryStorage(ctx, ret.ToString());
 		}
-		
+
 		protected virtual string Translate(Computation.Assignment node, Context context)
 		{
 			if (node.State is DelayedState)
@@ -598,7 +598,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				// Assignments to delayed states are handled differently
 				return TranslateDelayAssignment(node, context);
 			}
-			
+
 			var ctx = (Context)context.Base();
 			ctx.Push(node.State, node.Equation);
 
@@ -624,7 +624,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				                       node.DataTable.Size) + ";";
 			}
 		}
-		
+
 		protected virtual string Translate(Computation.CopyTable node, Context context)
 		{
 			string target = context.This(node.Target);
@@ -652,8 +652,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				return String.Format("{0} No constants to copy {1}", context.BeginComment, context.EndComment);
 			}
-		} 
-		
+		}
+
 		protected virtual string Translate(Computation.Empty node, Context context)
 		{
 			return "";

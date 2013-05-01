@@ -15,15 +15,15 @@ namespace Cdn.RawC.CommandLine
 		public OptionAttribute(string longname) : this(longname, null)
 		{
 		}
-		
+
 		public OptionAttribute(char shortname) : this(null, shortname)
 		{
 		}
-		
+
 		public OptionAttribute(string longname, char shortname) : this(longname, shortname.ToString())
 		{
 		}
-		
+
 		private OptionAttribute(string longname, string shortname)
 		{
 			LongName = longname;

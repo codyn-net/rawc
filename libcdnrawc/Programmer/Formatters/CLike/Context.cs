@@ -10,14 +10,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			public State State;
 			public Tree.Node Node;
-			
+
 			public Item(State state, Tree.Node node)
 			{
 				State = state;
 				Node = node;
 			}
 		}
-		
+
 		public class Temporary
 		{
 			public Tree.Node Node;
@@ -35,7 +35,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		private Stack<string> d_ret;
 		private Stack<List<Temporary>> d_tempstack;
 		private static HashSet<string> s_usedMathFunctions;
-		
+
 		public Context(Program program, Options options) : this(program, options, null, null)
 		{
 		}
@@ -44,10 +44,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			d_program = program;
 			d_options = options;
-			
+
 			d_stack = new Stack<Item>();
 			Push(node);
-			
+
 			if (mapping != null)
 			{
 				d_mapping = mapping;
@@ -56,11 +56,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				d_mapping = new Dictionary<Tree.NodePath, object>();
 			}
-			
+
 			d_tempstorage = new List<Temporary>();
 			d_tempactive = new Dictionary<Tree.Node, int>();
 			d_tempstack = new Stack<List<Temporary>>();
-			
+
 			d_ret = new Stack<string>();
 			d_tempstack.Push(new List<Temporary>());
 		}
@@ -95,7 +95,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				}
 			}
 		}
-		
+
 		public string AcquireTemporary(Tree.Node node)
 		{
 			int size = node.Dimension.Size();
@@ -108,14 +108,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					continue;
 				}
-				
+
 				if (tmp.Size < size)
 				{
 					continue;
 				}
-				
+
 				tmp.Node = node;
-				
+
 				d_tempactive[node] = i;
 				d_tempstack.Peek().Add(tmp);
 
@@ -123,35 +123,35 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			var idx = d_tempstorage.Count;
-			
+
 			var newtmp = new Temporary {
 				Node = node,
 				Size = size,
 				Name = String.Format("tmp{0}", idx),
 			};
-			
+
 			d_tempstorage.Add(newtmp);
 			d_tempactive[node] = idx;
 
 			d_tempstack.Peek().Add(newtmp);
 			return newtmp.Name;
 		}
-		
+
 		public List<Temporary> TemporaryStorage
 		{
 			get { return d_tempstorage; }
 		}
-		
+
 		public void PushRet(string ret)
 		{
 			d_ret.Push(ret);
 		}
-		
+
 		public string PopRet()
 		{
 			return d_ret.Pop();
 		}
-		
+
 		public string PeekRet()
 		{
 			if (d_ret.Count == 0)
@@ -175,11 +175,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return d_ret.Peek();
 		}
-		
+
 		public void ReleaseTemporary(Tree.Node node)
 		{
 			int i;
-			
+
 			if (d_tempactive.TryGetValue(node, out i))
 			{
 				d_tempstorage[i].Node = null;
@@ -195,14 +195,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		public Context Base()
 		{
 			var ctx = Clone();
-			
+
 			ctx.d_ret = new Stack<string>(d_ret);
 			ctx.d_tempstorage = d_tempstorage;
 			ctx.d_tempactive = d_tempactive;
-			
+
 			return ctx;
 		}
-		
+
 		public Context Push(State state, Tree.Node node)
 		{
 			if (node == null)
@@ -211,57 +211,57 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			d_stack.Push(new Item(state, node));
-			
+
 			if (d_root == null)
 			{
 				d_root = node;
 			}
-			
+
 			return this;
 		}
-		
+
 		public Context Push(Tree.Node node)
 		{
 			return Push(State, node);
 		}
-		
+
 		public Context Pop()
 		{
 			d_stack.Pop();
-			
+
 			if (d_stack.Count == 0)
 			{
 				d_root = null;
 			}
-			
+
 			return this;
 		}
-		
+
 		public Tree.Node Node
 		{
 			get { return d_stack.Count == 0 ? null : d_stack.Peek().Node; }
 		}
-		
+
 		public Tree.Node Root
 		{
 			get { return d_root; }
 		}
-		
+
 		public State State
 		{
 			get { return d_stack.Count == 0 ? null : d_stack.Peek().State; }
 		}
-		
+
 		public Program Program
 		{
 			get { return d_program; }
 		}
-		
+
 		public Options Options
 		{
 			get { return d_options; }
 		}
-		
+
 		public virtual bool TryMapping(Tree.Node node, out string ret)
 		{
 			Tree.NodePath path = node.RelPath(d_root);
@@ -305,18 +305,18 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				return false;
 			}
 		}
-		
+
 		public virtual string MathFunction(Tree.Node node)
 		{
 			Cdn.InstructionFunction instruction = (Cdn.InstructionFunction)node.Instruction;
 			var smanip = instruction.GetStackManipulation();
 			var type = (Cdn.MathFunctionType)instruction.Id;
-			
+
 			if (!smanip.Push.Dimension.IsOne)
 			{
 				return MathFunctionV(type, node);
 			}
-			
+
 			for (int i = 0; i < node.Children.Count; ++i)
 			{
 				if (!node.Children[i].Dimension.IsOne)
@@ -324,10 +324,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					return MathFunctionV(type, node);
 				}
 			}
-			
+
 			return MathFunction(type, (int)smanip.Pop.Num);
 		}
-		
+
 		public virtual string MathFunction(Cdn.MathFunctionType type, int arguments)
 		{
 			string name = Enum.GetName(typeof(Cdn.MathFunctionType), type);
@@ -381,10 +381,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
-			
+
 			return val;
 		}
-		
+
 		public virtual string MathFunctionV(Cdn.MathFunctionType type, Tree.Node node)
 		{
 			string name = Enum.GetName(typeof(Cdn.MathFunctionType), type);
@@ -475,7 +475,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Diag:
 			{
 				var d1 = node.Children[0].Dimension;
-				
+
 				if (d1.Rows == 1 || d1.Columns == 1)
 				{
 					val = "diag_v_v";
@@ -484,7 +484,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					val = "diag_v_m";
 				}
-				
+
 				return val;
 			}
 			case MathFunctionType.Slinsolve:
@@ -492,7 +492,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
-			
+
 			if (node.Children.Count == 2)
 			{
 				var n1 = node.Children[0].Dimension.IsOne;
@@ -507,11 +507,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var n3 = node.Children[2].Dimension.IsOne;
 
 				return String.Format("{0}_{1}_{2}_{3}", val, n1 ? "1" : "m", n2 ? "1" : "m", n3 ? "1" : "m");
-			}	
-			
+			}
+
 			return val;
 		}
-		
+
 		private static int IndentCount(string s)
 		{
 			int i;
@@ -642,11 +642,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					return false;
 				}
-				
+
 				first = false;
 				last = i;
 			}
-			
+
 			return true;
 		}
 
@@ -755,13 +755,13 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			return ThisCall(function.Name);
 		}
-		
+
 		public virtual void TranslateFunctionDimensionArguments(InstructionFunction instruction,
 		                                          List<string> args,
 		                                          int          cnt)
 		{
 			var type = (Cdn.MathFunctionType)instruction.Id;
-			
+
 			switch (type)
 			{
 			case MathFunctionType.Transpose:
@@ -785,7 +785,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Diag:
 			{
 				var dim1 = Node.Children[0].Dimension;
-				
+
 				if (dim1.Rows == 1 || dim1.Columns == 1)
 				{
 					args.Add(dim1.Size().ToString());

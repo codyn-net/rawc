@@ -16,7 +16,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		private Programmer.Program d_program;
 
 		private TextWriter d_writer;
-		
+
 		public JavaScript()
 		{
 			d_options = new Options("JavaScript Formatter");
@@ -33,7 +33,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			d_writer = new StreamWriter(filename);
 
 			d_writer.WriteLine("(function(Cdn) {");
-			
+
 			WriteSource();
 
 			d_writer.WriteLine("})(typeof window !== 'undefined' ? (window.Cdn = window.Cdn || {}) : (global.Cdn = global.Cdn || {}))");
@@ -227,7 +227,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			{
 				return;
 			}
-				
+
 			d_writer.Write("{0}{1}.{2} = [", indent, on, table.Name);
 
 			if (!table.NeedsInitialization)
@@ -238,7 +238,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 
 			var translator = new InitialValueTranslator();
-			
+
 			for (int i = 0; i < table.Count; ++i)
 			{
 				string val = translator.Translate(table[i].Key);
@@ -296,12 +296,12 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		private string GenerateArgsList(string prefix, int num, int numstart)
 		{
 			List<string> ret = new List<string>(num);
-			
+
 			for (int i = 0; i < num; ++i)
 			{
 				ret.Add(String.Format("{0}{1}", prefix, numstart + i));
 			}
-			
+
 			return String.Join(", ", ret.ToArray());
 		}
 
@@ -343,7 +343,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		private void WriteFunction(Programmer.Function function)
 		{
 			d_writer.WriteLine("Cdn.Networks.{0}.prototype.{1} = function ({2}) {{", CPrefix, function.Name, GenerateArgsList(function));
-			
+
 			d_writer.WriteLine("\treturn {0};", FunctionToJS(function));
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
@@ -377,18 +377,18 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		{
 			WriteComputationNode(node, "\t");
 		}
-		
+
 		private void WriteComputationNode(Computation.INode node, string indent)
 		{
 			Context context = new Context(d_program, d_options);
 			d_writer.WriteLine(Context.Reindent(ComputationNodeTranslator.Translate(node, context), indent));
 		}
-		
+
 		private void WriteComputationNodes(IEnumerable<Computation.INode> nodes)
 		{
 			bool empty = false;
 			bool written = false;
-			
+
 			foreach (Computation.INode node in nodes)
 			{
 				if (node is Computation.Empty)
@@ -401,7 +401,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 					WriteComputationNode(new Computation.Empty());
 					empty = false;
 				}
-				
+
 				WriteComputationNode(node);
 				written = true;
 			}
@@ -415,26 +415,26 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 
 			d_writer.Write("Cdn.Networks.{0}.prototype.{1} = function(", CPrefix, api.Name);
-			
+
 			for (int i = 0; i < api.Arguments.Length; i += 2)
 			{
 				if (i != 0)
 				{
 					d_writer.Write(", ");
 				}
-				
+
 				var name = api.Arguments[i + 1];
-				
+
 				d_writer.Write(name);
 			}
-			
+
 			d_writer.WriteLine(")\n{");
 
 			if (api.Body.Count != 0)
 			{
 				WriteComputationNodes(api.Body);
 			}
-			
+
 			d_writer.WriteLine("}");
 			d_writer.WriteLine();
 		}
@@ -582,33 +582,33 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 				{
 					var phases = ev.Phases;
 					++i;
-	
+
 					if (phases.Length == 0)
 					{
 						continue;
 					}
-	
+
 					d_writer.WriteLine("\tcase {0}:", i - 1);
-	
+
 					var parent = Knowledge.Instance.FindStateNode(ev);
 					var cont = Knowledge.Instance.EventStatesMap[parent];
 					var idx = cont.Index;
-	
+
 					List<string> conditions = new List<string>();
-	
+
 					foreach (var ph in phases)
 					{
 						var st = Knowledge.Instance.GetEventState(parent, ph);
-	
+
 						conditions.Add(String.Format("{0}[{1}] == {2}", d_program.EventStatesTable.Name, idx, st.Index));
 					}
-	
+
 					d_writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
 				}
-	
+
 				d_writer.WriteLine("\tdefault:");
 				d_writer.WriteLine("\t\treturn 1;");
-	
+
 				d_writer.WriteLine("\t}");
 			}
 

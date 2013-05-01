@@ -11,7 +11,7 @@ namespace Cdn.RawC
 		{
 			d_embedding = embedding;
 		}
-		
+
 		public Tree.Embedding Embedding
 		{
 			get { return d_embedding; }

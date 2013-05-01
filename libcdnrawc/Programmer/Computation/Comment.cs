@@ -10,7 +10,7 @@ namespace Cdn.RawC.Programmer.Computation
 		{
 			d_text = text;
 		}
-		
+
 		public string Text
 		{
 			get

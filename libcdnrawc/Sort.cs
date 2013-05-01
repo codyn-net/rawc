@@ -11,7 +11,7 @@ namespace Cdn.RawC
 		    	return a.CompareTo(b);
 		    });
 		}
-		
+
 		public static void Insertion<T>(IList<T> list, Comparison<T> comparer)
 		{
 		    int count = list.Count;
@@ -19,9 +19,9 @@ namespace Cdn.RawC
 		    for (int j = 1; j < count; j++)
 		    {
 		        T key = list[j];
-		
+
 		        int i = j - 1;
-		        
+
 		        while (i >= 0 && comparer(list[i], key) > 0)
 		        {
 		            list[i + 1] = list[i];

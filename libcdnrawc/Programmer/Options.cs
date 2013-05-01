@@ -12,10 +12,10 @@ namespace Cdn.RawC.Programmer
 
 		/* Original output directory */
 		public string OriginalOutput;
-		
+
 		/* Output file basename */
 		public string Basename;
-		
+
 		public double DelayTimeStep;
 	}
 }

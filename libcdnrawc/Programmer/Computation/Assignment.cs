@@ -14,7 +14,7 @@ namespace Cdn.RawC.Programmer.Computation
 			d_item = item;
 			d_equation = equation;
 		}
-		
+
 		public DataTable.DataItem Item
 		{
 			get
@@ -22,7 +22,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_item;
 			}
 		}
-		
+
 		public Tree.Node Equation
 		{
 			get
@@ -30,7 +30,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_equation;
 			}
 		}
-		
+
 		public State State
 		{
 			get

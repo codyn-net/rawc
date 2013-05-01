@@ -9,13 +9,13 @@ namespace Cdn.RawC.Tree
 		{
 			private uint d_index;
 			private NodePath d_path;
-			
+
 			public Argument(NodePath path,uint index)
 			{
 				d_index = index;
 				d_path = path;
 			}
-			
+
 			public uint Index
 			{
 				get
@@ -27,7 +27,7 @@ namespace Cdn.RawC.Tree
 					d_index = value;
 				}
 			}
-			
+
 			public NodePath Path
 			{
 				get
@@ -44,11 +44,11 @@ namespace Cdn.RawC.Tree
 		private uint d_argumentIdx;
 		private bool d_inline;
 		private bool d_pure;
-		
+
 		public struct InstanceArgs
 		{
 			public Node Instance;
-			
+
 			public InstanceArgs(Node instance)
 			{
 				Instance = instance;
@@ -59,24 +59,24 @@ namespace Cdn.RawC.Tree
 
 		public event InstanceHandler InstanceAdded = delegate {};
 		public event InstanceHandler InstanceRemoved = delegate {};
-		
+
 		public class Instance : Instruction
 		{
 			private Embedding d_prototype;
 			private List<ulong> d_embeddedIds;
 			private Instruction d_originalInstruction;
-	
+
 			public Instance(Tree.Embedding prototype, IEnumerable<ulong> embeddedIds, Instruction originalInstruction)
 			{
 				d_prototype = prototype;
 				d_embeddedIds = new List<ulong>(embeddedIds);
 				d_originalInstruction = originalInstruction;
 			}
-			
+
 			public Instance() : this(null, new List<ulong>(), null)
 			{
 			}
-			
+
 			public List<ulong> EmbeddedIds
 			{
 				get
@@ -84,7 +84,7 @@ namespace Cdn.RawC.Tree
 					return d_embeddedIds;
 				}
 			}
-			
+
 			public Embedding Prototype
 			{
 				get
@@ -96,7 +96,7 @@ namespace Cdn.RawC.Tree
 					d_prototype = value;
 				}
 			}
-			
+
 			public Instruction OriginalInstruction
 			{
 				get
@@ -110,7 +110,7 @@ namespace Cdn.RawC.Tree
 				// Compare overlap in embedded ids
 				int i = 0;
 				int j = 0;
-				
+
 				while (i < d_embeddedIds.Count && j < other.d_embeddedIds.Count)
 				{
 					if (d_embeddedIds[i] == other.d_embeddedIds[j])
@@ -126,10 +126,10 @@ namespace Cdn.RawC.Tree
 						++j;
 					}
 				}
-				
+
 				return false;
 			}
-			
+
 			public static new GLib.GType GType
 			{
 				get
@@ -138,14 +138,14 @@ namespace Cdn.RawC.Tree
 				}
 			}
 		}
-		
+
 		public Embedding(Node node, IEnumerable<Argument> arguments) : this(node, new NodePath[] {})
 		{
 			d_arguments = new List<Argument>(arguments);
 
 			Sort.Insertion(d_arguments, (a, b) => a.Index.CompareTo(b.Index));
 		}
-		
+
 		public Embedding(Node node, IEnumerable<NodePath> arguments)
 		{
 			d_potentialArguments = new List<NodePath>(arguments);
@@ -153,13 +153,13 @@ namespace Cdn.RawC.Tree
 			d_arguments = new List<Argument>();
 			d_instances = new List<Node>();
 			d_expression = node;
-			
+
 			d_argumentIdx = 0;
 
 			d_pure = true;
 			d_inline = false;
 		}
-		
+
 		public bool Conflicts(Embedding other)
 		{
 			foreach (Node node in d_instances)
@@ -170,7 +170,7 @@ namespace Cdn.RawC.Tree
 					{
 						continue;
 					}
-					
+
 					Instance a = (Instance)node.Instruction;
 					Instance b = (Instance)othernode.Instruction;
 
@@ -180,10 +180,10 @@ namespace Cdn.RawC.Tree
 					}
 				}
 			}
-			
+
 			return false;
 		}
-		
+
 		public Node Expression
 		{
 			get
@@ -191,16 +191,16 @@ namespace Cdn.RawC.Tree
 				return d_expression;
 			}
 		}
-		
+
 		public void Embed(Node embed)
 		{
 			List<ulong > embeddedIds = new List<ulong>();
-			
+
 			embed.Instruction = new Instance(this, embeddedIds, embed.Instruction);
 
 			Add(embed);
 		}
-		
+
 		public void Revert()
 		{
 			while (d_instances.Count > 0)
@@ -208,7 +208,7 @@ namespace Cdn.RawC.Tree
 				Remove(d_instances[0]);
 			}
 		}
-		
+
 		public void Remove(Node instance)
 		{
 			instance.Instruction = ((Instance)instance.Instruction).OriginalInstruction;
@@ -216,7 +216,7 @@ namespace Cdn.RawC.Tree
 
 			InstanceRemoved(this, new InstanceArgs(instance));
 		}
-		
+
 		private bool SameArguments(Node a, Node b)
 		{
 			// Check if the nodes in a and b, at 'path' are the same thing
@@ -229,7 +229,7 @@ namespace Cdn.RawC.Tree
 			{
 				return false;
 			}
-			
+
 			// Compare children
 			for (int i = 0; i < a.Children.Count; ++i)
 			{
@@ -238,19 +238,19 @@ namespace Cdn.RawC.Tree
 					return false;
 				}
 			}
-			
+
 			return true;
 		}
-		
+
 		private bool SameArguments(Node a, Node b, NodePath path)
 		{
 			return SameArguments(a.FromPath(path), b.FromPath(path));
 		}
-		
+
 		private bool ArgumentMatch(Argument argument, NodePath path)
 		{
 			NodePath orig = argument.Path;
-			
+
 			foreach (Node instance in d_instances)
 			{
 				if (!SameArguments(instance.FromPath(orig), instance.FromPath(path)))
@@ -258,10 +258,10 @@ namespace Cdn.RawC.Tree
 					return false;
 				}
 			}
-			
+
 			return true;
 		}
-		
+
 		private bool MergeArgument(NodePath path)
 		{
 			// See if this can be represented by a previous argument already
@@ -274,7 +274,7 @@ namespace Cdn.RawC.Tree
 					return true;
 				}
 			}
-			
+
 			uint idx = d_argumentIdx++;
 
 			// Unmerge previous arguments
@@ -289,21 +289,21 @@ namespace Cdn.RawC.Tree
 			d_arguments.Add(new Argument(path, idx));
 			return false;
 		}
-		
+
 		private void VerifyArguments(Node added)
 		{
 			d_potentialArguments.RemoveAll(delegate (NodePath path) {
 				bool needarg = d_instances.Count > 1 && !SameArguments(d_instances[0], added, path);
-				
+
 				if (needarg)
 				{
 					needarg = !MergeArgument(path);
 				}
-				
+
 				return needarg;
 			});
 		}
-		
+
 		public void Add(Node instance)
 		{
 			if (!(instance.Instruction is Instance))
@@ -325,7 +325,7 @@ namespace Cdn.RawC.Tree
 				return d_instances;
 			}
 		}
-		
+
 		public IEnumerable<Argument> Arguments
 		{
 			get
@@ -333,7 +333,7 @@ namespace Cdn.RawC.Tree
 				return d_arguments;
 			}
 		}
-		
+
 		public int ArgumentsCount
 		{
 			get
@@ -341,7 +341,7 @@ namespace Cdn.RawC.Tree
 				return (int)d_argumentIdx;
 			}
 		}
-		
+
 		public int InstancesCount
 		{
 			get

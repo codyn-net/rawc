@@ -12,23 +12,23 @@ namespace Cdn.RawC.Tree
 		{
 			d_nodes = new List<Node>(nodes);
 		}
-		
+
 		public void Write(string filename)
 		{
 			FileStream stream = new FileStream(filename, FileMode.Create);
 			StreamWriter writer = new StreamWriter(stream);
-			
+
 			writer.WriteLine("digraph {");
-			
+
 			foreach (Node node in d_nodes)
 			{
 				writer.WriteLine("subgraph {");
 				Write(writer, node);
 				writer.WriteLine("}");
 			}
-			
+
 			writer.WriteLine("}");
-			
+
 			writer.Flush();
 			writer.Close();
 		}
@@ -60,12 +60,12 @@ namespace Cdn.RawC.Tree
 				return "";
 			}
 		}
-		
+
 		private uint Id(Node node)
 		{
 			return (uint)node.GetHashCode();
 		}
-		
+
 		private string Color(Node node)
 		{
 			if (node.IsLeaf)
@@ -77,7 +77,7 @@ namespace Cdn.RawC.Tree
 				return "white";
 			}
 		}
-		
+
 		private void WriteNode(TextWriter writer, Node node)
 		{
 			Variable v = null;
@@ -100,11 +100,11 @@ namespace Cdn.RawC.Tree
 				writer.WriteLine("{0} [shape=record,style=filled,label=\"{1}|{2}\",fillcolor=\"{3}\"];", Id(node), Label(node), node.Top.Leafs.IndexOf(node), Color(node));
 			}
 		}
-		
+
 		private void Write(TextWriter writer, Node node)
 		{
 			WriteNode(writer, node);
-			
+
 			foreach (var child in node.Children)
 			{
 				Write(writer, child);

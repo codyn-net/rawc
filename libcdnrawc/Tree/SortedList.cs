@@ -8,11 +8,11 @@ namespace Cdn.RawC.Tree
 		public SortedList()
 		{
 		}
-		
+
 		public T Find(T item)
 		{
 			int i = BinarySearch(item);
-			
+
 			if (i >= 0)
 			{
 				return this[i];
@@ -22,11 +22,11 @@ namespace Cdn.RawC.Tree
 				return default(T);
 			}
 		}
-		
+
 		public new void Add(T item)
 		{
 			int i = BinarySearch(item);
-			
+
 			if (i >= 0)
 			{
 				base.Insert(i, item);
@@ -36,11 +36,11 @@ namespace Cdn.RawC.Tree
 				base.Insert(~i, item);
 			}
 		}
-		
+
 		public new void Remove(T item)
 		{
 			int i = BinarySearch(item);
-			
+
 			if (i >= 0)
 			{
 				RemoveAt(i);

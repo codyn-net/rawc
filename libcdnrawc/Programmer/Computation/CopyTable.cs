@@ -9,7 +9,7 @@ namespace Cdn.RawC.Programmer.Computation
 		private int d_sourceIndex;
 		private int d_targetIndex;
 		private int d_size;
-		
+
 		public CopyTable(DataTable source, DataTable target, int size) : this(source, target, 0, 0, size)
 		{
 		}
@@ -18,13 +18,13 @@ namespace Cdn.RawC.Programmer.Computation
 		{
 			d_source = source;
 			d_target = target;
-			
+
 			d_sourceIndex = sourceIndex;
 			d_targetIndex = targetIndex;
-			
+
 			d_size = size;
 		}
-		
+
 		public DataTable Source
 		{
 			get
@@ -32,7 +32,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_source;
 			}
 		}
-		
+
 		public int SourceIndex
 		{
 			get
@@ -40,7 +40,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_sourceIndex;
 			}
 		}
-		
+
 		public DataTable Target
 		{
 			get
@@ -48,7 +48,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_target;
 			}
 		}
-		
+
 		public int TargetIndex
 		{
 			get
@@ -56,7 +56,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_targetIndex;
 			}
 		}
-		
+
 		public int Size
 		{
 			get

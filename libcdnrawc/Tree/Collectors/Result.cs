@@ -13,21 +13,21 @@ namespace Cdn.RawC.Tree.Collectors
 			d_prototypes = new List<Embedding>();
 			d_embeddings = new Dictionary<State, List<Node>>();
 		}
-		
+
 		public void Add(Embedding embedding)
 		{
 			d_prototypes.Add(embedding);
 			embedding.InstanceAdded += PrototypeInstanceAdded;
 		}
-		
+
 		public Embedding Prototype(Node node, IEnumerable<NodePath> arguments)
 		{
 			Embedding ret = new Embedding((Node)node.Clone(), arguments);
 			Add(ret);
-			
+
 			return ret;
 		}
-		
+
 		private void PrototypeInstanceAdded(object source, Embedding.InstanceArgs args)
 		{
 			List<Node > items;
@@ -37,10 +37,10 @@ namespace Cdn.RawC.Tree.Collectors
 				items = new List<Node>();
 				d_embeddings[args.Instance.State] = items;
 			}
-			
+
 			items.Add(args.Instance);
 		}
-		
+
 		public IEnumerable<Embedding> Prototypes
 		{
 			get
@@ -48,11 +48,11 @@ namespace Cdn.RawC.Tree.Collectors
 				return d_prototypes;
 			}
 		}
-		
+
 		public IEnumerable<Node> Embeddings(State state)
 		{
 			List<Node > instances;
-			
+
 			if (d_embeddings.TryGetValue(state, out instances))
 			{
 				return instances;

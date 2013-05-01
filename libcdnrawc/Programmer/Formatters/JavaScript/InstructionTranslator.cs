@@ -8,12 +8,12 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 		public InstructionTranslator() : base()
 		{
 		}
-		
+
 		protected override string Translate(InstructionNumber instruction, CLike.Context context)
 		{
 			return NumberTranslator.Translate(instruction.Value, (Context)context);
 		}
-		
+
 		protected override string TranslateOperator(InstructionFunction instruction, CLike.Context context)
 		{
 			switch ((Cdn.MathFunctionType)instruction.Id)

@@ -11,7 +11,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			public Cdn.MathFunctionType Type;
 			public int Priority;
 			public bool LeftAssociation;
-			
+
 			public OperatorSpec(Cdn.MathFunctionType type, int priority, bool leftAssociation)
 			{
 				Type = type;
@@ -21,23 +21,23 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		}
 
 		private static Dictionary<Cdn.MathFunctionType, OperatorSpec> s_operatorSpecs;
-		
+
 		private static void AddSpec(Cdn.MathFunctionType type, int priority, bool leftAssociation)
 		{
 			s_operatorSpecs[type] = new OperatorSpec(type, priority, leftAssociation);
 		}
-		
+
 		static InstructionTranslator()
 		{
 			s_operatorSpecs = new Dictionary<MathFunctionType, OperatorSpec>();
-			
+
 			AddSpec(MathFunctionType.Multiply, 7, true);
 			AddSpec(MathFunctionType.Divide, 7, true);
 			AddSpec(MathFunctionType.Modulo, 7, true);
 			AddSpec(MathFunctionType.Plus, 6, true);
 			AddSpec(MathFunctionType.Minus, 6, true);
 			AddSpec(MathFunctionType.UnaryMinus, 8, false);
-			
+
 			AddSpec(MathFunctionType.Negate, 8, false);
 			AddSpec(MathFunctionType.Greater, 5, true);
 			AddSpec(MathFunctionType.Less, 5, true);
@@ -46,7 +46,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			AddSpec(MathFunctionType.Equal, 4, true);
 			AddSpec(MathFunctionType.Or, 2, true);
 			AddSpec(MathFunctionType.And, 3, true);
-			
+
 			AddSpec(MathFunctionType.Ternary, 1, false);
 		}
 
@@ -62,7 +62,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		                                      typeof(Context))
 		{
 		}
-		
+
 		public static string QuickTranslate(Context context)
 		{
 			return (new InstructionTranslator()).Translate(context);
@@ -87,7 +87,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return true;
 		}
-		
+
 		private string TranslateAssign(Context context, Tree.Node node, string assignto)
 		{
 			if (node.Dimension.IsOne)
@@ -99,15 +99,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				context.PushRet(assignto);
 				var ret = Translate(context, node);
 				context.PopRet();
-				
+
 				return ret;
 			}
 		}
-		
+
 		private string Translate(Context context)
 		{
 			string ret;
-			
+
 			if (context.TryMapping(context.Node, out ret))
 			{
 				return ret;
@@ -137,7 +137,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return ret;
 		}
-		
+
 		public string Translate(Context context, int child)
 		{
 			return Translate(context, context.Node.Children[child]);
@@ -147,40 +147,40 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			OperatorSpec s1;
 			OperatorSpec s2;
-			
+
 			if (!s_operatorSpecs.TryGetValue(a, out s1) || !s_operatorSpecs.TryGetValue(b, out s2))
 			{
 				return false;
 			}
-			
+
 			return s1.Priority >= s2.Priority;
 		}
 
 		protected string SimpleOperator(Context context, InstructionFunction inst, string glue)
 		{
 			int num = context.Node.Children.Count;
-			
+
 			if (num == 1)
 			{
 				return String.Format("{0}{1}", glue, Translate(context, 0)).Trim();
 			}
 
 			string[] args = new string[num];
-			
+
 			for (int i = 0; i < num; ++i)
 			{
 				args[i] = Translate(context, i);
 			}
-			
+
 			bool needsparen = false;
-			
+
 			if (context.Node.Parent != null)
 			{
 				InstructionFunction op = context.Node.Parent.Instruction as InstructionFunction;
-				
+
 				needsparen = inst == null || (op != null && HasPriority((Cdn.MathFunctionType)op.Id, (Cdn.MathFunctionType)inst.Id));
 			}
-			
+
 			if (!needsparen)
 			{
 				return String.Join(glue, args).Trim();
@@ -190,7 +190,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				return String.Format("({0})", String.Join(glue, args).Trim());
 			}
 		}
-		
+
 		protected virtual string Translate(InstructionNumber instruction, Context context)
 		{
 			var val = instruction.Value.ToString("0." + new String('0', 15));
@@ -204,7 +204,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return val;
 		}
-		
+
 		protected virtual string TranslateOperator(InstructionFunction instruction, Context context)
 		{
 			switch ((Cdn.MathFunctionType)instruction.Id)
@@ -259,19 +259,19 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					                     Translate(context, 1),
 					                     Translate(context, 2));
 			}
-			
+
 			throw new NotImplementedException(String.Format("The operator `{0}' is not implemented", instruction.Name));
 		}
 
 		protected virtual string Translate(InstructionVariable instruction, Context context)
 		{
 			Cdn.Variable prop = instruction.Variable;
-			
+
 			if (!context.Program.StateTable.Contains(prop))
 			{
 				throw new NotImplementedException(String.Format("The variable `{0}' is not implemented", prop.FullName));
 			}
-			
+
 			DataTable.DataItem item = context.Program.StateTable[prop];
 
 			if (instruction.HasSlice)
@@ -316,31 +316,31 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			return val;
 		}
-		
+
 		private int LiteralIndex(Tree.Node node)
 		{
 			var i = node.Instruction as InstructionNumber;
-			
+
 			if (i == null)
 			{
 				throw new Exception("Non constant indices are not yet supported");
 			}
-			
+
 			return (int)(i.Value + 0.5);
 		}
 
 		private void LiteralIndices(Tree.Node node, List<int> ret)
 		{
 			var i = node.Instruction as InstructionNumber;
-			
+
 			if (i != null)
 			{
 				ret.Add((int)(i.Value + 0.5));
 				return;
 			}
-			
+
 			var m = node.Instruction as InstructionMatrix;
-			
+
 			if (m != null)
 			{
 				foreach (var child in node.Children)
@@ -353,7 +353,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				throw new Exception("Non constant indices are not yet supported");
 			}
 		}
-		
+
 		protected virtual string TranslateV(InstructionIndex instruction, Context context)
 		{
 			return Translate(instruction, context);
@@ -363,26 +363,26 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		 * Translate an index instruction. The index instruction contains the
 		 * indices of the slice it should return inside the instruction. The
 		 * expression to index is the first child of the current context node.
-		 * 
+		 *
 		 * This method allocates a temporary storage for the result of the
 		 * expression to index of necessary. This is necessary if:
-		 * 
+		 *
 		 * 1. The expression is multidimensional AND
 		 * 2. The expression is not already stored in global network memory
-		 * 
+		 *
 		 * The second condition holds for example for variables which are in
 		 * the state table. In addition, for languages that support first class
 		 * arrays, a temporary variable never needs to be allocated since the
 		 * results of the expression are simply stored in an array on the
 		 * stack, allocated by the return result of the expression.
-		 * 
+		 *
 		 * If the result of the indexing is multidimensional, then there are
 		 * two separate cases.
-		 * 
+		 *
 		 * 1. The indexing operation is a simple _offset_ + length in the
 		 *    expression (i.e. a slice of adjacent elements)
 		 * 2. The indexing operation indexes randomly
-		 * 
+		 *
 		 * The following conditions determine how to deal with these cases:
 		 *
 		 * 1. Return value of indexing needs to be stored in temporary
@@ -416,7 +416,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				toindex = Translate(context, child);
 				context.PopRet();
 			}
-			
+
 			string ret = null;
 
 			// Check if the thing to index is just one thing, then we can
@@ -473,22 +473,22 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				if (retvar != null)
 				{
 					StringBuilder rets = new StringBuilder();
-	
+
 					if (tmp != null)
 					{
 						rets.Append(toindex);
 					}
-	
+
 					for (int i = 0; i < indices.Length; ++i)
 					{
 						if (i != 0 || tmp != null)
 						{
 							rets.Append(", ");
 						}
-	
+
 						rets.AppendFormat("({0})[{1}] = ({2})[{3}]", retvar, i, tmp != null ? tmp : toindex, indices[i]);
 					}
-	
+
 					ret = String.Format("({0}, {1})", rets.ToString(), retvar);
 				}
 				else if (context.SupportsFirstClassArrays)
@@ -500,7 +500,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					throw new Exception("Can't random index without first class arrays support");
 				}
 			}
-			
+
 			context.RestoreTemporaryStack();
 
 			return ret;
@@ -509,7 +509,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		/*
 		 * Translates a call to a builtin math function. The InstructionFunction
 		 * is used both for operators and functions (they are treated equally).
-		 * 
+		 *
 		 * If the instruction represents an operator, then we call
 		 * TranslateOperator which uses language specific available operators
 		 * to translate the instruction. Otherwise a function call is translated
@@ -555,10 +555,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						ret = String.Format("{0}({1}, {2})", name, args[i], args[i + 1]);
 					}
 				}
-				
+
 				return ret;
 			}
-			
+
 			return String.Format("{0}({1})", name, String.Join(", ", args));
 		}
 
@@ -575,7 +575,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				throw new NotSupportedException("Unable to determine delay of delayed operator");
 			}
-			
+
 			DataTable.DataItem item = context.Program.StateTable[new DelayedState.Key(delayed, delay)];
 
 			return String.Format("{0}[{1}]",
@@ -584,7 +584,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		}
 
 		/*
-		 * Support for custom operators which do not generate functions. 
+		 * Support for custom operators which do not generate functions.
 		 * Currently, the only operator supported here is the delay operator.
 		 * All other operators which currently exist generate functions which
 		 * are handled just like other custom functions.
@@ -646,7 +646,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 		/* Translate a rawc variable instruction. There are two cases for variable
 		 * instructions.
-		 * 
+		 *
 		 * 1. Member: in this case the variable is looked up in the language
 		 *    implicitly passed "this"
 		 * 2. Not member: just return the variable name.
@@ -668,7 +668,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		 * various places. If an instruction already has storage by itself
 		 * (e.g. in the statetable) then temporary storage does not need to
 		 * be allocated.
-		 * 
+		 *
 		 * If the language supports first class arrays, then temporary storage
 		 * never needs to be allocated to store intermediate results. For other
 		 * languages however, temporary storage needs to be allocated for
@@ -685,7 +685,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			var v = instruction as Cdn.InstructionVariable;
-			
+
 			if (v != null)
 			{
 				// Check for slice
@@ -693,7 +693,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					return true;
 				}
-				
+
 				// Only needs storage if indices are not continuous
 				Cdn.Dimension dim;
 				return !Context.IndicesAreContinuous(v.GetSlice(out dim));
@@ -705,13 +705,13 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				return true;
 			}
-			
+
 			return context.Program.StateTable.Contains(instruction);
 		}
-		
-		/* 
+
+		/*
 		 * Translators for multidimension values.
-		 * 
+		 *
 		 * The following methods are called specifically for instructions
 		 * which have a multidimensional result.
 		 */
@@ -761,13 +761,13 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			else
 			{
 				int argi = 0;
-				
+
 				var tmp = context.PeekRet();
-	
+
 				for (int i = 0; i < context.Node.Children.Count; ++i)
 				{
 					var child = context.Node.Children[i];
-					
+
 					// Translate such that we compute the result of the child
 					// at the tmp + argi location
 					if (argi == 0)
@@ -783,10 +783,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					{
 						throw new Exception("Matrix instruction without pointers is not yet implemented");
 					}
-	
+
 					argi += child.Dimension.Size();
 				}
-				
+
 				return String.Format("({0}, {1})", String.Join(",\n ", args), tmp);
 			}
 		}
@@ -819,9 +819,9 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		protected virtual string TranslateV(InstructionFunction instruction, Context context)
 		{
 			Cdn.MathFunctionType type;
-			
+
 			type = (Cdn.MathFunctionType)instruction.Id;
-			
+
 			var def = context.MathFunctionV(type, context.Node);
 			string ret = null;
 
@@ -829,14 +829,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				ret = context.PeekRet();
 			}
-			
+
 			Context.UsedMathFunctions.Add(def);
-			
+
 			List<string> args = new List<string>(context.Node.Children.Count + 1);
 
 			int cnt = 0;
 			context.SaveTemporaryStack();
-			
+
 			for (int i = 0; i < context.Node.Children.Count; ++i)
 			{
 				var child = context.Node.Children[i];
@@ -852,7 +852,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			context.RestoreTemporaryStack();
-			
+
 			context.TranslateFunctionDimensionArguments(instruction, args, cnt);
 
 			if (ret != null)
@@ -864,16 +864,16 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				return String.Format("{0}({1})", def, String.Join(", ", args));
 			}
 		}
-		
+
 		protected virtual string TranslateV(InstructionVariable instruction, Context context)
 		{
 			Cdn.Variable prop = instruction.Variable;
-			
+
 			if (!context.Program.StateTable.Contains(prop))
 			{
 				throw new NotImplementedException(String.Format("The variable `{0}' is not implemented", prop.FullName));
 			}
-			
+
 			DataTable.DataItem item = context.Program.StateTable[prop];
 			string ret = null;
 
@@ -884,12 +884,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			int size = prop.Dimension.Size();
 			int offset = 0;
-			
+
 			if (instruction.HasSlice)
 			{
 				Cdn.Dimension dim;
 				var slice = instruction.GetSlice(out dim);
-				
+
 				// This is a multidim slice for sure, check if it's just linear
 				if (!Context.IndicesAreContinuous(slice))
 				{
@@ -903,7 +903,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					else
 					{
 						StringBuilder sret = new StringBuilder("(");
-						
+
 						// Make single element assignments
 						for (int i = 0; i < slice.Length; ++i)
 						{
@@ -911,14 +911,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 							{
 								sret.Append(", ");
 							}
-							
+
 							sret.AppendFormat("({0})[{1}] = {2}[{3}]",
 							                  ret,
 							                  i,
 							                  context.This(context.Program.StateTable),
 							                  context.AddedIndex(item, slice[i]));
 						}
-						
+
 						sret.AppendFormat(", {0})", ret);
 						return sret.ToString();
 					}
@@ -981,7 +981,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 
 			string ret = null;
-			
+
 			if (!context.Node.Dimension.IsOne && !InstructionHasStorage(instruction, context))
 			{
 				// The return value is given as the first argument to the function

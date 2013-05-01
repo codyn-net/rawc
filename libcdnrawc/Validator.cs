@@ -60,9 +60,9 @@ namespace Cdn.RawC
 					ret.Add(new Cdn.Monitor(d_network, v));
 				}
 			}
-			
+
 			double ts;
-			
+
 			if (Options.Instance.DelayTimeStep <= 0)
 			{
 				ts = Options.Instance.ValidateRange[1];
@@ -71,11 +71,11 @@ namespace Cdn.RawC
 			{
 				ts = Options.Instance.DelayTimeStep;
 			}
-			
+
 			d_network.Run(Options.Instance.ValidateRange[0],
 			              ts,
 			              Options.Instance.ValidateRange[2]);
-			
+
 			// Extract the validation data
 			d_data = new List<double[]>();
 
@@ -90,17 +90,17 @@ namespace Cdn.RawC
 		private void ReadAndCompare(List<uint> indices, List<Cdn.Dimension> dimensions, int row, double[] data, double t)
 		{
 			List<string> failures = new List<string>();
-			
+
 			for (int i = 0; i < indices.Count; ++i)
 			{
 				var dim = dimensions[i];
 				var size = dim.Size();
-				
+
 				for (int j = 0; j < size; ++j)
 				{
 					double rawcval = data[indices[i] + (uint)j];
 					double cdnval = d_data[i][row * size + j];
-				
+
 					if (System.Math.Abs(cdnval - rawcval) > Options.Instance.ValidatePrecision ||
 				        double.IsNaN(cdnval) != double.IsNaN(rawcval))
 					{
@@ -168,7 +168,7 @@ namespace Cdn.RawC
 
 				t += data[dtstate.DataIndex];
 			}
-		
+
 			Log.WriteLine("Network {0} successfully validated...", d_network.Filename);
 		}
 
@@ -190,10 +190,10 @@ namespace Cdn.RawC
 			while (true)
 			{
 				dynnet.Step(t, dt);
-				
+
 				var vals = dynnet.Values();
 				yield return vals;
-				
+
 				t += vals[dtstate.DataIndex];
 			}
 		}
@@ -208,11 +208,11 @@ namespace Cdn.RawC
 			private IntPtr d_dataptr;
 			private double[] d_data;
 			private Array d_realdata;
-	
+
 			private string ToAsciiOnly(string name)
 			{
 				StringBuilder builder = new StringBuilder();
-	
+
 				foreach (char c in name)
 				{
 					if (!char.IsLetterOrDigit(c))
@@ -224,7 +224,7 @@ namespace Cdn.RawC
 						builder.Append(c);
 					}
 				}
-				
+
 				return builder.ToString();
 			}
 
@@ -235,7 +235,7 @@ namespace Cdn.RawC
 				// Define dynamic PInvoke method
 				DefineMethod(tb, shlib, "cdn_rawc_network_get_type_size", typeof(byte), typeof(IntPtr));
 				DefineMethod(tb, shlib, "cdn_rawc_" + name  + "_network", typeof(IntPtr));
-			
+
 				Type tp;
 
 				try
@@ -248,7 +248,7 @@ namespace Cdn.RawC
 					d_valuetype = typeof(double);
 					return;
 				}
-				
+
 				var net = (IntPtr)tp.InvokeMember("cdn_rawc_" + name + "_network",
 				                                  BindingFlags.InvokeMethod,
 				                                  null,
@@ -260,7 +260,7 @@ namespace Cdn.RawC
 				                              null,
 				                              Activator.CreateInstance(tp),
 				                              new object[] {net});
-			
+
 				if (s == sizeof(float))
 				{
 					d_valuetype = typeof(float);
@@ -270,7 +270,7 @@ namespace Cdn.RawC
 					d_valuetype = typeof(double);
 				}
 			}
-			
+
 			private void DefineMethod(TypeBuilder tb, string shlib, string name, Type rettype, params Type[] args)
 			{
 				var ret = tb.DefinePInvokeMethod(name,
@@ -283,7 +283,7 @@ namespace Cdn.RawC
 				                                 args,
 				                                 CallingConvention.StdCall,
 				                                 CharSet.Auto);
-				
+
 				ret.SetImplementationFlags(ret.GetMethodImplementationFlags() | MethodImplAttributes.PreserveSig);
 			}
 
@@ -291,12 +291,12 @@ namespace Cdn.RawC
 			{
 				AssemblyName name = new AssemblyName("DynamicRawcAssembly" +
 				                                      Guid.NewGuid().ToString("N"));
-	
+
 				// Assembly builder
 				AssemblyBuilder ab =
 					AppDomain.CurrentDomain.DefineDynamicAssembly(name,
 				                                                  AssemblyBuilderAccess.Run);
-	
+
 				// Module builder
 				ModuleBuilder mb = ab.DefineDynamicModule("DynamicRawc");
 
@@ -305,7 +305,7 @@ namespace Cdn.RawC
 
 				// Type builder
 				TypeBuilder tb = mb.DefineType("DynamicRawc" + Guid.NewGuid().ToString("N"));
-				
+
 				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_reset", null, d_valuetype);
 				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_step", null, d_valuetype, d_valuetype);
 				DefineMethod(tb, shlib, "cdn_rawc_" + d_name + "_get", d_valuetype, typeof(UInt32));
@@ -323,7 +323,7 @@ namespace Cdn.RawC
 					Console.Error.WriteLine("Could not create dynamic type proxy: {0}", e.Message);
 					return;
 				}
-				
+
 				d_shnetwork = (IntPtr)d_type.InvokeMember("cdn_rawc_" + d_name + "_network",
 				                                          BindingFlags.InvokeMethod,
 				                                          null,
@@ -341,11 +341,11 @@ namespace Cdn.RawC
 				                                        null,
 				                                        Activator.CreateInstance(d_type),
 				                                        null);
-				
+
 				d_data = new double[d_shsize];
-				
+
 				if (d_valuetype != typeof(double))
-				{				
+				{
 					d_realdata = Array.CreateInstance(d_valuetype, d_shsize);
 				}
 			}
@@ -357,13 +357,13 @@ namespace Cdn.RawC
 					if (d_realdata.GetType().GetElementType() == typeof(float))
 					{
 						Marshal.Copy(d_dataptr, (float[])d_realdata, 0, (int)d_shsize);
-						
+
 						float[] fl = (float[])d_realdata;
-						
+
 						for (int i = 0; i < d_shsize; ++i)
 						{
 							d_data[i] = (double)fl[i];
-						}						
+						}
 					}
 				}
 				else

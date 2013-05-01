@@ -11,7 +11,7 @@ namespace Cdn.RawC.Programmer
 			public HashSet<Node> Dependencies;
 			public HashSet<Node> DependencyFor;
 			public Tree.Embedding Embedding;
-			
+
 			public Node(State state)
 			{
 				State = state;
@@ -87,7 +87,7 @@ namespace Cdn.RawC.Programmer
 				return ret;
 			}
 		}
-		
+
 		private Node d_root;
 		private DataTable d_states;
 		private Dictionary<object, List<Node>> d_unresolved;
@@ -383,10 +383,10 @@ namespace Cdn.RawC.Programmer
 			{
 				node.Embedding = embedding;
 			}
-			
+
 			// Resolve currently unresolved dependencies first
 			List<Node> lst;
-			
+
 			if (d_unresolved.TryGetValue(state.DataKey, out lst))
 			{
 				foreach (var n in lst)
@@ -454,13 +454,13 @@ namespace Cdn.RawC.Programmer
 			else
 			{
 				List<Node> lst;
-			
+
 				if (!d_unresolved.TryGetValue(o, out lst))
 				{
 					lst = new List<Node>();
 					d_unresolved[o] = lst;
 				}
-			
+
 				lst.Add(node);
 			}
 		}

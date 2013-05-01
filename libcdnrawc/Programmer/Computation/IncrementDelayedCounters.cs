@@ -12,7 +12,7 @@ namespace Cdn.RawC.Programmer.Computation
 			d_counters = counters;
 			d_countersSize = countersSize;
 		}
-		
+
 		public DataTable Counters
 		{
 			get
@@ -20,7 +20,7 @@ namespace Cdn.RawC.Programmer.Computation
 				return d_counters;
 			}
 		}
-		
+
 		public DataTable CountersSize
 		{
 			get

@@ -6,7 +6,7 @@ namespace Cdn.RawC.Programmer
 	public class Program
 	{
 		private Options d_options;
-		
+
 		private APIFunction d_apiTDT;
 		private APIFunction d_apiPre;
 		private APIFunction d_apiPreDiff;
@@ -59,7 +59,7 @@ namespace Cdn.RawC.Programmer
 			d_embeddingFunctionMap = new Dictionary<Tree.Embedding, Function>();
 
 			d_zeroNumberExpression = new Tree.Node(null, new InstructionNumber("0"));
-			
+
 			d_apiTDT = new APIFunction("tdtdeps", "void");
 			d_apiTDT.Private = true;
 
@@ -134,7 +134,7 @@ namespace Cdn.RawC.Programmer
 				{
 					cur = enu.Current;
 				}
-				
+
 				var item = d_statetable[cur];
 				var end = item.DataIndex + item.Dimension.Size();
 
@@ -201,7 +201,7 @@ namespace Cdn.RawC.Programmer
 				return d_statetable;
 			}
 		}
-		
+
 		public Options Options
 		{
 			get
@@ -209,15 +209,15 @@ namespace Cdn.RawC.Programmer
 				return d_options;
 			}
 		}
-		
+
 		public Tree.Node Lookup(State state)
 		{
 			Tree.Node node = null;
-			
+
 			d_equations.TryGetValue(state, out node);
 			return node;
 		}
-		
+
 		public IEnumerable<Function> Functions
 		{
 			get
@@ -237,7 +237,7 @@ namespace Cdn.RawC.Programmer
 
 			return null;
 		}
-		
+
 		private void ProgramDataTables()
 		{
 			foreach (var state in Knowledge.Instance.States)
@@ -258,12 +258,12 @@ namespace Cdn.RawC.Programmer
 					{
 						item.Type |= DataTable.DataItem.Flags.Derivative;
 					}
-	
+
 					if ((v.Flags & VariableFlags.In) != 0)
 					{
 						item.Type |= DataTable.DataItem.Flags.In;
 					}
-	
+
 					if ((v.Flags & VariableFlags.Out) != 0)
 					{
 						item.Type |= DataTable.DataItem.Flags.Out;
@@ -300,7 +300,7 @@ namespace Cdn.RawC.Programmer
 					}
 				}
 			}
-			
+
 			foreach (var st in Knowledge.Instance.ExternalConstraintStates)
 			{
 				d_statetable.AddAlias(st, st.Object);
@@ -351,20 +351,20 @@ namespace Cdn.RawC.Programmer
 
 			return null;
 		}
-		
+
 		private string GenerateFunctionName(string templ)
 		{
 			int num = 0;
 			string name = templ;
-			
+
 			while (d_functionMap.ContainsKey(name))
 			{
 				name = String.Format("{0}{1}", name, ++num);
 			}
-			
+
 			return name;
 		}
-		
+
 		private void ProgramFunctions()
 		{
 			// Generate functions for all the embeddings
@@ -372,7 +372,7 @@ namespace Cdn.RawC.Programmer
 			{
 				string name = GenerateFunctionName(String.Format("f_{0}", d_functions.Count + 1));
 				Function function = new Function(name, embedding);
-				
+
 				foreach (Tree.Node instance in embedding.Instances)
 				{
 					instance.Instruction = new Instructions.Function(function);
@@ -381,7 +381,7 @@ namespace Cdn.RawC.Programmer
 				Add(embedding, function);
 			}
 		}
-		
+
 		public IEnumerable<T> CollectInstructions<T>() where T : Cdn.Instruction
 		{
 			foreach (KeyValuePair<State, Tree.Node> eq in d_equations)
@@ -391,7 +391,7 @@ namespace Cdn.RawC.Programmer
 					yield return (T)node.Instruction;
 				}
 			}
-			
+
 			foreach (Function function in d_functions)
 			{
 				foreach (Tree.Node node in function.Expression.Collect<T>())
@@ -413,7 +413,7 @@ namespace Cdn.RawC.Programmer
 				Nodes = new List<Tree.Node>();
 			}
 		}
-		
+
 		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cdn.Function, CustomFunctionNode> usage)
 		{
 			CustomFunctionNode lst;
@@ -437,7 +437,7 @@ namespace Cdn.RawC.Programmer
 					return;
 				}
 			}
-				
+
 			if (!usage.TryGetValue(f, out lst))
 			{
 				lst = new CustomFunctionNode(f);
@@ -460,7 +460,7 @@ namespace Cdn.RawC.Programmer
 
 			lst.Nodes.Add(node);
 		}
-		
+
 		private void Add(Tree.Embedding embedding, Function function)
 		{
 			d_functions.Add(function);
@@ -469,9 +469,9 @@ namespace Cdn.RawC.Programmer
 		}
 
 		private void ProgramCustomFunctions()
-		{			
+		{
 			var usage = new Dictionary<Cdn.Function, CustomFunctionNode>();
-			
+
 			// Calculate map from a custom function to the nodes that use that function
 			foreach (KeyValuePair<State, Tree.Node> eq in d_equations)
 			{
@@ -485,7 +485,7 @@ namespace Cdn.RawC.Programmer
 					CustomFunctionUsage(node, usage);
 				}
 			}
-			
+
 			// Check also in the generated function implementations
 			foreach (Function function in d_functions)
 			{
@@ -513,7 +513,7 @@ namespace Cdn.RawC.Programmer
 				// are used in the expression. All arguments are implemented as properties
 				List<Cdn.Variable> arguments = new List<Cdn.Variable>();
 				List<Cdn.FunctionArgument> aa = new List<FunctionArgument>();
-				
+
 				foreach (Cdn.FunctionArgument arg in function.Arguments)
 				{
 					if (!arg.Unused)
@@ -522,14 +522,14 @@ namespace Cdn.RawC.Programmer
 						aa.Add(arg);
 					}
 				}
-				
+
 				List<Tree.Embedding.Argument> args = new List<Tree.Embedding.Argument>();
 
 				foreach (Tree.Node child in node.Collect<InstructionVariable>())
 				{
 					InstructionVariable prop = child.Instruction as InstructionVariable;
 					int idx = arguments.IndexOf(prop.Variable);
-					
+
 					if (idx == -1)
 					{
 						continue;
@@ -552,7 +552,7 @@ namespace Cdn.RawC.Programmer
 				Add(embedding, func);
 
 				d_embeddings.Add(embedding);
-				
+
 				foreach (Tree.Node nn in usage[function].Nodes)
 				{
 					embedding.Embed(nn);
@@ -561,14 +561,14 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 		}
-		
+
 		private class LoopData
 		{
 			public Tree.Embedding Embedding;
 			public Function Function;
 			public List<Tree.Node> Instances;
 			public bool AllRoots;
-			
+
 			public LoopData(Tree.Embedding embedding, Function function)
 			{
 				Embedding = embedding;
@@ -576,21 +576,21 @@ namespace Cdn.RawC.Programmer
 				Instances = new List<Tree.Node>();
 				AllRoots = true;
 			}
-			
+
 			public void Add(Tree.Node node)
 			{
 				Instances.Add(node);
-				
+
 				if (node.Parent != null)
 				{
 					AllRoots = false;
 				}
 			}
 		}
-		
+
 		private Computation.Loop CreateLoop(LoopData loop)
 		{
-			DataTable dt = new DataTable(String.Format("ssi_{0}", d_indexTables.Count), true, loop.Function.NumArguments + 1);		
+			DataTable dt = new DataTable(String.Format("ssi_{0}", d_indexTables.Count), true, loop.Function.NumArguments + 1);
 			dt.IsConstant = true;
 
 			d_indexTables.Add(dt);
@@ -609,7 +609,7 @@ namespace Cdn.RawC.Programmer
 				{
 					Tree.Node subnode = node.FromPath(arg.Path);
 					Cdn.InstructionNumber num = subnode.Instruction as Cdn.InstructionNumber;
-					
+
 					if (num != null)
 					{
 						// Promote to data table
@@ -619,7 +619,7 @@ namespace Cdn.RawC.Programmer
 						d_constants.Add(st);
 
 						d_equations[st] = Tree.Node.Create(st);
-						
+
 						ditem.Type = DataTable.DataItem.Flags.Constant;
 						subnode.Instruction = new Instructions.State(ditem);
 					}
@@ -640,19 +640,19 @@ namespace Cdn.RawC.Programmer
 					// Create new temporary state for this computation
 					DataTable.DataItem item = d_statetable.Add(cloned);
 					item.Type = DataTable.DataItem.Flags.Temporary;
-					
+
 					ret.Add(item, cloned);
-					
+
 					// Create new instruction that references this state
 					Instructions.State inst = new Instructions.State(item);
-					
+
 					// Replace embedding instance in the node with the temporary state instruction
 					node.Instruction = inst;
 				}
 			}
-			
+
 			ret.Close();
-			
+
 			return ret;
 		}
 
@@ -665,7 +665,7 @@ namespace Cdn.RawC.Programmer
 		{
 			get { return d_initLoops.Count; }
 		}
-		
+
 		public int LoopsCount
 		{
 			get
@@ -673,7 +673,7 @@ namespace Cdn.RawC.Programmer
 				return d_loops.Count;
 			}
 		}
-		
+
 		public IEnumerable<Computation.Loop> Loops
 		{
 			get
@@ -713,7 +713,7 @@ namespace Cdn.RawC.Programmer
 					// Create loop for this thing. Note that CreateLoop
 					// removes the states relevant for the loop from 'st'
 					Computation.Loop l = CreateLoop(loop);
-				
+
 					ret.Add(l);
 					loops.Add(l);
 
@@ -750,10 +750,10 @@ namespace Cdn.RawC.Programmer
 			get
 			{
 				var ret = new DependencyFilter(d_dependencyGraph);
-				
+
 				ret.Add(Knowledge.Instance.Time);
 				ret.Add(Knowledge.Instance.TimeStep);
-				
+
 				return ret;
 			}
 		}
@@ -788,7 +788,7 @@ namespace Cdn.RawC.Programmer
 			func.Body.Add(new Computation.Assignment(null, dt, dteq));
 			func.Body.Add(new Computation.Empty());
 		}
-		
+
 		private void ProgramTDTDeps(DependencyFilter deps)
 		{
 			deps = deps.DependsOn(TDTModSet);
@@ -837,7 +837,7 @@ namespace Cdn.RawC.Programmer
 		                        DependencyFilter derivatives)
 		{
 			ProgramSetTDT(d_apiPre);
-			
+
 			// All the instates
 			var ins = Knowledge.Instance.FlaggedStates(VariableFlags.In);
 			var instates = new DependencyFilter(d_dependencyGraph);
@@ -934,7 +934,7 @@ namespace Cdn.RawC.Programmer
 				{
 					var cond = new Computation.StateConditional(grp);
 					List<State> conds = new List<State>();
-				
+
 					ProgramDependencies(cond,
 					                    deps,
 					                    "Dependencies of event state dependent derivatives that depend on states",
@@ -994,7 +994,7 @@ namespace Cdn.RawC.Programmer
 
 				d_apiDiff.NeedsEventStates = true;
 			}
-			
+
 			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
 		}
 
@@ -1063,12 +1063,12 @@ namespace Cdn.RawC.Programmer
 			// Update aux variables that depend on delays
 			ProgramDependencies(d_apiPost, later, "Auxiliary variables that depend on delays (or just come last)");
 		}
-		
+
 		private void ProgramSource()
 		{
 			// Get the list of integrated states
 			var derivatives = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DerivativeStates);
-			
+
 			// Auxiliary states are outs and temporaries (i.e. things that
 			// were promoted to the state table and are not recomputed on the fly)
 			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
@@ -1115,7 +1115,7 @@ namespace Cdn.RawC.Programmer
 			if (d_eventStates.Count > 0)
 			{
 				d_apiPrepare.NeedsEventStates = true;
-			
+
 				d_apiPrepare.Body.Add(new Computation.Comment("Copy initial event states"));
 				d_apiPrepare.Body.Add(new Computation.CopyTable(d_initialEventStates, d_eventStates, -1));
 				d_apiPrepare.Body.Add(new Computation.Empty());
@@ -1146,7 +1146,7 @@ namespace Cdn.RawC.Programmer
 				d_preparedStates.Add(s);
 			}
 		}
-		
+
 		private void ProgramInit()
 		{
 			// Due to the way that delays are implemented, we are going to first
@@ -1262,12 +1262,12 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 		}
-		
+
 		public IEnumerable<Cdn.Function> UsedCustomFunctions
 		{
 			get { return d_usedCustomFunctions; }
 		}
-		
+
 		public bool NodeIsInitialization(Computation.INode node)
 		{
 			return d_apiInit.Body.Contains(node) || d_apiPrepare.Body.Contains(node);
@@ -1288,7 +1288,7 @@ namespace Cdn.RawC.Programmer
 				yield return d_apiEvents;
 			}
 		}
-		
+
 		public IEnumerable<DataTable> DataTables
 		{
 			get
@@ -1297,7 +1297,7 @@ namespace Cdn.RawC.Programmer
 				{
 					yield return table;
 				}
-				
+
 				yield return d_delayedCounters;
 				yield return d_delayedCountersSize;
 
@@ -1315,7 +1315,7 @@ namespace Cdn.RawC.Programmer
 				yield return d_initialEventStates;
 			}
 		}
-		
+
 		public DataTable DelayedCounters
 		{
 			get
@@ -1323,7 +1323,7 @@ namespace Cdn.RawC.Programmer
 				return d_delayedCounters;
 			}
 		}
-		
+
 		public DataTable DelayedCountersSize
 		{
 			get

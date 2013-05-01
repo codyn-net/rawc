@@ -29,7 +29,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public bool NoLapack;
 
 		public string EventStateType;
-		
+
 		public Options(string name) : base(name)
 		{
 		}

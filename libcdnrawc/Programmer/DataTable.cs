@@ -20,7 +20,7 @@ namespace Cdn.RawC.Programmer
 		{
 			object DataKey { get; }
 		}
-		
+
 		public class DataItem
 		{
 			[Flags()]
@@ -53,7 +53,7 @@ namespace Cdn.RawC.Programmer
 			private Flags d_type;
 			private Cdn.Dimension d_dimension;
 			private int[] d_slice;
-			
+
 			public DataItem(DataTable table, object key, object obj, int index, int dataindex) : this(table, key, obj, index, dataindex, Flags.None)
 			{
 			}
@@ -66,9 +66,9 @@ namespace Cdn.RawC.Programmer
 				d_key = key;
 				d_object = obj;
 				d_type = type;
-				
+
 				var st = obj as State;
-				
+
 				if (st != null)
 				{
 					d_dimension = st.Dimension;
@@ -78,7 +78,7 @@ namespace Cdn.RawC.Programmer
 					d_dimension = new Cdn.Dimension { Rows = 1, Columns = 1 };
 				}
 			}
-			
+
 			public int[] Slice
 			{
 				get { return d_slice; }
@@ -95,7 +95,7 @@ namespace Cdn.RawC.Programmer
 			{
 				return (d_type & type) != 0;
 			}
-			
+
 			public string Description
 			{
 				get
@@ -108,7 +108,7 @@ namespace Cdn.RawC.Programmer
 					else if (d_key is DelayedState.Key)
 					{
 						DelayedState.Key key = (DelayedState.Key)d_key;
-						
+
 						if (HasType(Flags.State))
 						{
 							return key.Operator.Expression.AsString;
@@ -121,7 +121,7 @@ namespace Cdn.RawC.Programmer
 					else if (d_key is Computation.Loop.Index)
 					{
 						Computation.Loop.Index idx = (Computation.Loop.Index)d_key;
-						
+
 						return idx.Value.ToString();
 					}
 					else
@@ -130,35 +130,35 @@ namespace Cdn.RawC.Programmer
 					}
 				}
 			}
-			
+
 			public Flags Type
 			{
 				get { return d_type; }
 				set { d_type = value; }
 			}
-			
+
 			public DataTable Table
 			{
 				get { return d_table; }
 			}
-			
+
 			public int Index
 			{
 				get { return d_index; }
 				set { d_index = value; }
 			}
-			
+
 			public Cdn.Dimension Dimension
 			{
 				get { return d_dimension; }
 				set { d_dimension = value; }
 			}
-			
+
 			public object Key
 			{
 				get { return d_key; }
 			}
-			
+
 			public string Alias
 			{
 				get { return d_alias; }
@@ -169,7 +169,7 @@ namespace Cdn.RawC.Programmer
 			{
 				get { return d_object; }
 			}
-			
+
 			public string AliasOrIndex
 			{
 				get
@@ -178,11 +178,11 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 		}
-		
+
 		public DataTable(string name, bool needsInitialization) : this(name, needsInitialization, -1)
 		{
 		}
-		
+
 		public DataTable(string name, bool needsInitialization, int columns)
 		{
 			d_name = name;
@@ -193,17 +193,17 @@ namespace Cdn.RawC.Programmer
 			d_isconstant = false;
 			d_locked = false;
 		}
-		
+
 		public void Lock()
 		{
 			d_locked = true;
 		}
-		
+
 		public bool Locked
 		{
 			get { return d_locked; }
 		}
-		
+
 		private string TypeNameForSize(ulong s)
 		{
 			if (s < (ulong)byte.MaxValue)
@@ -228,13 +228,13 @@ namespace Cdn.RawC.Programmer
 		{
 			get { return TypeNameForSize((ulong)Count); }
 		}
-		
+
 		public bool IsConstant
 		{
 			get { return d_isconstant; }
 			set { d_isconstant = value; }
 		}
-		
+
 		public ulong IntegerTypeSize
 		{
 			get
@@ -264,33 +264,33 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 		}
-		
+
 		public int Columns
 		{
 			get { return d_columns; }
 			set { d_columns = value; }
 		}
-		
+
 		public bool NeedsInitialization
 		{
 			get { return d_needsInitialization; }
 		}
-		
+
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return d_list.GetEnumerator();
 		}
-		
+
 		public IEnumerator<DataItem> GetEnumerator()
 		{
 			return d_list.GetEnumerator();
 		}
-		
+
 		public bool Contains(object key)
 		{
 			return d_items.ContainsKey(BaseKey(key));
 		}
-		
+
 		private bool As<T>(object obj, out T val)
 		{
 			if (obj is T)
@@ -304,7 +304,7 @@ namespace Cdn.RawC.Programmer
 				return false;
 			}
 		}
-		
+
 		private object BaseKey(object key)
 		{
 			IKey keyed;
@@ -321,7 +321,7 @@ namespace Cdn.RawC.Programmer
 
 			return key;
 		}
-		
+
 		public int Count
 		{
 			get { return d_list.Count; }
@@ -336,21 +336,21 @@ namespace Cdn.RawC.Programmer
 		{
 			var item = this[other];
 			d_items.Add(BaseKey(key), item);
-			
+
 			return item;
 		}
 
 		public DataItem Add(object key)
 		{
 			object b = BaseKey(key);
-			
+
 			if (d_items.ContainsKey(b))
 			{
 				return d_items[b];
 			}
-			
+
 			var st = key as State;
-						
+
 			DataItem ret = new DataItem(this, b, key, d_list.Count, d_size);
 
 			if (st != null)
@@ -360,12 +360,12 @@ namespace Cdn.RawC.Programmer
 
 			d_items.Add(b, ret);
 			d_list.Add(ret);
-			
+
 			d_size += ret.Dimension.Size();
 
 			return ret;
 		}
-		
+
 		public DataItem this[int idx]
 		{
 			get
@@ -379,14 +379,14 @@ namespace Cdn.RawC.Programmer
 			object basekey = BaseKey(key);
 			return d_items.TryGetValue(basekey, out item);
 		}
-		
+
 		public DataItem this[object key]
 		{
 			get
 			{
 				DataItem ret;
 				object basekey = BaseKey(key);
-				
+
 				if (!d_items.TryGetValue(basekey, out ret))
 				{
 					if (key is Cdn.Variable)
@@ -410,12 +410,12 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 		}
-		
+
 		public void RemoveAll(IEnumerable<int> indices)
 		{
 			int num = 0;
 			int cur = d_list.Count;
-			
+
 			List<int > ids = new List<int>(indices);
 			ids.Sort();
 
@@ -425,26 +425,26 @@ namespace Cdn.RawC.Programmer
 				d_list.RemoveAt(idx - num);
 				++num;
 			}
-			
+
 			// How many rows
 			if (d_columns > 0)
 			{
 				d_columns -= num / (cur / d_columns);
 			}
-			
+
 			int size = 0;
-			
+
 			for (int i = 0; i < d_list.Count; ++i)
 			{
 				var item = d_list[i];
-				
+
 				item.Index = i;
 				item.DataIndex = size;
-				
+
 				size += item.Dimension.Size();
 			}
 		}
-		
+
 		public string Name
 		{
 			get { return d_name; }

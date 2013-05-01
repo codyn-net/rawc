@@ -15,12 +15,12 @@ namespace Cdn.RawC.Programmer.Instructions
 		{
 			get { return d_function.Expression.Dimension; }
 		}
-		
+
 		public Programmer.Function FunctionCall
 		{
 			get { return d_function; }
 		}
-		
+
 		public static new GLib.GType GType
 		{
 			get { return Instruction.GType; }

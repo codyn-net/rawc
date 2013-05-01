@@ -9,7 +9,7 @@ namespace Cdn.RawC.Tree.Filters
 		public Optimal()
 		{
 		}
-		
+
 		public Tree.Embedding[] Filter(IEnumerable<Tree.Embedding> prototypes)
 		{
 			throw new NotImplementedException("The optimal filter is not yet implemented");

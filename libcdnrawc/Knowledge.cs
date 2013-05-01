@@ -30,7 +30,7 @@ namespace Cdn.RawC
 		private Dictionary<Cdn.Event, List<EventSetState>> d_eventSetStates;
 		private Dictionary<Cdn.Variable, Cdn.EdgeAction[]> d_actionedVariables;
 		private List<Cdn.Variable> d_functionHelperVariables;
-		
+
 		public class EventState
 		{
 			public Node Node;
@@ -38,7 +38,7 @@ namespace Cdn.RawC
 			public List<Cdn.EdgeAction> ActiveActions;
 			public int Index;
 		}
-		
+
 		public class EventStateGroup
 		{
 			public List<int> Indices;
@@ -69,7 +69,7 @@ namespace Cdn.RawC
 
 			return s_instance;
 		}
-		
+
 		public static Knowledge Instance
 		{
 			get
@@ -77,11 +77,11 @@ namespace Cdn.RawC
 				return s_instance;
 			}
 		}
-		
+
 		private void Init()
 		{
 			d_delays = new Dictionary<Instruction, double>();
-			
+
 			d_stateMap = new Dictionary<object, State>();
 			d_initializeMap = new Dictionary<object, State>();
 
@@ -120,7 +120,7 @@ namespace Cdn.RawC
 		}
 
 		private delegate State StateCreator(Variable v, EdgeAction[] actions);
-		
+
 		private string EventStateId(Node node, string state)
 		{
 			return String.Format("{0}@{1}", node.Handle.ToString(), state);
@@ -220,7 +220,7 @@ namespace Cdn.RawC
 				++i;
 			}
 		}
-		
+
 		public Cdn.Node FindStateNode(Cdn.Node parent)
 		{
 			while (true)
@@ -249,7 +249,7 @@ namespace Cdn.RawC
 			{
 				var ph = action.Phases;
 				var eph = action.Edge.Phases;
-				
+
 				if (ph.Length != 0 || eph.Length != 0)
 				{
 					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
@@ -298,7 +298,7 @@ namespace Cdn.RawC
 						string key = String.Join(",", indices.ConvertAll(a => a.ToString()));
 
 						EventStateGroup grp;
-					
+
 						if (!d_eventStateGroups.TryGetValue(key, out grp))
 						{
 							grp = new EventStateGroup {
@@ -309,7 +309,7 @@ namespace Cdn.RawC
 
 							d_eventStateGroups[key] = grp;
 						}
-					
+
 						grp.Actions.Add(action);
 						grp.States.Add(evst);
 					}
@@ -327,7 +327,7 @@ namespace Cdn.RawC
 		private void ExtractStates()
 		{
 			HashSet<object> unique = new HashSet<object>();
-			
+
 			// Add t/dt
 			AddState(unique, ExpandedState(Network.Integrator.Variable("t")));
 			AddState(unique, ExpandedState(Network.Integrator.Variable("dt")));
@@ -417,7 +417,7 @@ namespace Cdn.RawC
 					AddState(unique, s);
 				}
 			}
-			
+
 			// Add acted upon variables
 			foreach (var v in d_actionedVariables)
 			{
@@ -502,7 +502,7 @@ namespace Cdn.RawC
 				{
 					yield return s;
 				}
-				
+
 				foreach (State s in d_externalConstraintStates)
 				{
 					yield return s;
@@ -638,7 +638,7 @@ namespace Cdn.RawC
 			{
 				var n = states.Dequeue();
 
-				// Add three states for each node to hold the 
+				// Add three states for each node to hold the
 				// 1) previous value of the event equation
 				// 2) current value of the event equation
 				// 3) distance value of the event equation
@@ -823,7 +823,7 @@ namespace Cdn.RawC
 			ExtractInitialize();
 			ExtractRand();
 		}
-		
+
 		private Cdn.Variable PromoteConstraint(Cdn.Variable variable)
 		{
 			var c = variable.Constraint;
@@ -838,9 +838,9 @@ namespace Cdn.RawC
 			// constraint expression.
 			var nv = new Cdn.Variable(String.Format("_{0}_unc", variable.Name), variable.Expression.Copy(), VariableFlags.None);
 			variable.Object.AddVariable(nv);
-			
+
 			var instrs = variable.Constraint.Instructions;
-			
+
 			for (int i = 0; i < instrs.Length; ++i)
 			{
 				Cdn.InstructionVariable vinstr;
@@ -1017,7 +1017,7 @@ namespace Cdn.RawC
 				ExtractDelayedState(s, same);
 			}
 		}
-		
+
 		private void ExtractDelayedStates()
 		{
 			HashSet<DelayedState.Key> same = new HashSet<DelayedState.Key>();
@@ -1085,7 +1085,7 @@ namespace Cdn.RawC
 
 				d_eventStatesMap[node] = states;
 			}
-			
+
 			if (!states.States.Contains(state))
 			{
 				states.States.Add(state);
@@ -1169,9 +1169,9 @@ namespace Cdn.RawC
 
 				AddFlaggedVariable(prop);
 			}
-			
+
 			Cdn.Node grp = obj as Cdn.Node;
-			
+
 			if (grp == null)
 			{
 				return;
@@ -1192,7 +1192,7 @@ namespace Cdn.RawC
 		{
 			d_network = network;
 		}
-		
+
 		public IEnumerable<Cdn.Variable> Variables
 		{
 			get
@@ -1240,7 +1240,7 @@ namespace Cdn.RawC
 
 			State state = null;
 			d_stateMap.TryGetValue(o, out state);
-			
+
 			return state;
 		}
 
@@ -1253,7 +1253,7 @@ namespace Cdn.RawC
 
 			State state = null;
 			d_initializeMap.TryGetValue(o, out state);
-			
+
 			return state;
 		}
 
@@ -1332,7 +1332,7 @@ namespace Cdn.RawC
 				return d_eventStates;
 			}
 		}
-		
+
 		public IEnumerable<EventStateGroup> EventStateGroups
 		{
 			get
@@ -1343,7 +1343,7 @@ namespace Cdn.RawC
 				}
 			}
 		}
-		
+
 		public int EventStateGroupsCount
 		{
 			get { return d_eventStateGroups.Count; }
@@ -1373,12 +1373,12 @@ namespace Cdn.RawC
 		{
 			get { return d_events.Count; }
 		}
-		
+
 		public Cdn.Expression ExpandExpression(params Cdn.Expression[] expressions)
 		{
 			return ExpandExpression(null, expressions);
 		}
-		
+
 		public Cdn.Expression ExpandExpression(Dictionary<Instruction, Instruction> instmap, params Cdn.Expression[] expressions)
 		{
 			if (expressions.Length == 0)
@@ -1387,17 +1387,17 @@ namespace Cdn.RawC
 				ret.Compile(null, null);
 				return ret;
 			}
-			
+
 			List<Cdn.Expression> inlined = new List<Expression>();
 
 			for (int i = 0; i < expressions.Length; ++i)
 			{
 				inlined.Add(Inline(instmap, expressions[i]));
 			}
-			
+
 			return Cdn.Expression.Sum(inlined.ToArray());
 		}
-		
+
 		private Cdn.Expression Inline(Dictionary<Instruction, Instruction> instmap, Cdn.Expression expr)
 		{
 			List<Cdn.Instruction> instructions = new List<Instruction>();
@@ -1405,7 +1405,7 @@ namespace Cdn.RawC
 			foreach (Instruction inst in expr.Instructions)
 			{
 				InstructionVariable variable = inst as InstructionVariable;
-				
+
 				if (variable != null)
 				{
 					// See if we need to expand it
@@ -1414,7 +1414,7 @@ namespace Cdn.RawC
 					if (State(v) == null)
 					{
 						var sub = Inline(instmap, v.Expression);
-						
+
 						// Expand the instruction
 						foreach (var i in sub.Instructions)
 						{
@@ -1434,10 +1434,10 @@ namespace Cdn.RawC
 
 				instructions.Add(cp);
 			}
-			
+
 			var e = new Cdn.Expression("");
 			e.SetInstructionsTake(instructions.ToArray());
-			
+
 			return e;
 		}
 	}

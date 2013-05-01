@@ -30,7 +30,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			get { return d_options.Standalone != null || d_options.ValueType != "double"; }
 		}
-		
+
 		public string[] Write(Program program)
 		{
 			Profile.Do("c init", () => {
@@ -38,7 +38,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			});
 
 			d_program = program;
-			
+
 			List<string > written = new List<string>();
 
 			Profile.Do("c header", () => {
@@ -58,7 +58,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					WriteRunSource();
 				});
 			});
-			
+
 			written.Add(d_headerFilename);
 			written.Add(d_sourceFilename);
 
@@ -108,7 +108,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					written.Add(dest + ".h");
 				}
 			}
-			
+
 			if (!d_options.NoMakefile)
 			{
 				var t = Profile.Begin("c makefile");
@@ -189,29 +189,29 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return ret;
 		}
-		
+
 		public string Source(string resource)
 		{
 			StringWriter writer = new StringWriter();
-			
+
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 			writer.WriteLine();
 
 			var prog = Template(resource);
-			
+
 			// Generate state map
 			StringBuilder statemap = new StringBuilder();
-			
+
 			for (int i = 0; i < d_enumMap.Count; ++i)
 			{
 				if (i != 0)
 				{
 					statemap.AppendLine(",");
 				}
-				
+
 				EnumItem item = d_enumMap[i];
 				string name;
-				
+
 				if (item.Variable.Object is Cdn.Integrator || item.Variable.Object is Cdn.Network)
 				{
 					name = item.Variable.Name;
@@ -220,10 +220,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					name = item.Variable.FullName;
 				}
-				
+
 				statemap.AppendFormat("\t{{{0}_{1}, \"{2}\"}}", CPrefixUp, d_enumMap[i].CName, name);
 			}
-			
+
 			prog = prog.Replace("${statemap}", statemap.ToString());
 
 			writer.WriteLine(prog);
@@ -283,7 +283,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			string ddir = Path.GetDirectoryName(d_sourceFilename);
-			
+
 			// Compile source file
 			Process process = new Process();
 
@@ -347,7 +347,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				process.StartInfo.RedirectStandardOutput = true;
 			}
-			
+
 			if (verbose)
 			{
 				Log.WriteLine("Compiling in {0}: make {1}", ddir, process.StartInfo.Arguments);
@@ -355,7 +355,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			process.Start();
 			process.WaitForExit();
-			
+
 			if (process.ExitCode != 0)
 			{
 				Environment.Exit(process.ExitCode);
@@ -363,7 +363,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return ret.ToArray();
 		}
-		
+
 		public CommandLine.OptionGroup Options
 		{
 			get
@@ -371,7 +371,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return d_options;
 			}
 		}
-		
+
 		private string ValueType
 		{
 			get
@@ -384,7 +384,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return CPrefixUp + "_" + name;
 		}
-		
+
 		private void WriteAccessorEnum(TextWriter writer)
 		{
 			if (d_program.StateTable.Count == 0)
@@ -394,11 +394,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("typedef enum");
 			writer.WriteLine("{");
-			
+
 			List<string > names = new List<string>();
 			List<string > values = new List<string>();
 			List<string > comments = new List<string>();
-			
+
 			int maxname = 0;
 			int maxval = 0;
 
@@ -407,11 +407,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				names.Add(String.Format("{0}_{1}", CPrefixUp, e.CName));
 				values.Add(e.Value);
 				comments.Add(e.Comment);
-				
+
 				maxname = System.Math.Max(maxname, e.CName.Length);
 				maxval = System.Math.Max(maxval, e.Value.Length);
 			}
-			
+
 			for (int i = 0; i < names.Count; ++i)
 			{
 				if (i != 0)
@@ -420,7 +420,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 
 				writer.Write("\t{0} = {1}", names[i].PadRight(maxname), values[i].PadLeft(maxval));
-				
+
 				if (i == names.Count - 1)
 				{
 					writer.WriteLine("  /* {0} */", comments[i]);
@@ -460,7 +460,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			d_headerFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".h");
 			TextWriter writer = new StreamWriter(d_headerFilename);
-			
+
 			// Include guard
 			writer.WriteLine("#ifndef __CDN_RAWC_{0}_H__", CPrefixUp);
 			writer.WriteLine("#define __CDN_RAWC_{0}_H__", CPrefixUp);
@@ -471,7 +471,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 			writer.WriteLine("#include <cdn-rawc/cdn-rawc.h>");
 			writer.WriteLine();
-			
+
 			// Protect for including this from C++
 			writer.WriteLine("CDN_RAWC_BEGIN_DECLS");
 			writer.WriteLine();
@@ -491,7 +491,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			                 NeedsSpaceForEvents() ? 1 : 0);
 
 			writer.WriteLine();
- 			
+
 			// Write interface
 			WriteAccessorEnum(writer);
 
@@ -499,20 +499,20 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 
 			// End protect for including this from C++
-			writer.WriteLine("CDN_RAWC_END_DECLS"); 			
+			writer.WriteLine("CDN_RAWC_END_DECLS");
 			writer.WriteLine();
-			
+
 			// End include guard
 			writer.WriteLine("#endif /* __CDN_RAWC_{0}_H__ */", CPrefixUp);
 
 			writer.Close();
 		}
-		
+
 		public bool IsDouble
 		{
 			get { return d_options.ValueType == "double"; }
 		}
-		
+
 		private string GenerateArgsList(Programmer.Function function)
 		{
 			List<string> ret = new List<string>(function.NumArguments + 2);
@@ -562,17 +562,17 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return String.Join(", ", ret.ToArray());
 		}
-		
+
 		private void WriteDefine(TextWriter writer, string name, string args, string val, params object[] objs)
 		{
 			WriteDefine(writer, name, args, val, null, objs);
 		}
-		
+
 		private void WriteDefine(TextWriter writer, string name, string args, string val, string extra, params object[] objs)
 		{
 			writer.WriteLine("#ifndef {0}", name);
 			writer.WriteLine(String.Format("#define {0}{1} {2}", name, args, String.Format(val, objs)));
-			
+
 			if (!String.IsNullOrEmpty(extra))
 			{
 				writer.WriteLine(extra);
@@ -589,7 +589,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			foreach (var instr in d_program.CollectInstructions<Cdn.InstructionRand>())
 			{
 				string def = "CDN_MATH_RAND";
-				
+
 				if (generated.Add(def))
 				{
 					writer.WriteLine("#define {0}_REQUIRED", def);
@@ -637,7 +637,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				}
 			}
 		}
-		
+
 		private void WriteFunctionDefines(TextWriter writer)
 		{
 			foreach (Programmer.Function function in d_program.Functions)
@@ -653,7 +653,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				WriteDefine(writer, def, "", impl, String.Format("#define {0}_IS_DEFINED", def));
 			}
 		}
-		
+
 		private string FunctionToC(Function function, out Context context)
 		{
 			context = new Context(d_program, d_options, function.Expression, GenerateMapping("x{0}", function.Arguments));
@@ -692,7 +692,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				writer.Write(" *");
 			}
-			
+
 			writer.WriteLine();
 
 			writer.WriteLine("{0} ({1})",
@@ -720,7 +720,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			writer.WriteLine("\treturn {0};", Context.Reindent(retval, "\t").Substring(1));
 			writer.WriteLine("}");
-			
+
 			if (function.CanBeOverridden)
 			{
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", impl.ToUpper());
@@ -767,20 +767,20 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			writer.WriteLine(";");
-			
+
 			if (function.CanBeOverridden)
 			{
 				writer.WriteLine("#endif /* {0}_IS_DEFINED */", impl.ToUpper());
 				writer.WriteLine();
 			}
 		}
-		
+
 		private string Eye(int i)
 		{
 			StringBuilder b = new StringBuilder();
-			
+
 			b.Append("{");
-			
+
 			for (var c = 0; c < i; ++c)
 			{
 				for (var r = 0; r < i; ++r)
@@ -800,24 +800,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					}
 				}
 			}
-			
+
 			b.Append("}");
 			return b.ToString();
 		}
-		
+
 		private void WriteMathDimFunctions(TextWriter writer)
 		{
 			foreach (var def in Context.UsedMathFunctions)
 			{
 				Context.Workspace ws;
-				
+
 				if (!Context.Workspaces.TryGetValue(def, out ws))
 				{
 					continue;
 				}
-				
+
 				var nm = Enum.GetName(typeof(Cdn.MathFunctionType), ws.Type);
-								
+
 				// Write function for this linsolve order
 				var os = String.Join("_", Array.ConvertAll(ws.Order, a => a.ToString()));
 				var n = String.Format("cdn_math_{0}_builtin_v_{1}", nm.ToLower(), os);
@@ -826,7 +826,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine("#define {0} {1}", def, n);
 				writer.WriteLine("static ValueType *");
 				writer.WriteLine("{0} (ValueType *ret,", n);
-				
+
 				switch (ws.Type)
 				{
 				case Cdn.MathFunctionType.Linsolve:
@@ -842,7 +842,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				case Cdn.MathFunctionType.Inverse:
 					writer.WriteLine("     ValueType *A)");
 					writer.WriteLine("{");
-					writer.WriteLine("\tint32_t ipiv[{0}];", ws.Dimension.Rows); 
+					writer.WriteLine("\tint32_t ipiv[{0}];", ws.Dimension.Rows);
 					writer.WriteLine("\tValueType work[{0}];", ws.WorkSize[0]);
 					writer.WriteLine();
 					writer.WriteLine("\treturn CDN_MATH_INVERSE_V(ret, A, {0}, ipiv, work, {1});", ws.Dimension.Rows, ws.WorkSize[0]);
@@ -851,7 +851,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					int maxdim = System.Math.Max(ws.Dimension.Rows, ws.Dimension.Columns);
 					int mindim = System.Math.Min(ws.Dimension.Rows, ws.Dimension.Columns);
-					
+
 					writer.WriteLine("     ValueType *A)");
 					writer.WriteLine("{");
 					writer.WriteLine("\tValueType Acp[{0}];", ws.Dimension.Size());
@@ -871,7 +871,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				case Cdn.MathFunctionType.Qr:
 				{
 					int mindim = System.Math.Min(ws.Dimension.Rows, ws.Dimension.Columns);
-					
+
 					writer.WriteLine("     ValueType *A)");
 					writer.WriteLine("{");
 					writer.WriteLine("\tValueType Acp[{0}] = {{0,}};", ws.Dimension.Size() + ws.Dimension.Rows * ws.Dimension.Rows);
@@ -898,13 +898,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 					break;
 				}
-				
+
 				writer.WriteLine("}");
 				writer.WriteLine("#endif");
 				writer.WriteLine();
 			}
 		}
-		
+
 		private void WriteFunctions(TextWriter writer)
 		{
 			WriteMathDimFunctions(writer);
@@ -914,7 +914,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				WriteFunctionDecl(writer, function);
 			}
-			
+
 			writer.WriteLine();
 
 			// API Function declarations
@@ -928,7 +928,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				WriteAPIDecl(writer, api, false);
 				writer.WriteLine(";");
 			}
-			
+
 			writer.WriteLine();
 
 			writer.WriteLine("static void {0}_events_update_distance (void *data);", CPrefixDown);
@@ -949,13 +949,13 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			WriteComputationNode(writer, node, "\t");
 		}
-		
+
 		private void WriteComputationNode(TextWriter writer, Computation.INode node, string indent)
 		{
 			Context context = new Context(d_program, d_options);
 			writer.WriteLine(Context.Reindent(CLike.ComputationNodeTranslator<ComputationNodeTranslator>.Translate(node, context), indent));
 		}
-		
+
 		private void WriteComputationNodes(TextWriter writer, IEnumerable<Computation.INode> nodes)
 		{
 			bool empty = false;
@@ -1052,7 +1052,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				writer.WriteLine();
 			}
 		}
-		
+
 		private void WriteAPISource(TextWriter writer, APIFunction api)
 		{
 			if (api.Private && api.Body.Count == 0)
@@ -1115,7 +1115,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return "uint64_t";
 			}
 		}
-		
+
 		private void WriteDataTable(TextWriter writer, DataTable table)
 		{
 			if (table.Count == 0)
@@ -1128,9 +1128,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			                 Context.TypeToCType(table.TypeName),
 			                 table.Name,
 			                 table.Columns > 0 ? String.Format("[{0}]", table.Columns) : "");
-			
+
 			writer.WriteLine("{");
-			
+
 			int cols = table.Columns > 0 ? table.Columns : System.Math.Min(10, table.Count);
 			int rows = (int)System.Math.Ceiling(table.Count / (double)cols);
 			int[,] colsize = new int[cols, 2];
@@ -1138,7 +1138,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			string[,] vals = new string[rows, cols];
 			InitialValueTranslator translator = new InitialValueTranslator();
 			int maxs = 0;
-			
+
 			for (int i = 0; i < table.Count; ++i)
 			{
 				int row = i / cols;
@@ -1150,7 +1150,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					maxs = val.Length;
 				}
-				
+
 				int pos = val.IndexOf('.');
 
 				colsize[col, 0] = System.Math.Max(colsize[col, 0], pos == -1 ? val.Length : pos);
@@ -1174,7 +1174,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					string v = vals[row, col];
 
 					writer.Write("\t{0}", v);
-					
+
 					if (i != table.Count - 1)
 					{
 						writer.Write(", ".PadRight(maxs - v.Length + 2));
@@ -1185,37 +1185,37 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					}
 
 					writer.WriteLine("/* {0}) {1} [{2}] */", i.ToString().PadLeft(numdec), table[i].Description, table[i].Type);
-					
+
 					if (table.Columns > 0 && col == table.Columns - 1)
 					{
 						writer.Write("}");
-						
+
 						if (i != table.Count - 1)
 						{
 							writer.Write(",");
 						}
-						
+
 						writer.WriteLine();
 					}
 
 					continue;
 				}
-			
+
 				if (col == 0)
 				{
 					writer.Write("\t");
-					
+
 					if (table.Columns > 0)
 					{
 						writer.Write("{ ");
 					}
 				}
-				
+
 				string val = vals[row, col];
 				string[] parts = val.Split('.');
 
 				int coloff = (col == 0 ? 0 : 1);
-				
+
 				if (parts.Length == 1)
 				{
 					writer.Write("{0}{1}", val.PadLeft(colsize[col, 0] + coloff), "".PadRight(colsize[col, 1]));
@@ -1224,16 +1224,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					writer.Write("{0}.{1}", parts[0].PadLeft(colsize[col, 0] + coloff), parts[1].PadRight(colsize[col, 1] - 1));
 				}
-				
+
 				if (table.Columns > 0 && col == table.Columns - 1)
 				{
 					writer.Write(" }");
 				}
-				
+
 				if (i != table.Count - 1)
 				{
 					writer.Write(",");
-					
+
 					if (col == cols - 1)
 					{
 						writer.WriteLine();
@@ -1248,7 +1248,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("};");
 			writer.WriteLine();
 		}
-		
+
 		private void WriteDataTables(TextWriter writer)
 		{
 			if (Cdn.RawC.Options.Instance.Validate && Knowledge.Instance.CountRandStates > 0)
@@ -1614,7 +1614,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("CdnRawcNetwork *");
 			writer.WriteLine("cdn_rawc_{0}_network ()", pref);
 			writer.WriteLine("{");
-			
+
 			WriteNetworkMeta(writer);
 			WriteNetworkDimensions(writer);
 
@@ -1870,33 +1870,33 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				{
 					var phases = ev.Phases;
 					++i;
-	
+
 					if (phases.Length == 0)
 					{
 						continue;
 					}
-	
+
 					writer.WriteLine("\tcase {0}:", i - 1);
-	
+
 					var parent = Knowledge.Instance.FindStateNode(ev);
 					var cont = Knowledge.Instance.EventStatesMap[parent];
 					var idx = cont.Index;
-	
+
 					List<string> conditions = new List<string>();
-	
+
 					foreach (var ph in phases)
 					{
 						var st = Knowledge.Instance.GetEventState(parent, ph);
-	
+
 						conditions.Add(String.Format("{0}[{1}] == {2}", d_program.EventStatesTable.Name, idx, st.Index));
 					}
-	
+
 					writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
 				}
-	
+
 				writer.WriteLine("\tdefault:");
 				writer.WriteLine("\t\treturn 1;");
-	
+
 				writer.WriteLine("\t}");
 			}
 
@@ -2147,7 +2147,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			get { return MinimumCType((ulong)Knowledge.Instance.EventsCount); }
 		}
-		
+
 		private void WriteSource()
 		{
 			d_options.CPrefix = CPrefix;
@@ -2157,7 +2157,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			d_sourceFilename = Path.Combine(d_program.Options.Output, d_program.Options.Basename + ".c");
 			TextWriter writer = new StreamWriter(d_sourceFilename);
-			
+
 			writer.WriteLine("#include \"{0}.h\"", d_program.Options.Basename);
 
 			foreach (var inc in new string[] {"stdint", "stddef", "float", "string"})
@@ -2166,10 +2166,10 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			writer.WriteLine("#include <cdn-rawc/cdn-rawc-macros.h>");
-			
+
 			writer.WriteLine();
 			WriteCustomMathRequired(writer);
-			
+
 			StringWriter source = new StringWriter();
 
 			if (d_options.CustomHeaders != null)
@@ -2190,7 +2190,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			WriteFunctionDefines(source);
-			
+
 			WriteDataTables(source);
 
 			WriteFunctions(source);
@@ -2200,9 +2200,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			WriteDataAccessors(source);
 
 			WriteNetwork(source);
-			
+
 			var seen = new HashSet<MathFunctionType>();
-			
+
 			foreach (var def in Context.UsedMathFunctions)
 			{
 				Context.Workspace ws;
@@ -2220,19 +2220,19 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					writer.WriteLine("#define {0}_REQUIRED", def);
 				}
 			}
-			
+
 			writer.WriteLine();
 
 			writer.WriteLine("#include <cdn-rawc/cdn-rawc-math.h>");
 			writer.WriteLine();
 
 			WriteMathDimFunctions(writer);
-			
+
 			writer.WriteLine();
 			writer.Write(source.ToString());
 
 			writer.Close();
-		}	
+		}
 	}
 }
 

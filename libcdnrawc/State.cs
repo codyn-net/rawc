@@ -51,7 +51,7 @@ namespace Cdn.RawC
 			}
 
 			Variable variable = obj as Variable;
-			
+
 			if (variable != null && variable.Integrated)
 			{
 				d_type = Flags.Integrated;
@@ -82,10 +82,10 @@ namespace Cdn.RawC
 				d_expression = Knowledge.Instance.ExpandExpression(d_expressionUnexpanded);
 				return;
 			}
-			
+
 			List<Cdn.Expression> exprs = new List<Cdn.Expression>();
 			Variable v = d_object as Variable;
-			
+
 			if (d_actions.Length != 0)
 			{
 				foreach (EdgeAction action in d_actions)
@@ -192,7 +192,7 @@ namespace Cdn.RawC
 
 			return base.ToString();
 		}
-		
+
 		public Cdn.Expression Expression
 		{
 			get
@@ -206,30 +206,30 @@ namespace Cdn.RawC
 		{
 			get { return d_actions; }
 		}
-		
+
 		public virtual Cdn.Dimension Dimension
 		{
 			get
 			{
 				var v = Object as Cdn.Variable;
-				
+
 				if (v != null)
 				{
 					return v.Dimension;
 				}
-				
+
 				var i = Object as Cdn.Instruction;
-				
+
 				if (i != null)
 				{
 					var smanip = i.GetStackManipulation();
 					return smanip.Push.Dimension;
 				}
-				
+
 				return new Cdn.Dimension { Rows = 1, Columns = 1 };
 			}
 		}
-		
+
 		public Instruction[] Instructions
 		{
 			get
@@ -243,11 +243,11 @@ namespace Cdn.RawC
 						d_instructions = expression.Instructions;
 					}
 				}
-				
+
 				return d_instructions;
 			}
 		}
-		
+
 		public Flags Type
 		{
 			get

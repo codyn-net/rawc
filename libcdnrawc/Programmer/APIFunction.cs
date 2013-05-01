@@ -21,7 +21,7 @@ namespace Cdn.RawC.Programmer
 			d_needsEventStates = false;
 			d_name = name;
 		}
-		
+
 		public bool Private
 		{
 			get { return d_private; }
@@ -52,7 +52,7 @@ namespace Cdn.RawC.Programmer
 		public string Name
 		{
 			get { return d_name; }
-		}	
+		}
 	}
 }
 

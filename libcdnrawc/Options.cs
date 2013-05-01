@@ -61,15 +61,15 @@ namespace Cdn.RawC
 			EnableProfile = Environment.GetEnvironmentVariable("ENABLE_PROFILE") == "1";
 			return s_instance;
 		}
-		
+
 		public Options() : base("cdnrawc", "raw codyn network generator", "[FILE...]")
 		{
 			d_formatter = new Programmer.Formatters.C.C();
 			AddOptionsForPlugin(d_formatter);
-			
+
 			d_validateRange = new double[] {0, 0.001, 5};
 		}
-		
+
 		public override void Parse(ref string[] args)
 		{
 			try
@@ -83,13 +83,13 @@ namespace Cdn.RawC
 				Console.Error.WriteLine("Could not parse options: {0}\n\nTrace:\n{1}", e.GetBaseException().Message, e.GetBaseException().StackTrace);
 				Environment.Exit(1);
 			}
-			
+
 			if (d_showHelp)
 			{
 				ShowHelp();
 				Environment.Exit(1);
 			}
-			
+
 			if (d_showVersion)
 			{
 				System.Version version = Assembly.GetExecutingAssembly().GetName().Version;
@@ -97,7 +97,7 @@ namespace Cdn.RawC
 				Console.WriteLine("cdnrawc - Version {0}.{1}.{2}", version.Major, version.Minor, version.Revision);
 				Environment.Exit(0);
 			}
-			
+
 			if (d_listOptions)
 			{
 				Console.WriteLine(ShowOptions());
@@ -108,14 +108,14 @@ namespace Cdn.RawC
 			{
 				return;
 			}
-			
+
 			if (d_files.Count == 0)
 			{
 				Console.Error.WriteLine("Please specify at least one network file");
 				Environment.Exit(1);
 			}
 		}
-		
+
 		public static Options Instance
 		{
 			get
@@ -123,7 +123,7 @@ namespace Cdn.RawC
 				return s_instance;
 			}
 		}
-		
+
 		public string[] Files
 		{
 			get
@@ -131,12 +131,12 @@ namespace Cdn.RawC
 				return d_files.ToArray();
 			}
 		}
-		
+
 		public bool Compile
 		{
 			get { return d_compile; }
 		}
-		
+
 		public string Output
 		{
 			get
@@ -144,7 +144,7 @@ namespace Cdn.RawC
 				return d_output;
 			}
 		}
-		
+
 		public string Collector
 		{
 			get
@@ -152,7 +152,7 @@ namespace Cdn.RawC
 				return d_collector;
 			}
 		}
-		
+
 		public bool Quiet
 		{
 			get
@@ -160,7 +160,7 @@ namespace Cdn.RawC
 				return d_quiet;
 			}
 		}
-		
+
 		public bool Verbose
 		{
 			get
@@ -168,7 +168,7 @@ namespace Cdn.RawC
 				return d_verbose;
 			}
 		}
-		
+
 		public string Filter
 		{
 			get
@@ -176,7 +176,7 @@ namespace Cdn.RawC
 				return d_filter;
 			}
 		}
-		
+
 		public string Basename
 		{
 			get
@@ -184,7 +184,7 @@ namespace Cdn.RawC
 				return d_basename;
 			}
 		}
-		
+
 		public double ValidatePrecision
 		{
 			get
@@ -192,7 +192,7 @@ namespace Cdn.RawC
 				return d_validatePrecision;
 			}
 		}
-		
+
 		public bool PrintCompileSource
 		{
 			get
@@ -207,7 +207,7 @@ namespace Cdn.RawC
 			set
 			{
 				string[] parts = value.Split(':');
-				
+
 				if (parts.Length == 1)
 				{
 					d_validateRange[1] = Double.Parse(parts[0]);
@@ -229,7 +229,7 @@ namespace Cdn.RawC
 				}
 			}
 		}
-		
+
 		public double[] ValidateRange
 		{
 			get
@@ -237,7 +237,7 @@ namespace Cdn.RawC
 				return d_validateRange;
 			}
 		}
-		
+
 		public bool Validate
 		{
 			get
@@ -245,27 +245,27 @@ namespace Cdn.RawC
 				return d_validate;
 			}
 		}
-		
+
 		private void AddOptionsForPlugin(object plugin)
 		{
 			Plugins.IOptions opts = plugin as Plugins.IOptions;
-			
+
 			if (opts != null)
 			{
 				Add(opts.Options);
 			}
 		}
-		
+
 		private void RemoveOptionsForPlugin(object plugin)
 		{
 			Plugins.IOptions opts = plugin as Plugins.IOptions;
-			
+
 			if (opts != null)
 			{
 				Remove(opts.Options);
 			}
 		}
-		
+
 		private void AddFormatterOptions(string format)
 		{
 			if (format == "")
@@ -276,7 +276,7 @@ namespace Cdn.RawC
 
 			Plugins.Plugins plugins = Plugins.Plugins.Instance;
 			Type type = plugins.Find(typeof(Programmer.Formatters.IFormatter), format);
-			
+
 			if (type != null)
 			{
 				if (d_formatter != null)
@@ -292,7 +292,7 @@ namespace Cdn.RawC
 				throw new CommandLine.OptionException("The formatter `{0}' does not exist...", format);
 			}
 		}
-		
+
 		[CommandLine.Option("format", OptionalArgument=true, ArgumentName="NAME", Description="The format of the output")]
 		private string Format
 		{
@@ -301,7 +301,7 @@ namespace Cdn.RawC
 				AddFormatterOptions(value);
 			}
 		}
-		
+
 		public Programmer.Formatters.IFormatter Formatter
 		{
 			get
@@ -309,7 +309,7 @@ namespace Cdn.RawC
 				return d_formatter;
 			}
 		}
-		
+
 		public bool ShowFormatters
 		{
 			get
@@ -317,7 +317,7 @@ namespace Cdn.RawC
 				return d_showFormatters;
 			}
 		}
-		
+
 		[CommandLine.Option("load", 'l', ArgumentName="FILENAME", Description="Load additional assembly with plugins")]
 		private string Load
 		{
@@ -326,7 +326,7 @@ namespace Cdn.RawC
 				Plugins.Plugins.Instance.LoadAssembly(value);
 			}
 		}
-		
+
 		public int MinimumEmbeddingSize
 		{
 			get
@@ -334,7 +334,7 @@ namespace Cdn.RawC
 				return d_minimumEmbeddingSize >= 2 ? d_minimumEmbeddingSize : 2;
 			}
 		}
-		
+
 		public bool ListOptions
 		{
 			get
@@ -342,7 +342,7 @@ namespace Cdn.RawC
 				return d_listOptions;
 			}
 		}
-		
+
 		public bool NoEmbeddings
 		{
 			get

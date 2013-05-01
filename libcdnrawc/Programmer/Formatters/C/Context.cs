@@ -13,14 +13,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			public int[] Order;
 			public Cdn.Dimension Dimension;
 		}
-		
+
 		private static Dictionary<string, Workspace> s_workspaces;
-				
+
 		static Context()
 		{
 			s_workspaces = new Dictionary<string, Workspace>();
 		}
-		
+
 		public static Dictionary<string, Workspace> Workspaces
 		{
 			get { return s_workspaces; }
@@ -38,7 +38,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		{
 			return String.Format("CDN_MATH_{0}", base.MathFunction(type, arguments).ToUpper());
 		}
-		
+
 		public override string MathFunctionV(Cdn.MathFunctionType type, Tree.Node node)
 		{
 			switch (type)
@@ -61,7 +61,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				var d2 = node.Children[1].Dimension;
 				var ret = String.Format("CDN_MATH_LINSOLVE_V_{0}", d2.Rows);
-				
+
 				s_workspaces[ret] = new Workspace {
 					Type = type,
 					Order = new int[] {d2.Rows},
@@ -75,11 +75,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				var d2 = node.Children[0].Dimension;
 				var ret = String.Format("CDN_MATH_INVERSE_V_{0}", d2.Rows);
-				
+
 				if (!s_workspaces.ContainsKey(ret))
 				{
 					int ws = Lapack.InverseWorkspace(d2.Rows);
-					
+
 					s_workspaces[ret] = new Workspace {
 						Type = type,
 						WorkSize = new int[] {ws},
@@ -87,14 +87,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						Order = new int[] {d2.Rows},
 					};
 				}
-				
+
 				return ret;
 			}
 			case MathFunctionType.PseudoInverse:
 			{
 				var d2 = node.Children[0].Dimension;
 				var ret = String.Format("CDN_MATH_PSEUDOINVERSE_V_{0}_{1}", d2.Rows, d2.Columns);
-				
+
 				if (!s_workspaces.ContainsKey(ret))
 				{
 					int[] ws = Lapack.PseudoInverseWorkspace(d2);
@@ -106,18 +106,18 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						Order = new int[] {d2.Rows, d2.Columns},
 					};
 				}
-				
+
 				return ret;
 			}
 			case MathFunctionType.Qr:
 			{
 				var d2 = node.Children[0].Dimension;
 				var ret = String.Format("CDN_MATH_QR_V_{0}_{1}", d2.Rows, d2.Columns);
-				
+
 				if (!s_workspaces.ContainsKey(ret))
 				{
 					int ws = Lapack.QrWorkspace(d2);
-					
+
 					s_workspaces[ret] = new Workspace {
 						Type = type,
 						Dimension = d2,
@@ -125,14 +125,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 						Order = new int[] {d2.Rows, d2.Columns},
 					};
 				}
-				
+
 				return ret;
 			}
 			case MathFunctionType.Slinsolve:
 			{
 				var d2 = node.Children[2].Dimension;
 				var ret = String.Format("CDN_MATH_SLINSOLVE_V_{0}", d2.Rows);
-				
+
 				if (!s_workspaces.ContainsKey(ret))
 				{
 					s_workspaces[ret] = new Workspace {
@@ -222,7 +222,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			return name;
 		}
-		
+
 		public override void TranslateFunctionDimensionArguments(InstructionFunction instruction, List<string> args, int cnt)
 		{
 			switch ((Cdn.MathFunctionType)instruction.Id)
@@ -232,16 +232,16 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				// Add rows of A and columns of B arguments
 				var dim1 = Node.Children[1].Dimension;
 				var dim2 = Node.Children[0].Dimension;
-				
+
 				// Here we also reorder the arguments A and b. In codyn these
 				// are on the stack in reversed order to make it more efficient
 				// but here we really don't need that and it's more logical
 				// the other way around
 				var tmp = args[0];
-				
+
 				args[0] = args[1];
 				args[1] = tmp;
-				
+
 				args.Add(dim1.Rows.ToString());
 				args.Add(dim2.Columns.ToString());
 			}
@@ -249,12 +249,12 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.Slinsolve:
 			{
 				// Add columns of B argument
-				
+
 				// Here we also reorder the arguments.
 				var b = args[0];
 				var L = args[1];
 				var A = args[2];
-				
+
 				args[0] = A;
 				args[1] = b;
 				args[2] = Node.Children[0].Dimension.Columns.ToString();

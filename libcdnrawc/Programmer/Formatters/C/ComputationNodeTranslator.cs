@@ -48,7 +48,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 
 			ret.Append("}");
-			
+
 			return ret.ToString();
 		}
 

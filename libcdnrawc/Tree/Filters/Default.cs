@@ -9,16 +9,16 @@ namespace Cdn.RawC.Tree.Filters
 		public Default()
 		{
 		}
-		
+
 		public Tree.Embedding[] Filter(IEnumerable<Tree.Embedding> prototypes)
 		{
 			// Filter out any prototypes that have conflicting instances.
 			// Sort prototypes based on a score heuristic
 			List<Tree.Embedding> list = new List<Tree.Embedding>(prototypes);
 			list.Sort(CompareEmbeddings);
-			
+
 			List<Tree.Embedding> ret = new List<Tree.Embedding>();
-			
+
 			foreach (Tree.Embedding embedding in list)
 			{
 				bool isconflict = false;
@@ -31,21 +31,21 @@ namespace Cdn.RawC.Tree.Filters
 						break;
 					}
 				}
-				
+
 				if (!isconflict)
 				{
 					ret.Add(embedding);
 				}
 			}
-			
+
 			return ret.ToArray();
 		}
-		
+
 		private int Score(Tree.Embedding embedding)
 		{
 			return -1 * embedding.InstancesCount * embedding.Expression.Descendants.Length;
 		}
-		
+
 		private int CompareEmbeddings(Tree.Embedding a, Tree.Embedding b)
 		{
 			return Score(a).CompareTo(Score(b));

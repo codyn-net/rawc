@@ -16,7 +16,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			public string CName;
 			public string Comment;
 			public string Value;
-			
+
 			public EnumItem(Cdn.Variable property, string shortname, string cname, string comment, string v)
 			{
 				Variable = property;
@@ -82,20 +82,20 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				return;
 			}
-			
+
 			Dictionary<string, bool > unique = new Dictionary<string, bool>();
-			
+
 			int firstrand = -1;
-			
+
 			foreach (DataTable.DataItem item in d_program.StateTable)
 			{
 				Cdn.Variable prop = null;
 				bool isdiff = false;
-				
+
 				if ((item.Type & DataTable.DataItem.Flags.Derivative) != 0)
 				{
 					var state = item.Object as DerivativeState;
-					
+
 					if (state != null)
 					{
 						prop = state.Object as Cdn.Variable;
@@ -113,7 +113,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					{
 						continue;
 					}
-					
+
 					var rinstr = item.Key as InstructionRand;
 
 					if (rinstr != null)
@@ -122,7 +122,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						{
 							firstrand = item.Index;
 						}
-						
+
 						item.Alias = string.Format("{0} /* RAND_{1} */", item.Index, item.Index - firstrand);
 					}
 					else if ((item.Type & DataTable.DataItem.Flags.Constant) != 0)
@@ -136,12 +136,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 					continue;
 				}
-				
+
 				string fullname = PrettyFullName(prop);
 
 				string orig = Context.ToAsciiOnly(fullname).ToUpper();
 				string prefix;
-				
+
 				if (isdiff)
 				{
 					prefix = "DERIV";
@@ -150,20 +150,20 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					prefix = "STATE";
 				}
-				
+
 				string enumname = String.Format("{0}_{1}", prefix, orig);
 				string shortname = orig;
-				
+
 				int id = 0;
-				
+
 				while (unique.ContainsKey(enumname))
 				{
 					enumname = String.Format("_{1}__{2}", prefix, orig, ++id);
 					shortname = String.Format("{0}__{1}", orig, id);
 				}
-				
+
 				var comment = fullname;
-				
+
 				if (isdiff)
 				{
 					comment += "'";
@@ -173,11 +173,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					item.Alias = EnumAlias(enumname);
 				}
-				
+
 				unique[enumname] = true;
-				
+
 				d_enumMap.Add(new EnumItem(prop, shortname, enumname, comment, item.Index.ToString()));
-			}			
+			}
 		}
 
 		protected string CPrefix
@@ -187,17 +187,17 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				if (d_cprefix == null)
 				{
 					string[] parts = Context.ToAsciiOnly(d_program.Options.Basename).ToLower().Split('_');
-					
+
 					parts = Array.FindAll(parts, a => !String.IsNullOrEmpty(a));
 					parts = Array.ConvertAll(parts, a => char.ToUpper(a[0]) + a.Substring(1));
-					
+
 					d_cprefix = String.Join("", parts);
 				}
-				
+
 				return d_cprefix;
 			}
 		}
-		
+
 		protected string CPrefixUp
 		{
 			get
@@ -206,11 +206,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					d_cprefixup = Context.ToAsciiOnly(d_program.Options.Basename).ToUpper();
 				}
-				
+
 				return d_cprefixup;
 			}
 		}
-		
+
 		protected string CPrefixDown
 		{
 			get
@@ -227,12 +227,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		protected Dictionary<Tree.NodePath, object> GenerateMapping(string format, IEnumerable<Tree.Embedding.Argument> args)
 		{
 			var mapping = new Dictionary<Tree.NodePath, object>();
-			
+
 			foreach (Tree.Embedding.Argument arg in args)
 			{
 				mapping[arg.Path] = String.Format(format, arg.Index);
 			}
-			
+
 			return mapping;
 		}
 
@@ -431,7 +431,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						writer.WriteLine("\t\telse");
 						writer.WriteLine("\t\t{");
 						writer.Write("\t\t\t{0} = {1} / ({1} - {2})", dist, prev, cur);
-						
+
 						if (st.Node.CompareType == Cdn.MathFunctionType.Less ||
 						    st.Node.CompareType == Cdn.MathFunctionType.Greater)
 						{

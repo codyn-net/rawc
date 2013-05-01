@@ -46,7 +46,7 @@ namespace Cdn.RawC.Programmer
 						break;
 					}
 				}
-				
+
 				if (!doesdepend)
 				{
 					if (ret.d_not == null)
@@ -59,7 +59,7 @@ namespace Cdn.RawC.Programmer
 
 				return !doesdepend;
 			});
-			
+
 			return ret;
 		}
 

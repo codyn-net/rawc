@@ -15,12 +15,12 @@ namespace Cdn.RawC.Programmer.Computation
 			d_body = new List<INode>();
 			d_else = new List<INode>();
 		}
-		
+
 		public Knowledge.EventStateGroup EventStateGroup
 		{
 			get { return d_eventStateGroup; }
 		}
-		
+
 		public List<INode> Body
 		{
 			get { return d_body; }

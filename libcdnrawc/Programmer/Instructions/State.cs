@@ -15,7 +15,7 @@ namespace Cdn.RawC.Programmer.Instructions
 		{
 			get { return d_item.Dimension; }
 		}
-		
+
 		public DataTable.DataItem Item
 		{
 			get { return d_item; }

@@ -32,7 +32,7 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			}
 
 			ret.Append("}");
-			
+
 			return ret.ToString();
 		}
 

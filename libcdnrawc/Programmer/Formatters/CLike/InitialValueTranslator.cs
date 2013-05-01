@@ -14,7 +14,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		                                          typeof(object))
 		{
 		}
-		
+
 		public string Translate(params object[] parameters)
 		{
 			return Invoke<string>(parameters);
@@ -29,7 +29,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			return val.DataItem.AliasOrIndex;
 		}
-		
+
 		protected virtual string Translate(double number)
 		{
 			var val = number.ToString("0." + new String('0', 15));

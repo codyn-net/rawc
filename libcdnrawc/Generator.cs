@@ -56,7 +56,7 @@ namespace Cdn.RawC
 			t.End();
 
 			t = Profile.Begin("filter");
-			
+
 			// Filter conflicts and resolve final embeddings
 			Tree.Embedding[] embeddings = Filter(collection);
 
@@ -68,7 +68,7 @@ namespace Cdn.RawC
 			Dictionary<State, Tree.Node> equations = ResolveEquations(embeddings);
 
 			t.End();
-			
+
 			// Create program
 			t = Profile.Begin("create program");
 
@@ -77,7 +77,7 @@ namespace Cdn.RawC
 			t.End();
 
 			bool outistemp = false;
-			
+
 			// Write program
 			if (Options.Instance.Validate || Options.Instance.Compile)
 			{
@@ -100,7 +100,7 @@ namespace Cdn.RawC
 			d_writtenFiles = Options.Instance.Formatter.Write(program);
 
 			t.End();
-			
+
 			if (Options.Instance.PrintCompileSource)
 			{
 				foreach (string filename in d_writtenFiles)
@@ -162,21 +162,21 @@ namespace Cdn.RawC
 				return d_writtenFiles;
 			}
 		}
-		
+
 		private Programmer.Options ProgrammerOptions()
 		{
 			Programmer.Options ret = new Programmer.Options();
-			
+
 			ret.Network = d_network;
 			ret.Basename = Options.Instance.Basename;
 			ret.Output = Options.Instance.Output;
 			ret.DelayTimeStep = Options.Instance.DelayTimeStep;
-			
+
 			if (String.IsNullOrEmpty(ret.Basename))
 			{
 				ret.Basename = Path.GetFileNameWithoutExtension(ret.Network.Filename);
 			}
-			
+
 			if (String.IsNullOrEmpty(ret.Output))
 			{
 				var dirname = Path.GetDirectoryName(ret.Network.Filename);
@@ -184,10 +184,10 @@ namespace Cdn.RawC
 			}
 
 			ret.OriginalOutput = ret.Output;
-			
+
 			return ret;
 		}
-		
+
 		private void ResolveState(State state, Tree.Embedding[] embeddings, Dictionary<State, List<Tree.Node>> mapping, Dictionary<State, Tree.Node> ret)
 		{
 			List<Tree.Node> instances;
@@ -197,11 +197,11 @@ namespace Cdn.RawC
 			{
 				// Otherwise, merge all the embeddings into the equation
 				instances.Sort(SortDeepestFirst);
-			
+
 				foreach (Tree.Node instance in instances)
 				{
 					Tree.NodePath path = instance.Path;
-					
+
 					if (path.Count == 0)
 					{
 						node = instance;
@@ -216,15 +216,15 @@ namespace Cdn.RawC
 
 			ret[state] = node;
 		}
-		
+
 		private Dictionary<State, Tree.Node> ResolveEquations(Tree.Embedding[] embeddings)
 		{
 			// Create a map from state to all non-conflicting embedding instances for that state
-			Dictionary<State, List<Tree.Node>> mapping;			
+			Dictionary<State, List<Tree.Node>> mapping;
 			mapping = Collect(embeddings);
-			
+
 			Dictionary<State, Tree.Node> ret = new Dictionary<State, Tree.Node>();
-			
+
 			foreach (State state in Knowledge.Instance.States)
 			{
 				ResolveState(state, embeddings, mapping, ret);
@@ -247,10 +247,10 @@ namespace Cdn.RawC
 					ResolveState(state, embeddings, mapping, ret);
 				}
 			}
-			
+
 			return ret;
 		}
-		
+
 		private int SortDeepestFirst(Tree.Node a, Tree.Node b)
 		{
 			if (a.Path.Count == 0)
@@ -266,11 +266,11 @@ namespace Cdn.RawC
 				return b.Path.Peek().CompareTo(a.Path.Peek());
 			}
 		}
-		
+
 		private Dictionary<State, List<Tree.Node>> Collect(Tree.Embedding[] embeddings)
 		{
 			Dictionary<State, List<Tree.Node>> mapping = new Dictionary<State, List<Tree.Node>>();
-			
+
 			foreach (Tree.Embedding embedding in embeddings)
 			{
 				foreach (Tree.Node instance in embedding.Instances)
@@ -282,14 +282,14 @@ namespace Cdn.RawC
 						inst = new List<Tree.Node>();
 						mapping[instance.State] = inst;
 					}
-					
+
 					inst.Add(instance);
 				}
 			}
-			
+
 			return mapping;
 		}
-		
+
 		private void LoadNetwork()
 		{
 			if (Options.Instance.Validate)
@@ -306,7 +306,7 @@ namespace Cdn.RawC
 			{
 				throw new Exception("Failed to load network: {0}", e.Message);
 			}
-			
+
 			CompileError error = new CompileError();
 
 			if (!d_network.Compile(null, error))
@@ -314,7 +314,7 @@ namespace Cdn.RawC
 				throw new Exception("Failed to compile network: {0}", error.FormattedString);
 			}
 		}
-		
+
 		private Tree.Collectors.Result Collect()
 		{
 			if (Options.Instance.NoEmbeddings)
@@ -324,27 +324,27 @@ namespace Cdn.RawC
 
 			Options parser = Options.Instance;
 			Tree.Collectors.ICollector collector;
-			
+
 			if (parser.Collector != null)
 			{
 				Plugins.Plugins plugins = Plugins.Plugins.Instance;
 				Type type = plugins.Find(typeof(Tree.Collectors.ICollector), parser.Collector);
-				
+
 				if (type == null)
 				{
 					throw new Exception(String.Format("The collector `{0}' could not be found...", parser.Collector));
 				}
-				
+
 				collector = (Tree.Collectors.ICollector)type.GetConstructor(new Type[] {}).Invoke(new object[] {});
 			}
 			else
 			{
 				collector = new Tree.Collectors.Default();
 			}
-			
+
 			List<Tree.Node> forest = new List<Tree.Node>();
 			var added = new HashSet<State>();
-			
+
 			foreach (State state in Knowledge.Instance.States)
 			{
 				added.Add(state);
@@ -362,7 +362,7 @@ namespace Cdn.RawC
 					forest.Add(Tree.Node.Create(state));
 				}
 			}
-			
+
 			var ret = collector.Collect(forest.ToArray());
 			CollectSpecialSingles(ret, forest);
 
@@ -402,33 +402,33 @@ namespace Cdn.RawC
 			{
 				var lst = constnodes[code];
 				var proto = (Tree.Node)lst[0].Clone();
-			
+
 				// Create embedding
 				var embedding = ret.Prototype(proto, new Tree.NodePath[] {});
 				embedding.Inline = true;
-			
+
 				foreach (Tree.Node node in lst)
 				{
 					embedding.Embed(node);
 				}
 			}
 		}
-		
+
 		private Tree.Embedding[] Filter(Tree.Collectors.Result collection)
 		{
 			Options parser = Options.Instance;
 			Tree.Filters.IFilter filter;
-			
+
 			if (parser.Filter != null)
 			{
 				Plugins.Plugins plugins = Plugins.Plugins.Instance;
 				Type type = plugins.Find(typeof(Tree.Filters.IFilter), parser.Filter);
-				
+
 				if (type == null)
 				{
 					throw new Exception(String.Format("The filter `{0}' could not be found...", parser.Filter));
 				}
-				
+
 				filter = (Tree.Filters.IFilter)type.GetConstructor(new Type[] {}).Invoke(new object[] {});
 			}
 			else

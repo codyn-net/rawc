@@ -17,38 +17,38 @@ namespace Cdn.RawC.CommandLine
 		public Options() : this(null)
 		{
 		}
-		
+
 		public Options(string appname) : this(appname, null)
 		{
 		}
-		
+
 		public Options(string appname, string appdescription) : this(appname, appdescription, null)
 		{
 		}
-		
+
 		public Options(string appname, string appdescription, string extradescription)
 		{
 			d_ignoreUnknown = false;
 			d_doubleDash = false;
-			
+
 			d_appname = appname;
 			d_appdescription = appdescription;
 			d_extradescription = extradescription;
-			
+
 			d_groups = new List<OptionGroup>();
 			d_groups.Add(this);
 		}
-		
+
 		public void Add(OptionGroup grp)
 		{
 			d_groups.Add(grp);
 		}
-		
+
 		public void Remove(OptionGroup grp)
 		{
 			d_groups.Remove(grp);
 		}
-		
+
 		public bool PassDoubleDash
 		{
 			get
@@ -60,7 +60,7 @@ namespace Cdn.RawC.CommandLine
 				d_doubleDash = value;
 			}
 		}
-		
+
 		public bool IgnoreUnknown
 		{
 			get
@@ -72,7 +72,7 @@ namespace Cdn.RawC.CommandLine
 				d_ignoreUnknown = value;
 			}
 		}
-		
+
 		public string AppName
 		{
 			get
@@ -84,7 +84,7 @@ namespace Cdn.RawC.CommandLine
 				d_appname = value;
 			}
 		}
-		
+
 		public string AppDescription
 		{
 			get
@@ -96,7 +96,7 @@ namespace Cdn.RawC.CommandLine
 				d_appdescription = value;
 			}
 		}
-		
+
 		public string ExtraDescription
 		{
 			get
@@ -108,12 +108,12 @@ namespace Cdn.RawC.CommandLine
 				d_extradescription = value;
 			}
 		}
-		
+
 		public void ShowHelp()
 		{
 			ShowHelp(Console.Out);
 		}
-		
+
 		private bool HasOptions
 		{
 			get
@@ -125,11 +125,11 @@ namespace Cdn.RawC.CommandLine
 						return true;
 					}
 				}
-				
+
 				return false;
 			}
 		}
-		
+
 		public string ShowOptions()
 		{
 			List<string> opts = new List<string>();
@@ -142,21 +142,21 @@ namespace Cdn.RawC.CommandLine
 					{
 						opts.Add(String.Format("-{0}", info.Option.ShortName));
 					}
-					
+
 					if (info.Option.LongName != null)
 					{
 						opts.Add(String.Format("--{0}", info.Option.LongName));
 					}
 				}
 			}
-			
+
 			return String.Join(" ", opts.ToArray());
 		}
-		
+
 		public new void ShowHelp(TextWriter writer)
 		{
 			writer.WriteLine("Usage:");
-			
+
 			if (!String.IsNullOrEmpty(d_appname))
 			{
 				writer.Write("  {0}", d_appname);
@@ -165,31 +165,31 @@ namespace Cdn.RawC.CommandLine
 			{
 				writer.Write("  {0}", AppDomain.CurrentDomain.FriendlyName);
 			}
-			
+
 			if (HasOptions)
 			{
 				writer.Write(" [OPTION...]");
 			}
-			
+
 			if (!String.IsNullOrEmpty(d_extradescription))
 			{
 				writer.Write(" {0}", d_extradescription);
 			}
-			
+
 			if (!String.IsNullOrEmpty(d_appdescription))
 			{
 				writer.Write(" - {0}", d_appdescription);
 			}
-			
+
 			writer.WriteLine();
 			writer.WriteLine();
-			
+
 			foreach (OptionGroup grp in d_groups)
 			{
 				grp.ShowHelp(writer);
 			}
 		}
-		
+
 		private void ParseOption(OptionGroup opt, string[] args, string arg, Info info, bool canarg, string argument, ref int idx)
 		{
 			if (info.ValueType == typeof(bool))
@@ -215,11 +215,11 @@ namespace Cdn.RawC.CommandLine
 				throw new OptionException("Expected value for option `{0}'...", arg);
 			}
 		}
-		
+
 		private bool ParseLong(string[] args, string arg, string argument, ref int idx)
 		{
 			Info info;
-			
+
 			foreach (OptionGroup opt in d_groups)
 			{
 				if (opt.LongName(arg, out info))
@@ -231,11 +231,11 @@ namespace Cdn.RawC.CommandLine
 
 			return false;
 		}
-		
+
 		private bool ParseShort(string[] args, string arg, bool islast, string argument, ref int idx)
 		{
 			Info info;
-			
+
 			foreach (OptionGroup opt in d_groups)
 			{
 				if (opt.ShortName(arg, out info))
@@ -249,16 +249,16 @@ namespace Cdn.RawC.CommandLine
 					return true;
 				}
 			}
-			
+
 			return false;
 		}
-		
+
 		public virtual void Parse(ref string[] args)
 		{
 			List<string> rest = new List<string>();
 			bool pass = false;
 			int i = 0;
-			
+
 			while (i < args.Length)
 			{
 				string arg = args[i];
@@ -269,30 +269,30 @@ namespace Cdn.RawC.CommandLine
 					rest.Add(arg);
 					continue;
 				}
-				
+
 				if (d_doubleDash && arg == "--")
 				{
 					pass = true;
 					continue;
 				}
-				
+
 				if (!arg.StartsWith("-"))
 				{
 					rest.Add(arg);
 					continue;
 				}
-				
+
 				string argument = null;
 				int pos = arg.IndexOf('=');
-				
+
 				if (pos >= 0)
 				{
 					argument = arg.Substring(pos + 1);
 					arg = arg.Substring(0, pos);
 				}
-				
+
 				bool ret = true;
-				
+
 				if (arg.StartsWith("--"))
 				{
 					ret = ParseLong(args, arg.Substring(2), argument, ref i);
@@ -308,7 +308,7 @@ namespace Cdn.RawC.CommandLine
 						ret = ParseShort(args, shortarg.Substring(j, 1), islast, argument, ref i);
 					}
 				}
-				
+
 				if (!ret)
 				{
 					if (d_ignoreUnknown)
@@ -321,7 +321,7 @@ namespace Cdn.RawC.CommandLine
 					}
 				}
 			}
-			
+
 			args = rest.ToArray();
 		}
 	}

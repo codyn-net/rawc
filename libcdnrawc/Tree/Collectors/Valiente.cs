@@ -19,7 +19,7 @@ namespace Cdn.RawC.Tree.Collectors
 		private Dictionary<Node, Node> d_mapping;
 		private Dictionary<Node, List<Node>> d_reverseMapping;
 		private CustomOptions d_options;
-		
+
 		public Valiente()
 		{
 			d_options = new CustomOptions();
@@ -28,7 +28,7 @@ namespace Cdn.RawC.Tree.Collectors
 			d_mapping = new Dictionary<Node, Node>();
 			d_reverseMapping = new Dictionary<Node, List<Node>>();
 		}
-		
+
 		public CommandLine.OptionGroup Options
 		{
 			get
@@ -36,25 +36,25 @@ namespace Cdn.RawC.Tree.Collectors
 				return d_options;
 			}
 		}
-		
+
 		public Result Collect(Node[] forest)
 		{
 			Calculate(forest);
-			
+
 			// d_nodes is a list of all root nodes constituting the embeddings
 			// d_reverseMapping is a map from the roots to all the original nodes
 			// which are contained in that root
 			Result result = new Result();
-			
+
 			foreach (Node root in d_nodes)
 			{
 				List<Node> mapping = d_reverseMapping[root];
-				
+
 				// Replace the subexpression that was mapped on this root with an
 				// embedding
 				Node prototype = (Node)root.Clone();
 				List<NodePath> arguments = new List<NodePath>();
-				
+
 				// Calculate the placeholder nodes
 				foreach (Node node in prototype.Descendants)
 				{
@@ -63,9 +63,9 @@ namespace Cdn.RawC.Tree.Collectors
 						arguments.Add(node.Path);
 					}
 				}
-				
+
 				Embedding proto = result.Prototype(prototype, arguments);
-				
+
 				// Now we generate all the full expressions for this embedding
 				foreach (Node inst in mapping)
 				{
@@ -73,15 +73,15 @@ namespace Cdn.RawC.Tree.Collectors
 					proto.Embed(((Node)inst.Top.Clone()).FromPath(inst.Path));
 				}
 			}
-			
+
 			return result;
 		}
-		
+
 		public void Calculate(Node[] forest)
 		{
 			Dictionary<string, Node> lmap = new Dictionary<string, Node>();
 			Queue<Node> queue = new Queue<Node>();
-			
+
 			// Create initial mapping for leaves
 			if (!d_options.Labeled)
 			{
@@ -90,7 +90,7 @@ namespace Cdn.RawC.Tree.Collectors
 
 				lmap[leaf.Label] = leaf;
 			}
-			
+
 			foreach (Node tree in forest)
 			{
 				foreach (Node leaf in tree.Leafs)
@@ -100,7 +100,7 @@ namespace Cdn.RawC.Tree.Collectors
 						Node n = Add(leaf.Label, 0);
 						lmap[leaf.Label] = n;
 					}
-					
+
 					queue.Enqueue(leaf);
 				}
 			}
@@ -108,7 +108,7 @@ namespace Cdn.RawC.Tree.Collectors
 			while (queue.Count != 0)
 			{
 				Node node = queue.Dequeue();
-				
+
 				if (node.IsLeaf)
 				{
 					Map(node, lmap[d_options.Labeled ? node.Label : "0"]);
@@ -117,16 +117,16 @@ namespace Cdn.RawC.Tree.Collectors
 				{
 					bool found = false;
 					List<Node> children = new List<Node>();
-					
+
 					foreach (Node child in node.Children)
 					{
 						children.Add(d_mapping[child]);
 					}
-					
+
 					for (int i = d_nodes.Count - 1; i >= 0; --i)
 					{
 						Node g = d_nodes[i];
-						
+
 						if (node.Height != g.Height)
 						{
 							break;
@@ -135,9 +135,9 @@ namespace Cdn.RawC.Tree.Collectors
 						{
 							continue;
 						}
-						
+
 						bool match = true;
-						
+
 						for (int j = 0; j < children.Count; ++j)
 						{
 							if (!Object.ReferenceEquals(g.Children[j], children[j]))
@@ -146,7 +146,7 @@ namespace Cdn.RawC.Tree.Collectors
 								break;
 							}
 						}
-						
+
 						if (match)
 						{
 							Map(node, g);
@@ -154,11 +154,11 @@ namespace Cdn.RawC.Tree.Collectors
 							break;
 						}
 					}
-					
+
 					if (!found)
 					{
 						Node w = Add(node);
-					
+
 						foreach (Node child in node)
 						{
 							// Explicitly directly on children instead of the Add method because
@@ -182,21 +182,21 @@ namespace Cdn.RawC.Tree.Collectors
 				}
 			}
 		}
-		
+
 		private void Map(Node original, Node graph)
 		{
 			d_mapping[original] = graph;
 			List<Node> reverse;
-			
+
 			if (!d_reverseMapping.TryGetValue(graph, out reverse))
 			{
 				reverse = new List<Node>();
 				d_reverseMapping[graph] = reverse;
 			}
-			
+
 			reverse.Add(original);
 		}
-		
+
 		public bool Labeled
 		{
 			get
@@ -204,7 +204,7 @@ namespace Cdn.RawC.Tree.Collectors
 				return d_options.Labeled;
 			}
 		}
-		
+
 		public Dictionary<Node, Node> Mapping
 		{
 			get
@@ -212,7 +212,7 @@ namespace Cdn.RawC.Tree.Collectors
 				return d_mapping;
 			}
 		}
-		
+
 		public Dictionary<Node, List<Node>> ReverseMapping
 		{
 			get
@@ -220,26 +220,26 @@ namespace Cdn.RawC.Tree.Collectors
 				return d_reverseMapping;
 			}
 		}
-		
+
 		public Node Add(string label, uint height)
 		{
 			Node n = new Node(label);
 			n.Height = height;
 
 			d_nodes.Add(n);
-			
+
 			return n;
 		}
-		
+
 		public Node Add(Node node)
 		{
 			Node ret = Add(node.Label, node.Height);
-			
+
 			Map(node, ret);
-			
+
 			return ret;
 		}
-		
+
 		public List<Node> Nodes
 		{
 			get
@@ -247,7 +247,7 @@ namespace Cdn.RawC.Tree.Collectors
 				return d_nodes;
 			}
 		}
-		
+
 		public override string ToString()
 		{
 			StringBuilder builder = new StringBuilder();
@@ -260,7 +260,7 @@ namespace Cdn.RawC.Tree.Collectors
 					builder.AppendFormat("{0} -> {1}\n", node.Height, string.Join(", ", parts));
 				}
 			}
-			
+
 			return builder.ToString();
 		}
 	}
