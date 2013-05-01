@@ -61,7 +61,22 @@ typedef struct
 
 	// Index into network.meta.children (or 0 if node has no children)
 	uint32_t first_child;
+
+	// Index into network.meta.templates (or 0 if node has no templates)
+	uint32_t first_template;
 } CdnRawcNodeMeta;
+
+typedef struct
+{
+	// The template name
+	char const *name;
+
+	// Index into network.meta.children
+	uint32_t parent;
+
+	// Index into network.meta.templates (or 0 if there is no next template)
+	uint32_t next;
+} CdnRawcTemplateMeta;
 
 typedef struct
 {
@@ -81,6 +96,9 @@ typedef struct
 	// Linked lists of node children
 	CdnRawcChildMeta const *children;
 	uint32_t children_size;
+
+	CdnRawcTemplateMeta const *templates;
+	uint32_t templates_size;
 } CdnRawcNetworkMeta;
 
 typedef struct

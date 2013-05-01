@@ -1267,6 +1267,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private class ChildMeta
 		{
+			public object Object;
 			public uint Parent;
 			public bool IsNode;
 
@@ -1276,16 +1277,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 		private class NodeMeta
 		{
+			public Cdn.Object Object;
 			public string Name;
 			public uint Parent;
 			public uint FirstChild;
+			public uint FirstTemplate;
 		}
 
 		private class StateMeta
 		{
+			public Cdn.Variable Variable;
 			public string Name;
 			public uint Parent;
 			public uint Index;
+		}
+
+		private class TemplateMeta
+		{
+			public Cdn.Object Object;
+			public string Name;
+			public uint Parent;
+			public uint Next;
 		}
 
 		private class Meta
@@ -1293,8 +1305,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			public List<NodeMeta> Nodes;
 			public List<StateMeta> States;
 			public List<ChildMeta> Children;
-
-			public Dictionary<Cdn.Object, uint> NodeMap;
+			public List<TemplateMeta> Templates;
 		}
 
 		private ChildMeta AddChild(Meta meta, NodeMeta parent, ChildMeta child, ChildMeta prev)
@@ -1312,18 +1323,49 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return child;
 		}
 
+		private void ExtractMetaTemplates(Meta meta, Cdn.Object obj, NodeMeta node, uint parent)
+		{
+			TemplateMeta prev = null;
+
+			foreach (var tmpl in obj.AppliedTemplates)
+			{
+				var tm = new TemplateMeta {
+					Object = tmpl,
+					Name = tmpl.FullId,
+					Parent = parent,
+					Next = 0,
+				};
+
+				if (node.FirstTemplate == 0)
+				{
+					node.FirstTemplate = (uint)meta.Templates.Count;
+				}
+
+				if (prev != null)
+				{
+					prev.Next = (uint)meta.Templates.Count;
+				}
+
+				prev = tm;
+				meta.Templates.Add(tm);
+			}
+		}
+
 		private uint ExtractMeta(Meta meta, Cdn.Object obj, uint parent)
 		{
 			NodeMeta nm = new NodeMeta {
+				Object = obj,
 				Name = obj.Id,
 				Parent = parent,
-				FirstChild = 0
+				FirstChild = 0,
+				FirstTemplate = 0,
 			};
 
 			parent = (uint)meta.Nodes.Count;
+
 			meta.Nodes.Add(nm);
 
-			meta.NodeMap[obj] = parent;
+			ExtractMetaTemplates(meta, obj, nm, parent);
 
 			ChildMeta prev = null;
 
@@ -1346,12 +1388,21 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				if (d_program.StateTable.TryGetValue(v, out item))
 				{
 					ChildMeta cm = new ChildMeta {
+						Object = v,
 						Parent = parent,
 						IsNode = false,
-						Index = (uint)item.Index,
+						Index = (uint)meta.States.Count,
 						Next = 0
 					};
 
+					StateMeta sm = new StateMeta {
+						Index = (uint)item.DataIndex,
+						Name = v.Name,
+						Variable = v,
+						Parent = parent,
+					};
+
+					meta.States.Add(sm);
 					prev = AddChild(meta, nm, cm, prev);
 				}
 			}
@@ -1365,6 +1416,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					uint cid = ExtractMeta(meta, child, parent);
 
 					ChildMeta cm = new ChildMeta {
+						Object = child,
 						Parent = parent,
 						IsNode = true,
 						Index = cid,
@@ -1384,20 +1436,27 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				Nodes = new List<NodeMeta>(),
 				States = new List<StateMeta>(d_program.StateTable.Count + 1),
 				Children = new List<ChildMeta>(),
-				NodeMap = new Dictionary<Cdn.Object, uint>()
+				Templates = new List<TemplateMeta>()
 			};
 
 			// Empty root nodes
 			meta.Nodes.Add(new NodeMeta {
 				Name = null,
 				Parent = 0,
-				FirstChild = 0
+				FirstChild = 0,
+				FirstTemplate = 0,
 			});
 
 			meta.Children.Add(new ChildMeta {
 				Parent = 0,
 				IsNode = false,
 				Index = 0,
+				Next = 0
+			});
+
+			meta.Templates.Add(new TemplateMeta {
+				Name = null,
+				Parent = 0,
 				Next = 0
 			});
 
@@ -1408,86 +1467,126 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			ExtractMeta(meta, Knowledge.Instance.Network, 0);
 
-			foreach (var item in d_program.StateTable)
-			{
-				Cdn.Variable v = item.Key as Cdn.Variable;
-
-				StateMeta sm = new StateMeta {
-					Name = null,
-					Parent = 0,
-					Index = 0,
-				};
-				
-				if (v != null)
-				{
-					uint nid = 0;
-
-					if (item.Object == Knowledge.Instance.Time ||
-					    item.Object == Knowledge.Instance.TimeStep)
-					{
-						meta.NodeMap.TryGetValue(Knowledge.Instance.Network, out nid);
-					}
-					else
-					{
-						meta.NodeMap.TryGetValue(v.Object, out nid);
-					}
-					
-					sm.Name = v.Name;
-					sm.Parent = nid;
-					sm.Index = (uint)item.DataIndex;
-				}
-				else
-				{
-					continue;
-				}
-
-				meta.States.Add(sm);
-			}
-			
 			return meta;
 		}
-		
+
 		private void WriteNetworkMeta(TextWriter writer)
 		{
 			var meta = ExtractMeta();
+			var vb = Cdn.RawC.Options.Instance.Verbose;
 
 			writer.WriteLine("\tstatic CdnRawcStateMeta meta_states[] = {");
-			
-			foreach (var state in meta.States)
+
+			var pl = (meta.States.Count - 1).ToString().Length;
+
+			for (int i = 0; i < meta.States.Count; ++i)
 			{
+				var state = meta.States[i];
+
+				if (vb)
+				{
+					writer.WriteLine("\n\t\t/* [{0}] {1} */",
+					                 i.ToString().PadLeft(pl),
+					                 state.Variable != null ? state.Variable.FullNameForDisplay : "(empty)");
+				}
+
 				writer.WriteLine("\t\t{{ {0}, {1}, {2} }},",
-		 		                 state.Name == null ? "NULL" : "\"" + state.Name + "\"",
-		 		                 state.Parent,
+				                 state.Name == null ? "NULL" : "\"" + state.Name.Replace("\"", "\\\"") + "\"",
+				                 state.Parent,
 				                 state.Index);
 			}
-			
+
 			writer.WriteLine("\t};");
-			writer.WriteLine();			
+			writer.WriteLine();
 			writer.WriteLine("\tstatic CdnRawcNodeMeta meta_nodes[] = {");
-			
-			foreach (var node in meta.Nodes)
+
+			pl = (meta.Nodes.Count - 1).ToString().Length;
+
+			for (int i = 0; i < meta.Nodes.Count; ++i)
 			{
-				writer.WriteLine("\t\t{{ {0}, {1}, {2} }},",
-				                  node.Name == null ? "NULL" : "\"" + node.Name + "\"",
-				                  node.Parent,
-				                  node.FirstChild);
+				var node = meta.Nodes[i];
+
+				if (vb)
+				{
+					writer.WriteLine("\n\t\t/* [{0}] {1} */",
+					                 i.ToString().PadLeft(pl),
+					                 node.Object != null ? node.Object.FullIdForDisplay : "(empty)");
+				}
+
+				writer.WriteLine("\t\t{{ {0}, {1}, {2}, {3} }},",
+				                 node.Name == null ? "NULL" : "\"" + node.Name.Replace("\"", "\\\"") + "\"",
+				                 node.Parent,
+				                 node.FirstChild,
+				                 node.FirstTemplate);
 			}
-			
+
 			writer.WriteLine("\t};");
-			writer.WriteLine();			
+			writer.WriteLine();
 			writer.WriteLine("\tstatic CdnRawcChildMeta meta_children[] = {");
-			
-			foreach (var child in meta.Children)
+
+			pl = (meta.Children.Count - 1).ToString().Length;
+
+			for (int i = 0; i < meta.Children.Count; ++i)
 			{
+				var child = meta.Children[i];
+
+				if (vb)
+				{
+					string s;
+
+					if (child.Object != null)
+					{
+						if (child.IsNode)
+						{
+							s = ((Cdn.Object)child.Object).FullIdForDisplay;
+						}
+						else
+						{
+							s = ((Cdn.Variable)child.Object).FullNameForDisplay;
+						}
+					}
+					else
+					{
+						s = "(empty)";
+					}
+
+					writer.WriteLine("\n\t\t/* [{0}] {1} */",
+					                 i.ToString().PadLeft(pl),
+					                 s);
+				}
+
 				writer.WriteLine("\t\t{{ {0}, {1}, {2}, {3} }},",
 				                 child.Parent,
 				                 child.IsNode ? 1 : 0,
 				                 child.Index,
 				                 child.Next);
 			}
-			
+
 			writer.WriteLine("\t};");
-			writer.WriteLine();			
+			writer.WriteLine();
+			writer.WriteLine("\tstatic CdnRawcTemplateMeta meta_templates[] = {");
+
+			pl = (meta.Templates.Count - 1).ToString().Length;
+
+			for (int i = 0; i < meta.Templates.Count; ++i)
+			{
+				var tmpl = meta.Templates[i];
+
+				if (vb)
+				{
+					writer.WriteLine("\n\t\t/* [{0}] {1} */",
+					                 i.ToString().PadLeft(pl),
+					                 tmpl.Object != null ? tmpl.Object.FullIdForDisplay : "(empty)");
+				}
+
+				writer.WriteLine("\t\t{{ {0}, {1}, {2} }},",
+				                 tmpl.Name == null ? "NULL" : "\"" + tmpl.Name.Replace("\"", "\\\"") + "\"",
+				                 tmpl.Parent,
+				                 tmpl.Next);
+			}
+
+			writer.WriteLine("\t};");
+			writer.WriteLine();
 		}
 
 		private void WriteNetworkDimensions(TextWriter writer)
@@ -1605,6 +1704,9 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine();
 			writer.WriteLine("\t\t\t.children = meta_children,");
 			writer.WriteLine("\t\t\t.children_size = sizeof (meta_children) / sizeof (CdnRawcChildMeta),");
+			writer.WriteLine();
+			writer.WriteLine("\t\t\t.templates = meta_templates,");
+			writer.WriteLine("\t\t\t.templates_size = sizeof (meta_templates) / sizeof (CdnRawcTemplateMeta),");
 			writer.WriteLine("\t\t},");
 
 			writer.WriteLine("\t};");
