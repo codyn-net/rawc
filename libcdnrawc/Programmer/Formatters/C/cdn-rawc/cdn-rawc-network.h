@@ -57,8 +57,18 @@ CdnRawcDimension const *
                                              void           *data,
                                              uint32_t        i);
 
+#ifdef ENABLE_META_LOOKUP
 int32_t cdn_rawc_network_find_variable      (CdnRawcNetwork *network,
                                              char const     *name);
+
+uint32_t cdn_rawc_network_meta_find_variable (CdnRawcNetwork *network,
+                                              uint32_t        root,
+                                              char const     *name);
+
+uint32_t cdn_rawc_network_meta_find_node     (CdnRawcNetwork *network,
+                                              uint32_t        root,
+                                              char const     *name);
+#endif
 
 uint8_t cdn_rawc_network_get_type_size      (CdnRawcNetwork *network);
 uint32_t cdn_rawc_network_get_data_size     (CdnRawcNetwork *network);

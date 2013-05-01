@@ -106,7 +106,6 @@ cdn_rawc_network_get_nth (CdnRawcNetwork *network,
 
 CdnRawcDimension const *
 cdn_rawc_network_get_dimension (CdnRawcNetwork *network,
-                                void           *data,
                                 uint32_t        i)
 {
 	return network->get_dimension (network->dimensions, i);
@@ -130,6 +129,7 @@ cdn_rawc_network_get_type_size (CdnRawcNetwork *network)
 	return network->type_size;
 }
 
+#ifdef ENABLE_META_LOOKUP
 static uint8_t
 compare_names (char const *name, char const *cmpto, int len)
 {
@@ -143,37 +143,112 @@ compare_names (char const *name, char const *cmpto, int len)
 	}
 }
 
-int32_t
-cdn_rawc_network_find_variable (CdnRawcNetwork *network,
-                                char const     *name)
+static char const *
+skip_ws (char const *s)
 {
-	uint32_t nodepos;
+	while (s && *s && isspace (*s))
+	{
+		++s;
+	}
 
-	nodepos = 1;
+	return s;
+}
 
+static char const *
+extract_next_part (char const  *s,
+                   int         *len,
+                   char const **next_s)
+{
+	char const *ret = NULL;
+
+	s = skip_ws (s);
+
+	*len = 0;
+	*next_s = NULL;
+
+	if (!*s)
+	{
+		return NULL;
+	}
+
+	if (*s == '"')
+	{
+		ret = ++s;
+
+		// go until the next double quote
+		while (*s && *s != '"')
+		{
+			++s;
+		}
+
+		if (!*s)
+		{
+			return NULL;
+		}
+
+		*len = s - ret - 1;
+
+		// Skip over the double quote
+		++s;
+	}
+	else
+	{
+		ret = s;
+
+		// Read until the next dot or space
+		while (*s && *s != '.' && isspace (*s))
+		{
+			++s;
+		}
+
+		*len = s - ret - 1;
+	}
+
+	s = skip_ws (s);
+
+	if (*s == '.')
+	{
+		// Next start
+		*next_s = s + 1;
+	}
+	else if (*s)
+	{
+		// Error
+		*len = 0;
+		return NULL;
+	}
+
+	return ret;
+}
+
+static uint32_t
+rawc_find_child (CdnRawcNetwork *network,
+                 uint32_t        root,
+                 char const     *name)
+{
 	// Only support simple . syntax
 	do
 	{
-		char const *dotpos;
+		char const *next_name;
 		int len = -1;
 		uint32_t child;
 
 		// Check if we are still in range
-		if (nodepos >= network->meta.nodes_size)
+		if (root >= network->meta.nodes_size)
 		{
 			return 0;
 		}
 
-		dotpos = strchr (name, '.');
+		name = extract_next_part (name, &len, &next_name);
 
-		if (dotpos != NULL)
+		if (name == NULL)
 		{
-			len = name - dotpos;
+			return 0;
 		}
 
-		// Lookup the corresponding child in 'nodepos'
-		child = network->meta.nodes[nodepos].first_child;
-		nodepos = 0;
+		// Lookup the corresponding child in 'root'
+		child = network->meta.nodes[root].first_child;
+		root = 0;
 
 		while (child > 0)
 		{
@@ -185,7 +260,12 @@ cdn_rawc_network_find_variable (CdnRawcNetwork *network,
 			{
 				if (compare_names (name, network->meta.nodes[cmeta->index].name, len))
 				{
-					nodepos = cmeta->index;
+					if (!next_name)
+					{
+						return child;
+					}
+
+					root = cmeta->index;
 					break;
 				}
 			}
@@ -193,19 +273,84 @@ cdn_rawc_network_find_variable (CdnRawcNetwork *network,
 			{
 				if (compare_names (name, network->meta.states[cmeta->index].name, len))
 				{
-					if (len == -1)
+					// Check for the last item
+					if (!next_name)
 					{
-						return (int32_t)network->meta.states[cmeta->index].index;
+						return child;
 					}
 				}
 			}
 
 			child = cmeta->next;
 		}
+
+		if (!next_name)
+		{
+			break;
+		}
+
+		name = next_name;
 	} while (1);
 
 	return 0;
 }
+
+int32_t
+cdn_rawc_network_find_variable (CdnRawcNetwork *network,
+                                char const     *name)
+{
+	uint32_t child;
+
+	child = rawc_find_child (network, 1, name);
+
+	if (child == 0 || network->meta.children[child].is_node)
+	{
+		return -1;
+	}
+	else
+	{
+		return (int32_t)network->meta.states[network->meta.children[child].index].index;
+	}
+}
+
+uint32_t
+cdn_rawc_network_meta_find_variable (CdnRawcNetwork *network,
+                                     uint32_t        root,
+                                     char const     *name)
+{
+	uint32_t child;
+
+	child = rawc_find_child (network, 1, name);
+
+	if (child == 0 || network->meta.children[child].is_node)
+	{
+		return 0;
+	}
+	else
+	{
+		return network->meta.children[child].index;
+	}
+}
+
+uint32_t
+cdn_rawc_network_meta_find_node (CdnRawcNetwork *network,
+                                 uint32_t        root,
+                                 char const     *name)
+{
+	uint32_t child;
+
+	child = rawc_find_child (network, 1, name);
+
+	if (child == 0 || !network->meta.children[child].is_node)
+	{
+		return 0;
+	}
+	else
+	{
+		return network->meta.children[child].index;
+	}
+}
+#endif
 
 #ifdef ENABLE_MALLOC
 void *
