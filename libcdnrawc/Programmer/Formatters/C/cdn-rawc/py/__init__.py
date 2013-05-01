@@ -6,7 +6,22 @@ valuetypeptr = ctypes.POINTER(valuetype)
 # Bind data structures
 class CdnRawcRange(ctypes.Structure):
     _fields_ = [('start', ctypes.c_uint32),
-                ('end', ctypes.c_uint32)]
+                ('end', ctypes.c_uint32),
+                ('stride', ctypes.c_uint32)]
+
+class CdnRawcDimension(ctypes.Structure):
+    _fields_ = [('rows', ctypes.c_uint16),
+                ('columns', ctypes.c_uint16)]
+
+    @property
+    def size(self):
+        return self.rows * self.columns
+
+    def __repr__(self):
+        return '<{0} instance at 0x{1:x}, .rows={2}, .columns={3}>'.format(self.__class__.__name__,
+                                                                           id(self),
+                                                                           self.rows,
+                                                                           self.columns)
 
 class CdnRawcNetwork(ctypes.Structure):
     pass
@@ -14,10 +29,54 @@ class CdnRawcNetwork(ctypes.Structure):
 class CdnRawcIntegrator(ctypes.Structure):
     pass
 
+class CdnRawcStateMeta(ctypes.Structure):
+    _fields_ = [
+        ('name', ctypes.c_char_p),
+        ('parent', ctypes.c_uint32),
+        ('index', ctypes.c_uint32),
+    ]
+
+class CdnRawcNodeMeta(ctypes.Structure):
+    _fields_ = [
+        ('name', ctypes.c_char_p),
+        ('parent', ctypes.c_uint32),
+        ('first_child', ctypes.c_uint32),
+        ('first_template', ctypes.c_uint32),
+    ]
+
+class CdnRawcChildMeta(ctypes.Structure):
+    _fields_ = [
+        ('parent', ctypes.c_uint32),
+        ('is_node', ctypes.c_uint8),
+        ('index', ctypes.c_uint32),
+        ('next', ctypes.c_uint32),
+    ]
+
+class CdnRawcTemplateMeta(ctypes.Structure):
+    _fields_ = [
+        ('name', ctypes.c_char_p),
+        ('parent', ctypes.c_uint32),
+        ('next', ctypes.c_uint32),
+    ]
+
 class CdnRawcNetworkMeta(ctypes.Structure):
-    _fields_ = [('t', ctypes.c_uint32),
-                ('dt', ctypes.c_uint32),
-                ('name', ctypes.c_char_p)]
+    _fields_ = [
+        ('t', ctypes.c_uint32),
+        ('dt', ctypes.c_uint32),
+        ('name', ctypes.c_char_p),
+
+        ('states', ctypes.POINTER(CdnRawcStateMeta)),
+        ('states_size', ctypes.c_uint32),
+
+        ('nodes', ctypes.POINTER(CdnRawcNodeMeta)),
+        ('nodes_size', ctypes.c_uint32),
+
+        ('children', ctypes.POINTER(CdnRawcChildMeta)),
+        ('children_size', ctypes.c_uint32),
+
+        ('templates', ctypes.POINTER(CdnRawcTemplateMeta)),
+        ('templates_size', ctypes.c_uint32),
+    ]
 
 # Callback signatures
 NetworkFuncT = ctypes.CFUNCTYPE(None, ctypes.c_void_p, valuetype)
@@ -48,12 +107,17 @@ CdnRawcNetwork._fields_ = [('prepare', NetworkFuncT),
                            ('get_events_active', ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p, ctypes.c_uint32)),
                            ('get_events_value', ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32)),
 
+                           ('get_dimension', ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.POINTER(CdnRawcDimension), ctypes.c_uint32)),
+
                            ('states', CdnRawcRange),
                            ('derivatives', CdnRawcRange),
                            ('event_values', CdnRawcRange),
 
-                           ('data_size', ctypes.c_uint32),
+                           ('dimensions', ctypes.c_void_p),
+
                            ('size', ctypes.c_uint32),
+                           ('data_size', ctypes.c_uint32),
+                           ('data_count', ctypes.c_uint32),
 
                            ('event_refinement', ctypes.c_uint8),
                            ('type_size', ctypes.c_uint8),
@@ -140,12 +204,34 @@ class API:
         self.cdn_rawc_network_get_derivatives.argtypes = [ctypes.POINTER(CdnRawcNetwork),
                                                           ctypes.c_void_p]
 
+        self.cdn_rawc_network_get_dimension = lib.cdn_rawc_network_get_dimension
+        self.cdn_rawc_network_get_dimension.restype = ctypes.POINTER(CdnRawcDimension)
+        self.cdn_rawc_network_get_dimension.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                          ctypes.c_uint32]
+
         self.cdn_rawc_network_alloc = lib.cdn_rawc_network_alloc
         self.cdn_rawc_network_alloc.restype = ctypes.c_void_p
         self.cdn_rawc_network_alloc.argtypes = [ctypes.POINTER(CdnRawcNetwork), ctypes.c_uint32]
 
         self.cdn_rawc_network_free = lib.cdn_rawc_network_free
-        self.cdn_rawc_network_alloc.argtypes = [ctypes.c_void_p]
+        self.cdn_rawc_network_free.argtypes = [ctypes.c_void_p]
+
+        self.cdn_rawc_network_find_variable = lib.cdn_rawc_network_find_variable
+        self.cdn_rawc_network_find_variable.restype = ctypes.c_int32
+        self.cdn_rawc_network_find_variable.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                        ctypes.c_char_p]
+
+        self.cdn_rawc_network_meta_find_variable = lib.cdn_rawc_network_meta_find_variable
+        self.cdn_rawc_network_meta_find_variable.restype = ctypes.c_uint32
+        self.cdn_rawc_network_meta_find_variable.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                             ctypes.c_uint32,
+                                                             ctypes.c_char_p]
+
+        self.cdn_rawc_network_meta_find_node = lib.cdn_rawc_network_meta_find_node
+        self.cdn_rawc_network_meta_find_node.restype = ctypes.c_uint32
+        self.cdn_rawc_network_meta_find_node.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                         ctypes.c_uint32,
+                                                         ctypes.c_char_p]
 
         # Network specific API
         # Get the network spec for this network
@@ -319,6 +405,9 @@ class Network:
                                                self.storage,
                                                self.t,
                                                dt)
+
+    def get_dimension(self, i):
+        return self.api.cdn_rawc_network_get_dimension(self.network, i).contents
 
 class Integrator:
     def __init__(self, integrator):
