@@ -2,6 +2,7 @@
 CC = gcc
 AR = ar
 RANLIB = ranlib
+LIBTOOL = libtool
 
 UNAME = $(shell uname)
 
@@ -102,9 +103,7 @@ shared: lib${name}.$(SHARED_EXT)
 
 lib${name}.a: $(STATIC_OBJECTS)
 	$(call vecho,AR,$@) 							\
-	([ ! -z "$(ST_LIBS)" ] && cp $(ST_LIBS) $@);	\
-	$(AR) r $@ $^ 2>/dev/null && 					\
-	$(RANLIB) $@
+	$(LIBTOOL) -static -o $@ $^ $(ST_LIBS) 2>/dev/null
 
 lib${name}.$(SHARED_EXT): $(SHARED_OBJECTS)
 	$(call vecho,CC,$@) $(CC) -shared -o $@ $^ $(SH_LIBS) $(${NAME}_LDFLAGS) $(LDFLAGS)
