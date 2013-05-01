@@ -54,7 +54,6 @@ void *cdn_rawc_network_get_nth              (CdnRawcNetwork *network,
 
 CdnRawcDimension const *
       cdn_rawc_network_get_dimension        (CdnRawcNetwork *network,
-                                             void           *data,
                                              uint32_t        i);
 
 #ifdef ENABLE_META_LOOKUP
