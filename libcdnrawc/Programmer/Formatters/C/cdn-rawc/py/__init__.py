@@ -409,6 +409,15 @@ class Network:
     def get_dimension(self, i):
         return self.api.cdn_rawc_network_get_dimension(self.network, i).contents
 
+    def find_variable(self, name):
+        return self.api.cdn_rawc_network_find_variable(self.network, name)
+
+    def find_meta_variable(self, name, rootid=1):
+        return self.api.cdn_rawc_network_find_meta_variable(self.network, rootid, name)
+
+    def find_meta_node(self, name, rootid=1):
+        return self.api.cdn_rawc_network_find_meta_node(self.network, rootid, name)
+
 class Integrator:
     def __init__(self, integrator):
         self.integrator = integrator
