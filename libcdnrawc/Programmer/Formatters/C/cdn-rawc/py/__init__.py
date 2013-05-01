@@ -266,9 +266,15 @@ class MetaVariable:
         self.name = None
         self.parent = None
         self.index = 0
+        self._dimension = None
 
     @property
-    def value(self):
+    def dimension(self):
+        if self._dimension is None:
+            self._dimension = self._network.get_dimension(self.index)
+
+        return self._dimension
+
         start = self.index
 
         dim = self._network.get_dimension(start)
