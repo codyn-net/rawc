@@ -537,7 +537,7 @@ cdn_math_transpose_v_builtin (ValueType *ret,
 
 		for (c = 0; c < columns; ++c)
 		{{
-			ret[ptr] = x0[i++];
+			ret[i++] = x0[ptr];
 			ptr += rows;
 		}}
 	}}
