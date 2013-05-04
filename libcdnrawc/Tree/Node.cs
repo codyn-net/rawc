@@ -87,18 +87,53 @@ namespace Cdn.RawC.Tree
 		private void Constructed()
 		{
 			InstructionCustomFunction icfunc = d_instruction as InstructionCustomFunction;
+			InstructionCustomOperator icop = d_instruction as InstructionCustomOperator;
+
+			Cdn.Function f = null;
 
 			if (icfunc != null)
 			{
-				var args = icfunc.Function.Arguments;
-				int offset = 0;
+				f = icfunc.Function;
+			}
+			else if (icop != null)
+			{
+				f = icop.Operator.PrimaryFunction;
+			}
 
-				for (int i = 0; i < args.Length; ++i)
+			if (f == null)
+			{
+				return;
+			}
+
+			var args = f.Arguments;
+			int offset = 0;
+
+			for (int i = 0; i < args.Length; ++i)
+			{
+				if (args[i].Unused)
 				{
-					if (args[i].Unused)
+					d_children.RemoveAt(i - offset);
+					++offset;
+				}
+			}
+		}
+
+		public IEnumerable<Cdn.Instruction> Instructions
+		{
+			get
+			{
+				Queue<Node> q = new Queue<Node>();
+				q.Enqueue(this);
+
+				while (q.Count > 0)
+				{
+					var n = q.Dequeue();
+
+					yield return n.Instruction;
+
+					foreach (var c in n.Children)
 					{
-						d_children.RemoveAt(i - offset);
-						++offset;
+						q.Enqueue(c);
 					}
 				}
 			}
@@ -826,6 +861,7 @@ namespace Cdn.RawC.Tree
 			InstructionNumber inum;
 			InstructionRand irand;
 			InstructionIndex iindex;
+			InstructionMatrix imat;
 
 			if (InstructionIs(inst, out icusf))
 			{
@@ -907,6 +943,11 @@ namespace Cdn.RawC.Tree
 					var idx = Array.ConvertAll<int, string>(indices, a => a.ToString());
 					yield return InstructionIdentifier(String.Format("index_m[{0}]", String.Join(",", idx)), inst);
 				}
+			}
+			else if (InstructionIs(inst, out imat))
+			{
+				var smanip = imat.GetStackManipulation();
+				yield return InstructionIdentifier(String.Format("mat_{0}_{1}", smanip.Push.Dimension.Rows, smanip.Push.Dimension.Columns), inst);
 			}
 			else if (strict)
 			{
