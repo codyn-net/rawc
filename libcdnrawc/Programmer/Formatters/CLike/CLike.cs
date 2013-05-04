@@ -123,15 +123,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 							firstrand = item.Index;
 						}
 
-						item.Alias = string.Format("{0} /* RAND_{1} */", item.Index, item.Index - firstrand);
+						item.Alias = string.Format("{0} /* RAND_{1} */", item.DataIndex, item.Index - firstrand);
 					}
 					else if ((item.Type & DataTable.DataItem.Flags.Constant) != 0)
 					{
-						item.Alias = string.Format("{0} /* {1} */", item.Index, item.Key);
+						item.Alias = string.Format("{0} /* {1} */", item.DataIndex, item.Key);
 					}
 					else if (prop != null)
 					{
-						item.Alias = string.Format("{0} /* {1} */", item.Index, PrettyFullName(prop));
+						item.Alias = string.Format("{0} /* {1} */", item.DataIndex, PrettyFullName(prop));
 					}
 
 					continue;
@@ -176,7 +176,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 				unique[enumname] = true;
 
-				d_enumMap.Add(new EnumItem(prop, shortname, enumname, comment, item.Index.ToString()));
+				d_enumMap.Add(new EnumItem(prop, shortname, enumname, comment, item.DataIndex.ToString()));
 			}
 		}
 
