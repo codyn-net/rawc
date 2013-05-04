@@ -774,7 +774,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					// at the tmp + argi location
 					if (argi == 0)
 					{
-						args[i] = TranslateAssign(context, child, String.Format("{0}", tmp));
+						args[i] = TranslateAssign(context, child, tmp);
 					}
 					else if (context.SupportsPointers)
 					{
