@@ -1,4 +1,10 @@
-f(q, dq) = "dq"
-
 # Test automatic purging of unused function arguments
-a = "f(1.3, 5.2)" | out
+f1(q, dq) = "dq"
+a1 = "f(1.3, 5.2)" | out
+
+# Test multidim mapping
+f2(q, dq) = "[dq; 0; 0; 0]"
+a2 = "f(0, [1; 2; 3])" | out
+
+f3(q, dq) = "[dq; 0; 0; 0]"
+a3 = "f(0, 2)" | out
