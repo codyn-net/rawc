@@ -2,7 +2,14 @@
 
 unset MAKEFLAGS
 
-binary=$srcdir/../bin/Debug/cdn-rawc.exe
+monoexec=
+
+if [ ! -z "$CDN_RAWC" ]; then
+	binary="$(which $CDN_RAWC)"
+else
+	binary=$srcdir/../bin/Debug/cdn-rawc.exe
+	monoexec=mono
+fi
 
 if [ ! -f "$binary" ];
 then
@@ -16,7 +23,7 @@ then
 fi
 
 for f in $files; do
-	mono "$binary" --validate -q "$srcdir/$f"
+	$monoexec "$binary" --validate -q "$srcdir/$f"
 	status=$?
 
 	if [ $status -ne 0 ]; then
