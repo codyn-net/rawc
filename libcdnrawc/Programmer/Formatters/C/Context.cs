@@ -223,6 +223,11 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return name;
 		}
 
+		public override string TranslateNumber(double number)
+		{
+			return NumberTranslator.Translate(number, this);
+		}
+
 		public override void TranslateFunctionDimensionArguments(InstructionFunction instruction, List<string> args, int cnt)
 		{
 			switch ((Cdn.MathFunctionType)instruction.Id)

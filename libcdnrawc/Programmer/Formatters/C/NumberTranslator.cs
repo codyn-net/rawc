@@ -43,7 +43,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			}
 			else
 			{
-				return number.ToString("0." + new String('0', precision));
+				return number.ToString("R");
 			}
 		}
 
@@ -125,7 +125,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				return "-M_PI";
 			}
 
-			string val = Translate(number, 15, context);
+			string val = Translate(number, 20, context);
 
 			if (val.IndexOf('.') == -1)
 			{

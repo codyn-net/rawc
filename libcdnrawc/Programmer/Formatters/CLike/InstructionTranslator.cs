@@ -204,16 +204,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 		protected virtual string Translate(InstructionNumber instruction, Context context)
 		{
-			var val = instruction.Value.ToString("0." + new String('0', 15));
-
-			val = val.TrimEnd('0');
-
-			if (val.EndsWith("."))
-			{
-				val += "0";
-			}
-
-			return val;
+			return context.TranslateNumber(instruction.Value);
 		}
 
 		protected virtual string TranslateOperator(InstructionFunction instruction, Context context)

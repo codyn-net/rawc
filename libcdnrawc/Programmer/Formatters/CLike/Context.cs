@@ -717,7 +717,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 		public virtual string TranslateNumber(double number)
 		{
-			var val = number.ToString("0." + new String('0', 15));
+			var val = number.ToString("R");
 
 			val = val.TrimEnd('0');
 
