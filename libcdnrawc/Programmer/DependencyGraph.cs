@@ -519,6 +519,7 @@ namespace Cdn.RawC.Programmer
 			InstructionVariable variable;
 			InstructionRand rand;
 			InstructionCustomOperator cusop;
+			InstructionCustomFunction cusfn;
 
 			if (As(instruction, out variable))
 			{
@@ -528,8 +529,19 @@ namespace Cdn.RawC.Programmer
 			{
 				AddDependency(node, rand, null);
 			}
+			else if (As(instruction, out cusfn))
+			{
+				Resolve(node, cusfn.Function.Expression, seen, mapping);
+			}
 			else if (As(instruction, out cusop))
 			{
+				var fn = cusop.Operator.PrimaryFunction;
+
+				if (fn != null)
+				{
+					Resolve(node, fn.Expression, seen, mapping);
+				}
+
 				AddDependency(node, cusop, null);
 			}
 		}
