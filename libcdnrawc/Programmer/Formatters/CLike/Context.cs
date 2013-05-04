@@ -100,7 +100,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			int size = node.Dimension.Size();
 
-			for (int i = 0; i < d_tempstorage.Count; ++i)
+			/* This code would reuse temporaries which are no
+			 * longer needed, however this doesn't work for
+			 * function arguments which were assumed to be
+			 * evaluated in order (C doesn't guarantee this)
+			 */
+			/*for (int i = 0; i < d_tempstorage.Count; ++i)
 			{
 				var tmp = d_tempstorage[i];
 
@@ -120,7 +125,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				d_tempstack.Peek().Add(tmp);
 
 				return String.Format("tmp{0}", i);
-			}
+			}*/
 
 			var idx = d_tempstorage.Count;
 
