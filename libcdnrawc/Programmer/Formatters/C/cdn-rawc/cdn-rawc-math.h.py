@@ -525,20 +525,20 @@ cdn_math_transpose_v_builtin (ValueType *ret,
                               uint32_t   rows,
                               uint32_t   columns)
 {{
-	uint32_t r;
+	uint32_t c;
 	uint32_t i = 0;
 	uint32_t ptr = 0;
 
-	for (r = 0; r < rows; ++r)
+	for (c = 0; c < columns; ++c)
 	{{
-		uint32_t c;
+		uint32_t r;
 
-		ptr = r;
+		ptr = c;
 
-		for (c = 0; c < columns; ++c)
+		for (r = 0; r < rows; ++r)
 		{{
-			ret[i++] = x0[ptr];
-			ptr += rows;
+			ret[ptr] = x0[i++];
+			ptr += columns;
 		}}
 	}}
 
