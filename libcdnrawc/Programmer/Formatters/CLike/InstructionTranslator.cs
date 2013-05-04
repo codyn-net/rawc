@@ -110,6 +110,17 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			if (context.TryMapping(context.Node, out ret))
 			{
+				if (!context.Node.Dimension.IsOne)
+				{
+					var pret = context.PeekRet();
+
+					if (pret != null)
+					{
+						// Do a memcpy
+						ret = context.MemCpy(pret, "0", ret, "0", "ValueType", context.Node.Dimension.Size());
+					}
+				}
+
 				return ret;
 			}
 
