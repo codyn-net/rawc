@@ -600,7 +600,7 @@ static ValueType *cdn_math_linsolve_v_builtin (ValueType *ret,
                                                ValueType *b,
                                                uint32_t   RA,
                                                uint32_t   CB,
-                                               int32_t   *ipiv);
+                                               int64_t   *ipiv);
 
 #ifndef ENABLE_LAPACK
 static ValueType *
@@ -609,7 +609,7 @@ cdn_math_linsolve_v_no_lapack_builtin (ValueType *ret,
                                        ValueType *b,
                                        uint32_t   RA,
                                        uint32_t   CB,
-                                       int32_t   *ipiv)
+                                       int64_t   *ipiv)
 {{
 	#error("The linsolve function is not supported without LAPACK");
 }}
@@ -628,14 +628,14 @@ cdn_math_linsolve_v_lapack_builtin (ValueType *ret,
                                     ValueType *b,
                                     uint32_t   RA,
                                     uint32_t   CB,
-                                    int32_t   *ipiv)
+                                    int64_t   *ipiv)
 {{
 	LP_ValueType *lpA = A;
 	LP_ValueType *lpb = ret;
 	LP_int lpRA = RA;
 	LP_int lpCB = CB;
 	LP_int info;
-	LP_int *lpipiv = ipiv;
+	LP_int *lpipiv = (LP_int *)ipiv;
 
 	memcpy (ret, b, sizeof (ValueType) * RA * CB);
 
@@ -658,7 +658,7 @@ cdn_math_linsolve_v_builtin (ValueType *ret,
                              ValueType *b,
                              uint32_t   RA,
                              uint32_t   CB,
-                             int32_t   *ipiv)
+                             int64_t   *ipiv)
 {{
 #ifdef ENABLE_LAPACK
 	return cdn_math_linsolve_v_lapack_builtin (ret, A, b, RA, CB, ipiv);
@@ -677,7 +677,7 @@ def print_inverse_v():
 static ValueType *cdn_math_inverse_v_builtin (ValueType *ret,
                                               ValueType *A,
                                               uint32_t   RA,
-                                              int32_t   *ipiv,
+                                              int64_t   *ipiv,
                                               ValueType *work,
                                               int32_t    lwork);
 
@@ -686,7 +686,7 @@ static ValueType *
 cdn_math_inverse_v_no_lapack_builtin (ValueType *ret,
                                       ValueType *A,
                                       uint32_t   RA,
-                                      int32_t   *ipiv,
+                                      int64_t   *ipiv,
                                       ValueType *work,
                                       int32_t    lwork)
 {{
@@ -701,13 +701,13 @@ static ValueType *
 cdn_math_inverse_v_lapack_builtin (ValueType *ret,
                                    ValueType *A,
                                    uint32_t   RA,
-                                   int32_t   *ipiv,
+                                   int64_t   *ipiv,
                                    ValueType *work,
                                    int32_t    lwork)
 {{
 	LP_ValueType *lpA = ret;
 	LP_int lpRA = RA;
-	LP_int *lpipiv = ipiv;
+	LP_int *lpipiv = (LP_int *)ipiv;
 	LP_ValueType *lpwork = work;
 	LP_int lplwork = lwork;
 	LP_int info;
@@ -737,7 +737,7 @@ static ValueType *
 cdn_math_inverse_v_builtin (ValueType *ret,
                              ValueType *A,
                              uint32_t   RA,
-                             int32_t   *ipiv,
+                             int64_t   *ipiv,
                              ValueType *work,
                              int32_t    lwork)
 {{
@@ -765,7 +765,7 @@ static ValueType *cdn_math_pseudoinverse_v_builtin (ValueType *ret,
                                                      ValueType *S,
                                                      ValueType *work,
                                                      uint32_t   lwork,
-                                                     int32_t   *iwork);
+                                                     int64_t   *iwork);
 
 #ifndef ENABLE_LAPACK
 static ValueType *
@@ -778,7 +778,7 @@ cdn_math_pseudoinverse_v_no_lapack_builtin (ValueType *ret,
                                              ValueType *S,
                                              ValueType *work,
                                              uint32_t   lwork,
-                                             int32_t   *iwork)
+                                             int64_t   *iwork)
 {{
 	#error("The pinv function is not supported without LAPACK");
 }}
@@ -796,7 +796,7 @@ cdn_math_pseudoinverse_v_lapack_builtin (ValueType *ret,
                                           ValueType *S,
                                           ValueType *work,
                                           uint32_t   lwork,
-                                          int32_t   *iwork)
+                                          int64_t   *iwork)
 {{
 	LP_ValueType *lpA     = A;
 	LP_int        lpRA    = RA;
@@ -808,7 +808,7 @@ cdn_math_pseudoinverse_v_lapack_builtin (ValueType *ret,
 	LP_int        rank;
 	LP_ValueType *lpwork  = work;
 	LP_int        lplwork = lwork;
-	LP_int       *lpiwork = iwork;
+	LP_int       *lpiwork = (LP_int *)iwork;
 	LP_int        info;
 	uint32_t      i;
 	ValueType    *retptr;
@@ -853,7 +853,7 @@ cdn_math_pseudoinverse_v_builtin (ValueType *ret,
                                   ValueType *S,
                                   ValueType *work,
                                   uint32_t   lwork,
-                                  int32_t   *iwork)
+                                  int64_t   *iwork)
 {{
 #ifdef ENABLE_LAPACK
 	return cdn_math_pseudoinverse_v_lapack_builtin (ret, A, RA, CA, B, RB, S, work, lwork, iwork);

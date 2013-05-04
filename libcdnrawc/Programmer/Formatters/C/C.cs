@@ -835,14 +835,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					writer.WriteLine("     uint32_t   RA,");
 					writer.WriteLine("     uint32_t   CB)");
 					writer.WriteLine("{");
-					writer.WriteLine("\tint32_t ipiv[{0}];", ws.WorkSize[0]);
+					writer.WriteLine("\tint64_t ipiv[{0}];", ws.WorkSize[0]);
 					writer.WriteLine();
 					writer.WriteLine("\treturn CDN_MATH_LINSOLVE_V(ret, A, b, RA, CB, ipiv);");
 					break;
 				case Cdn.MathFunctionType.Inverse:
 					writer.WriteLine("     ValueType *A)");
 					writer.WriteLine("{");
-					writer.WriteLine("\tint32_t ipiv[{0}];", ws.Dimension.Rows);
+					writer.WriteLine("\tint64_t ipiv[{0}];", ws.Dimension.Rows);
 					writer.WriteLine("\tValueType work[{0}];", ws.WorkSize[0]);
 					writer.WriteLine();
 					writer.WriteLine("\treturn CDN_MATH_INVERSE_V(ret, A, {0}, ipiv, work, {1});", ws.Dimension.Rows, ws.WorkSize[0]);
@@ -858,7 +858,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					writer.WriteLine("\tValueType b[{0}] = {1};", maxdim * maxdim, Eye(maxdim));
 					writer.WriteLine("\tValueType s[{0}];", mindim);
 					writer.WriteLine("\tValueType work[{0}];", ws.WorkSize[0]);
-					writer.WriteLine("\tint32_t   iwork[{0}];", ws.WorkSize[1]);
+					writer.WriteLine("\tint64_t   iwork[{0}];", ws.WorkSize[1]);
 					writer.WriteLine();
 					writer.WriteLine("\tmemcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
 					writer.WriteLine("\treturn CDN_MATH_PSEUDOINVERSE_V(ret, Acp, {0}, {1}, b, {2}, s, work, {3}, iwork);",
