@@ -397,11 +397,30 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			switch (type)
 			{
+			case MathFunctionType.Atan2:
+			case MathFunctionType.Pow:
+			case MathFunctionType.Csign:
+			case MathFunctionType.Hypot:
+			case MathFunctionType.Sum:
+			case MathFunctionType.Product:
+			case MathFunctionType.Plus:
+			case MathFunctionType.Modulo:
+			case MathFunctionType.Emultiply:
+			case MathFunctionType.Divide:
+			case MathFunctionType.Minus:
+			case MathFunctionType.Less:
+			case MathFunctionType.LessOrEqual:
+			case MathFunctionType.GreaterOrEqual:
+			case MathFunctionType.Greater:
+			case MathFunctionType.Equal:
+			case MathFunctionType.And:
+			case MathFunctionType.Or:
+			case MathFunctionType.Nequal:
+			case MathFunctionType.Negate:
 			case MathFunctionType.Abs:
 			case MathFunctionType.Acos:
 			case MathFunctionType.Asin:
 			case MathFunctionType.Atan:
-			case MathFunctionType.Atan2:
 			case MathFunctionType.Ceil:
 			case MathFunctionType.Cos:
 			case MathFunctionType.Cosh:
@@ -409,14 +428,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Exp2:
 			case MathFunctionType.Erf:
 			case MathFunctionType.Floor:
-			case MathFunctionType.Hypot:
 			case MathFunctionType.Invsqrt:
 			case MathFunctionType.Lerp:
 			case MathFunctionType.Ln:
 			case MathFunctionType.Log10:
 			case MathFunctionType.Max:
 			case MathFunctionType.Min:
-			case MathFunctionType.Pow:
 			case MathFunctionType.Round:
 			case MathFunctionType.Sin:
 			case MathFunctionType.Sinh:
@@ -426,21 +443,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Tanh:
 			case MathFunctionType.Clip:
 			case MathFunctionType.Cycle:
-			case MathFunctionType.Modulo:
-			case MathFunctionType.Plus:
-			case MathFunctionType.Emultiply:
-			case MathFunctionType.Divide:
-			case MathFunctionType.Minus:
-			case MathFunctionType.Negate:
-			case MathFunctionType.Less:
-			case MathFunctionType.LessOrEqual:
-			case MathFunctionType.GreaterOrEqual:
-			case MathFunctionType.Greater:
-			case MathFunctionType.Equal:
-			case MathFunctionType.Nequal:
-			case MathFunctionType.Csign:
-			case MathFunctionType.Sum:
-			case MathFunctionType.Product:
 			case MathFunctionType.Transpose:
 			case MathFunctionType.Sign:
 			case MathFunctionType.Triu:
@@ -500,10 +502,21 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			if (node.Children.Count == 2)
 			{
-				var n1 = node.Children[0].Dimension.IsOne;
-				var n2 = node.Children[1].Dimension.IsOne;
+				var d1 = node.Children[0].Dimension;
+				var d2 = node.Children[1].Dimension;
 
-				return String.Format("{0}_{1}_{2}", val, n1 ? "1" : "m", n2 ? "1" : "m");
+				if ((d1.Columns == 1 || d2.Columns == 1) && d1.Rows == d2.Rows && d1.Rows != 1 && d1.Columns != d2.Columns)
+				{
+					return String.Format("{0}_cwise_{1}", val, d1.Columns == 1 ? "1_m" : "m_1");
+				}
+				else if ((d1.Rows == 1 || d2.Rows == 1) && d1.Columns == d2.Columns && d1.Columns != 1 && d1.Rows != d2.Rows)
+				{
+					return String.Format("{0}_rwise_{1}", val, d1.Rows == 1 ? "1_m" : "m_1");
+				}
+				else
+				{
+					return String.Format("{0}_{1}_{2}", val, d1.IsOne ? "1" : "m", d2.IsOne ? "1" : "m");
+				}
 			}
 			else if (node.Children.Count == 3)
 			{
@@ -830,6 +843,25 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Index:
 				break;
 			default:
+				if (Node.Children.Count == 2)
+				{
+					var d1 = Node.Children[0].Dimension;
+					var d2 = Node.Children[1].Dimension;
+
+					if ((d1.Columns == 1 || d2.Columns == 1) && d1.Rows == d2.Rows && d1.Rows != 1 && d1.Columns != d2.Columns)
+					{
+						args.Add(d1.Rows.ToString());
+						args.Add((d1.Columns == 1 ? d2.Columns : d1.Columns).ToString());
+						break;
+					}
+					else if ((d1.Rows == 1 || d2.Rows == 1) && d1.Columns == d2.Columns && d1.Columns != 1 && d1.Rows != d2.Rows)
+					{
+						args.Add((d1.Rows == 1 ? d2.Rows : d1.Rows).ToString());
+						args.Add(d1.Columns.ToString());
+						break;
+					}
+				}
+
 				args.Add(cnt.ToString());
 				break;
 			}

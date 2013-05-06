@@ -418,6 +418,53 @@ for f in binary_all:
 for f in ternary_all:
     print_ternary_v(f)
 
+def print_operator_v_crwise(f, op, whichwise):
+    combos = {
+        '1m': {'x1': 'x0', 'xm': 'x1'},
+        'm1': {'x1': 'x1', 'xm': 'x0'}
+    }
+
+    whichsel = {
+        'cwise': 'r',
+        'rwise': 'c'
+    }
+
+    for x in combos:
+        name = '_'.join(list(x))
+        conf = combos[x]
+
+        print_guard('{0}_v_{1}_{2}'.format(f, whichwise, name))
+
+        print("""static ValueType *cdn_math_{0}_v_{1}_{2}_builtin (ValueType *ret, ValueType *x0, ValueType *x1, uint32_t rows, uint32_t columns);
+
+static ValueType *
+cdn_math_{0}_v_{1}_{2}_builtin (ValueType *ret, ValueType *x0, ValueType *x1, uint32_t rows, uint32_t columns)
+{{
+	uint32_t c;
+	uint32_t i = 0;
+
+	for (c = 0; c < columns; ++c)
+	{{
+		uint32_t r;
+
+		for (r = 0; r < rows; ++r)
+		{{
+			ret[i] = {3}[i] {4} {5}[{6}];
+			++i;
+		}}
+	}}
+
+	return ret;
+}}""".format(f, whichwise, name, conf['xm'], op, conf['x1'], whichsel[whichwise]))
+
+        print_guard_end('{0}_v_{1}_{2}'.format(f, whichwise, name))
+
+def print_operator_v_cwise(f, op):
+    print_operator_v_crwise(f, op, 'cwise')
+
+def print_operator_v_rwise(f, op):
+    print_operator_v_crwise(f, op, 'rwise')
+
 def print_operator_v(f, n, op):
     tps = {
         'm': 'ValueType *',
@@ -469,6 +516,10 @@ static ValueType *cdn_math_{0}_v{1}_builtin (ValueType *ret, {2}, uint32_t l)
 }}""".format(f, name, ", ".join(args), f.upper(), op.join(cargs)))
 
         print_guard_end('{0}_v{1}'.format(f, name))
+
+    if n == 2:
+        print_operator_v_cwise(f, op)
+        print_operator_v_rwise(f, op)
 
 def print_index_v():
     print_guard('index_v')
