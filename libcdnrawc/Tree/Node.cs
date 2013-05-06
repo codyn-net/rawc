@@ -933,15 +933,33 @@ namespace Cdn.RawC.Tree
 			}
 			else if (InstructionIs(inst, out iindex))
 			{
-				if (iindex.IndexType == Cdn.InstructionIndexType.Offset)
+				switch (iindex.IndexType)
 				{
+				case Cdn.InstructionIndexType.Offset:
 					yield return InstructionIdentifier(String.Format("index_o{0}", iindex.Offset), inst);
+					break;
+				case Cdn.InstructionIndexType.Range:
+					yield return InstructionIdentifier(String.Format("index_r{0}_{1}_{2}", iindex.Range.Start, iindex.Range.Step, iindex.Range.End), inst);
+					break;
+				case Cdn.InstructionIndexType.RangeBlock:
+				{
+					IndexRange rows;
+					IndexRange columns;
+
+					iindex.GetRangeBlock(out rows, out columns);
+				
+					yield return InstructionIdentifier(String.Format("index_rb{0}_{1}_{2}_{3}_{4}_{5}",
+					                                                 rows.Start, rows.Step, rows.End,
+					                                                 columns.Start, columns.Step, columns.End), inst);
 				}
-				else
+					break;
+				case Cdn.InstructionIndexType.Index:
 				{
 					var indices = iindex.Indices;
 					var idx = Array.ConvertAll<int, string>(indices, a => a.ToString());
 					yield return InstructionIdentifier(String.Format("index_m[{0}]", String.Join(",", idx)), inst);
+				}
+					break;
 				}
 			}
 			else if (InstructionIs(inst, out imat))
