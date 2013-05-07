@@ -230,6 +230,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.UnaryMinus:
 				return String.Format("-({0})", Translate(context, 0));
 			case MathFunctionType.Multiply:
+			case MathFunctionType.Emultiply:
 				return SimpleOperator(context, instruction, " * ");
 			case MathFunctionType.Negate:
 				return SimpleOperator(context, instruction, " !");
