@@ -402,6 +402,7 @@ print_func('hypot', 2, 'return hypot(x0, x1);')
 print_func('product', 2, 'return x0 * x1;')
 print_func('sum', 2, 'return x0 + x1;')
 print_func('sqsum', 2, 'return x0 * x0 + x1 * x1;')
+print_func('sqsum_1', 1, 'return x0 * x0;')
 
 print_func('rand', 1, 'return (random () / (ValueType)RAND_MAX);')
 print_func('modulo', 2, """ValueType ans = CDN_MATH_VALUE_TYPE_FUNC(fmod) (x0, x1);

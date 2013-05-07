@@ -363,7 +363,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Sin:
 			case MathFunctionType.Sinh:
 			case MathFunctionType.Sqrt:
-			case MathFunctionType.Sqsum:
 			case MathFunctionType.Tan:
 			case MathFunctionType.Tanh:
 			case MathFunctionType.Clip:
@@ -383,6 +382,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Power:
 				val = "pow";
 				break;
+			case MathFunctionType.Sqsum:
+				if (arguments == 1)
+				{
+					return "sqsum_1";
+				}
+				else
+				{
+					return "sqsum";
+				}
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
