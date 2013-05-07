@@ -447,6 +447,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Sign:
 			case MathFunctionType.Triu:
 			case MathFunctionType.Tril:
+			case MathFunctionType.Csum:
+			case MathFunctionType.Rsum:
 				val = String.Format("{0}_v", name.ToLower());
 				break;
 			case MathFunctionType.Vcat:
@@ -838,6 +840,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					args.Add(cnt.ToString());
 				}
+			}
+				break;
+			case MathFunctionType.Csum:
+			case MathFunctionType.Rsum:
+			{
+				var d = Node.Children[0].Dimension;
+				args.Add(d.Rows.ToString());
+				args.Add(d.Columns.ToString());
 			}
 				break;
 			case MathFunctionType.Index:

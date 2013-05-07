@@ -1421,6 +1421,90 @@ cdn_math_triu_v_builtin (ValueType *ret,
 
     print_guard_end('triu_v')
 
+def print_crsum():
+    print_guard('csum_v')
+
+    print("""
+static ValueType *cdn_math_csum_v_builtin (ValueType *ret,
+                                           ValueType *x0,
+                                           uint32_t   rows,
+                                           uint32_t   columns);
+
+static ValueType *
+cdn_math_csum_v_builtin (ValueType *ret,
+                         ValueType *x0,
+                         uint32_t   rows,
+                         uint32_t   columns)
+{
+	uint32_t c;
+
+	if (columns == 1)
+	{
+		memcpy (ret, x0, sizeof(ValueType) * rows);
+		return ret;
+	}
+
+	for (c = 0; c < columns; ++c)
+	{
+		uint32_t r;
+
+		for (r = 0; r < rows; ++r)
+		{
+			if (c == 0)
+			{
+				ret[r] = *x0++;
+			}
+			else
+			{
+				ret[r] += *x0++;
+			}
+		}
+	}
+
+	return ret;
+}""")
+
+    print_guard_end('csum_v')
+
+    print_guard('rsum_v')
+
+    print("""
+static ValueType *cdn_math_rsum_v_builtin (ValueType *ret,
+                                           ValueType *x0,
+                                           uint32_t   rows,
+                                           uint32_t   columns);
+
+static ValueType *
+cdn_math_rsum_v_builtin (ValueType *ret,
+                         ValueType *x0,
+                         uint32_t   rows,
+                         uint32_t   columns)
+{
+	uint32_t c;
+
+	if (rows == 1)
+	{
+		memcpy (ret, x0, sizeof(ValueType) * columns);
+		return ret;
+	}
+
+	for (c = 0; c < columns; ++c)
+	{
+		uint32_t r;
+
+		ret[c] = 0;
+
+		for (r = 0; r < rows; ++r)
+		{
+			ret[c] += *x0++;
+		}
+	}
+
+	return ret;
+}""")
+
+    print_guard_end('rsum_v')
+
 # Element wise operators
 print_operator_v('uminus', 1, '-')
 print_operator_v('negate', 1, '!')
@@ -1457,6 +1541,7 @@ print_inverse_v()
 print_pseudo_inverse_v()
 print_diag()
 print_tri()
+print_crsum()
 
 print("#endif /* CDN_RAWC_MATH_PROTOS */")
 
