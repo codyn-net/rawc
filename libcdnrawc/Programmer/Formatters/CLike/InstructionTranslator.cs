@@ -228,7 +228,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			case MathFunctionType.Minus:
 				return SimpleOperator(context, instruction, " - ");
 			case MathFunctionType.UnaryMinus:
-				return SimpleOperator(context, instruction, " -");
+				return String.Format("-({0})", Translate(context, 0));
 			case MathFunctionType.Multiply:
 				return SimpleOperator(context, instruction, " * ");
 			case MathFunctionType.Negate:
