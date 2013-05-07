@@ -1,0 +1,17 @@
+include "_defines.cdn"
+
+v1 = "-0.5"
+v2 = "3.2"
+
+"uf_@unary_function"          = "@1(v1)"        | out
+"ufp_@unary_function_positive" = "@1(v2)"    | out
+"uo_@unary_operator"          = "@[op_@1](v1)"     | out
+
+"bf_@binary_function"   = "@1(v1, v2)"  | out
+
+"bfp_@binary_function_positive" = "@1(v2, v2)"  | out
+
+"bo_@binary_operator"   = "v1 @[op_@1] v1"  | out
+"bop_@binary_operator_positive"   = "v2 @[op_@1] v2"  | out
+
+# vi:ts=4:et

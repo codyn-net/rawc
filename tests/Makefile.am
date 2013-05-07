@@ -1,4 +1,4 @@
-test_cdn_files = $(wildcard *.cdn)
+test_cdn_files = $(filter-out _%.cdn,$(wildcard *.cdn))
 test_names = $(foreach i,$(test_cdn_files),${i:%.cdn=%.test})
 
 TESTS = $(test_names)
