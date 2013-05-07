@@ -1,0 +1,22 @@
+
+defines
+{
+    unary_function           = "{abs,sin,cos,tan,asin,acos,atan,sinh,
+                                 cosh,tanh,floor,ceil,round,exp,erf,
+                                 sign,exp2,max,min,sum,product,sqsum,
+                                 transpose,csum,rsum}"
+
+    unary_function_positive  = "{sqrt,invsqrt,log10,ln}"
+
+    unary_operator           = "{uminus}"
+
+    binary_function          = "{atan2,hypot}"
+    binary_function_positive = "{pow}"
+
+    binary_operator          = "{plus,minus,multiply,divide,emultiply,
+                                 modulo}"
+    binary_operator_positive = "{power}"
+
+    "op_{uminus,plus,minus,multiply,divide,emultiply,modulo,power}" = "{-,+,-,*,/,.*,%,^}"
+}
+

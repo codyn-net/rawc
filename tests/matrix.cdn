@@ -1,26 +1,7 @@
+include "_defines.cdn"
+
 matrix = "[-0.1, 0.2, 0.3; -0.4, 0.5, 0.6]"
 matrix_pos = "[0.1, 0.2, 0.3; 0.4, 0.5, 0.6]" | out
-
-defines
-{
-    unary_function           = "{abs,sin,cos,tan,asin,acos,atan,sinh,
-                                 cosh,tanh,floor,ceil,round,exp,erf,
-                                 sign,exp2,max,min,sum,product,sqsum,
-                                 transpose}"
-
-    unary_function_positive  = "{sqrt,invsqrt,log10,ln}"
-
-    unary_operator           = "{uminus}"
-
-    binary_function          = "{atan2,hypot}"
-    binary_function_positive = "{pow}"
-
-    binary_operator          = "{plus,minus,multiply,divide,emultiply,
-                                 modulo}"
-    binary_operator_positive = "{power}"
-
-    "op_{uminus,plus,minus,multiply,divide,emultiply,modulo,power}" = "{-,+,-,*,/,.*,%,^}"
-}
 
 "@unary_function"          = "@1(matrix)"        | out
 "@unary_function_positive" = "@1(matrix_pos)"    | out
