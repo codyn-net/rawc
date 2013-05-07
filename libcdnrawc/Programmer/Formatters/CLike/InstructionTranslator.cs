@@ -361,64 +361,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return Translate(instruction, context);
 		}
 
-		private int[] IndexIndices(Tree.Node node, InstructionIndex index)
-		{
-			var dim = node.Dimension;
-
-			switch (index.IndexType)
-			{
-			case InstructionIndexType.Offset:
-			{
-				int[] ret = new int[dim.Size() - index.Offset];
-
-				for (int i = index.Offset; i < dim.Size(); ++i)
-				{
-					ret[i - index.Offset] = i;
-				}
-
-				return ret;
-			}
-			case InstructionIndexType.Range:
-			{
-				int[] ret = new int[index.Range.N()];
-				int p = index.Range.Start;
-
-				for (int i = 0; i < index.Range.N(); ++i)
-				{
-					ret[i] = p;
-					p += index.Range.Step;
-				}
-
-				return ret;
-			}
-			case InstructionIndexType.RangeBlock:
-			{
-				IndexRange rows;
-				IndexRange columns;
-
-				index.GetRangeBlock(out rows, out columns);
-
-				int[] ret = new int[rows.N() * columns.N()];
-				int i = 0;
-
-				for (int c = columns.Start; c < columns.End; c += columns.Step)
-				{
-					for (int r = rows.Start; r < rows.End; r += rows.Step)
-					{
-						ret[i] = c * dim.Rows + r;
-						++i;
-					}
-				}
-
-				return ret;
-			}
-			case InstructionIndexType.Index:
-				return index.Indices;
-			}
-
-			return null;
-		}
-
 		/*
 		 * Translate an index instruction. The index instruction contains the
 		 * indices of the slice it should return inside the instruction. The
@@ -528,7 +470,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				// Too bad! Really just need to index here
 				var retvar = context.PeekRet();
-				var indices = IndexIndices(context.Node, instruction);
+				var indices = instruction.Indices;
 
 				if (retvar != null)
 				{
