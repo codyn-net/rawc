@@ -1886,12 +1886,22 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 					foreach (var ph in phases)
 					{
-						var st = Knowledge.Instance.GetEventState(parent, ph);
+						Knowledge.EventState evstate;
 
-						conditions.Add(String.Format("{0}[{1}] == {2}", d_program.EventStatesTable.Name, idx, st.Index));
+						if (Knowledge.Instance.TryGetEventState(parent, ph, out evstate))
+						{
+							conditions.Add(String.Format("{0}[{1}] == {2}", d_program.EventStatesTable.Name, idx, evstate.Index));
+						}
 					}
 
-					writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+					if (conditions.Count > 0)
+					{
+						writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+					}
+					else
+					{
+						writer.WriteLine("\t\treturn 0;");
+					}
 				}
 
 				writer.WriteLine("\tdefault:");
@@ -1966,11 +1976,14 @@ namespace Cdn.RawC.Programmer.Formatters.C
 					var parent = Knowledge.Instance.FindStateNode(ev);
 					var cont = Knowledge.Instance.EventStatesMap[parent];
 					var idx = cont.Index;
-					var st = Knowledge.Instance.GetEventState(parent, state);
+					Knowledge.EventState st;
 
-					writer.WriteLine("\t\t\t\tnetwork->event_states[{0}] = {1};",
-					                 idx,
-					                 st.Index);
+					if (Knowledge.Instance.TryGetEventState(parent, state, out st))
+					{
+						writer.WriteLine("\t\t\t\tnetwork->event_states[{0}] = {1};",
+					                     idx,
+					                     st.Index);
+					}
 				}
 
 				if (prg != null)

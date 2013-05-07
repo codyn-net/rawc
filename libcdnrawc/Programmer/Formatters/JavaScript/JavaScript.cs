@@ -598,12 +598,22 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 
 					foreach (var ph in phases)
 					{
-						var st = Knowledge.Instance.GetEventState(parent, ph);
+						Knowledge.EventState st;
 
-						conditions.Add(String.Format("{0}[{1}] == {2}", d_program.EventStatesTable.Name, idx, st.Index));
+						if (Knowledge.Instance.TryGetEventState(parent, ph, out st))
+						{
+							conditions.Add(String.Format("{0}[{1}] == {2}", d_program.EventStatesTable.Name, idx, st.Index));
+						}
 					}
 
-					d_writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+					if (conditions.Count > 0)
+					{
+						d_writer.WriteLine("\t\treturn ({0});", String.Join(" || ", conditions));
+					}
+					else
+					{
+						d_writer.WriteLine("\t\treturn 0;");
+					}
 				}
 
 				d_writer.WriteLine("\tdefault:");
@@ -674,12 +684,15 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 					var parent = Knowledge.Instance.FindStateNode(ev);
 					var cont = Knowledge.Instance.EventStatesMap[parent];
 					var idx = cont.Index;
-					var st = Knowledge.Instance.GetEventState(parent, state);
+					Knowledge.EventState st;
 
-					d_writer.WriteLine("\t\t\t\tthis.{0}.event_states[{1}] = {2};",
-					                   Context.DataName,
-					                   idx,
-					                   st.Index);
+					if (Knowledge.Instance.TryGetEventState(parent, state, out st))
+					{
+						d_writer.WriteLine("\t\t\t\tthis.{0}.event_states[{1}] = {2};",
+					                       Context.DataName,
+					                       idx,
+					                       st.Index);
+					}
 				}
 
 				if (prg != null)

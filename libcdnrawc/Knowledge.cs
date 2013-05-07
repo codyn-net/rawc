@@ -319,9 +319,9 @@ namespace Cdn.RawC
 			return ret;
 		}
 
-		public EventState GetEventState(Cdn.Node parent, string state)
+		public bool TryGetEventState(Cdn.Node parent, string state, out EventState ret)
 		{
-			return d_eventStateIdMap[EventStateId(parent, state)];
+			return d_eventStateIdMap.TryGetValue(EventStateId(parent, state), out ret);
 		}
 
 		private void ExtractStates()
