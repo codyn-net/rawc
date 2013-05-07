@@ -533,13 +533,31 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				args[i] = Translate(context, i);
 			}
 
-			if (instruction.Id == (uint)Cdn.MathFunctionType.Transpose)
+			string name = context.MathFunction(context.Node);
+
+			switch ((Cdn.MathFunctionType)instruction.Id)
 			{
-				// Transpose on 1-by-1 value is a NOOP
-				return args[0];
+			case MathFunctionType.Transpose:
+			case MathFunctionType.Min:
+			case MathFunctionType.Max:
+			case MathFunctionType.Sum:
+			case MathFunctionType.Product:
+			case MathFunctionType.Hypot:
+				if (args.Length == 1)
+				{
+					// These functions are NOOPs with a single argument
+					return args[0];
+				}
+				break;
+			case MathFunctionType.Sqsum:
+				if (args.Length == 1)
+				{
+					Context.UsedMathFunctions.Add(name);
+					return String.Format("{0}({1})", name, args[0]);
+				}
+				break;
 			}
 
-			string name = context.MathFunction(context.Node);
 			Context.UsedMathFunctions.Add(name);
 
 			if (Math.FunctionIsVariable((Cdn.MathFunctionType)instruction.Id))
@@ -547,6 +565,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				string ret = "";
 
 				// This does not work in the general case, but anyway
+				if (args.Length == 1)
+				{
+					return args[0];
+				}
+
 				for (int i = args.Length - 2; i >= 0; --i)
 				{
 					if (i != args.Length - 2)
