@@ -243,7 +243,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var def = context.MathFunction(Cdn.MathFunctionType.Modulo, context.Node.Children.Count);
 				Context.UsedMathFunctions.Add(def);
 
-				return String.Format("{0}{1}",
+				return String.Format("{0}({1})",
 					                 def,
 					                 SimpleOperator(context, null, ", "));
 			}
@@ -252,7 +252,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var def = context.MathFunction(Cdn.MathFunctionType.Pow, context.Node.Children.Count);
 				Context.UsedMathFunctions.Add(def);
 
-				return String.Format("{0}{1}",
+				return String.Format("{0}({1})",
 					                 def,
 					                 SimpleOperator(context, null, ", "));
 			}
