@@ -967,26 +967,22 @@ namespace Cdn.RawC.Tree
 				var smanip = imat.GetStackManipulation();
 				yield return InstructionIdentifier(String.Format("mat_{0}_{1}", smanip.Push.Dimension.Rows, smanip.Push.Dimension.Columns), inst);
 			}
+			else if (InstructionIs(inst, out ivar) && ivar.HasSlice)
+			{
+				Cdn.Dimension dim;
+				int[] slice = ivar.GetSlice(out dim);
+				
+				var n = String.Format("var_{0}[{1}]",
+				                      ivar.Variable.FullName,
+				                      String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+			
+				yield return InstructionIdentifier(HashMap(n), inst);
+			}
 			else if (strict)
 			{
 				if (InstructionIs(inst, out ivar))
 				{
-					string n;
-
-					if (ivar.HasSlice)
-					{
-						Cdn.Dimension dim;
-						int[] slice = ivar.GetSlice(out dim);
-
-						n = String.Format("var_{0}[{1}]",
-						                  ivar.Variable.FullName,
-						                  String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
-					}
-					else
-					{
-						n = String.Format("var_{0}", ivar.Variable.FullName);
-					}
-
+					var n = String.Format("var_{0}", ivar.Variable.FullName);
 					yield return InstructionIdentifier(HashMap(n), inst);
 				}
 				else if (InstructionIs(inst, out inum))
