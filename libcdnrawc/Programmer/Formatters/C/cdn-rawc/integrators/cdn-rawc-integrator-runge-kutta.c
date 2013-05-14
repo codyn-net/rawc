@@ -30,7 +30,6 @@ update (CdnRawcNetwork    *network,
 	ValueType *current_state;
 	ValueType *current_deriv;
 	ValueType *next_deriv;
-	ValueType *prev_deriv;
 	ValueType *stored_state;
 	uint32_t num;
 	uint32_t i;
@@ -49,7 +48,6 @@ update (CdnRawcNetwork    *network,
 	stored_state = network->get_states (network->get_nth (data, 1));
 
 	next_deriv = network->get_derivatives (network->get_nth (data, n + 1));
-	prev_deriv = network->get_derivatives (network->get_nth (data, n));
 
 	for (i = 0; i < num; ++i)
 	{
@@ -60,6 +58,8 @@ update (CdnRawcNetwork    *network,
 		current_state[i] = stored_state[i] + factor * current_deriv[i];
 	}
 }
+
+#include <stdio.h>
 
 static void
 update_total (CdnRawcNetwork *network,
@@ -75,8 +75,6 @@ update_total (CdnRawcNetwork *network,
 	ValueType *k4;
 	uint32_t num;
 	uint32_t i;
-	double f1;
-	double f2;
 
 	num = network->states.end - network->states.start;
 
@@ -96,16 +94,10 @@ update_total (CdnRawcNetwork *network,
 	k3 = network->get_derivatives (network->get_nth (data, 3));
 	k4 = current_deriv;
 
-	f1 = dt / 6.0;
-	f2 = dt / 3.0;
-
 	for (i = 0; i < num; ++i)
 	{
-		current_state[i] = stored_state[i] +
-		                   f1 * k1[i] +
-		                   f2 * k2[i] +
-		                   f2 * k3[i] +
-		                   f1 * k4[i];
+		current_state[i] = stored_state[i] + (1.0 / 6.0) *
+		                   (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) * dt;
 	}
 }
 
