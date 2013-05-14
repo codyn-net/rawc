@@ -110,9 +110,19 @@ namespace Cdn.RawC.Application
 
 					if (options.Verbose)
 					{
-						Console.Error.WriteLine("Trace:");
-						Console.Error.WriteLine("======");
-						Console.Error.WriteLine("  - {0}", String.Join("\n  - ", b.StackTrace.Split('\n')));
+						while (e != null)
+						{
+							Console.Error.WriteLine("Trace:");
+							Console.Error.WriteLine("======");
+							Console.Error.WriteLine("  - {0}", String.Join("\n  - ", e.StackTrace.Split('\n')));
+
+							e = e.InnerException;
+
+							if (e != null)
+							{
+								Console.Error.WriteLine("\n");
+							}
+						}
 					}
 					else
 					{
