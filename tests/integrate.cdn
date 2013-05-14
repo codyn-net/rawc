@@ -23,5 +23,16 @@ node "n{1:3}"
     q' = "0.5 + [q[1]; q[0]]"
 }
 
+# Test additive direct edges
+node "direct{1:3}"
+{
+    a = 0 | out
+}
+
+edge from "direct{2,3}" to "direct1"
+{
+    a += "1"
+}
+
 # vi:ts=4:et
 
