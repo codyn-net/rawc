@@ -650,14 +650,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			{
 				foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
 				{
-					args.Add(Translate(context, context.Node.FromPath(argument.Path)));
+					args.Add(TranslateChildV(context.Node.FromPath(argument.Path), context));
 				}
 			}
 			else
 			{
 				foreach (Tree.Node child in context.Node.Children)
 				{
-					args.Add(Translate(context, child));
+					args.Add(TranslateChildV(child, context));
 				}
 			}
 
