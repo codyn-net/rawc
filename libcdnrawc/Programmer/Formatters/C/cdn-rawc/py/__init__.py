@@ -292,6 +292,16 @@ class MetaVariable:
         else:
             return val
 
+    def update(self, v):
+        start = self.index
+
+        if dim.rows == 1 and dim.columns == 1:
+            self._network.data[self.index] = v
+        else:
+            for i in range(self.dimension.size):
+                self._network.data[start] = v[i]
+                start += 1
+
     def _make_matrix(self, v, dim):
         ret = [None] * dim.rows
         i = 0
