@@ -171,6 +171,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		{
 			int num = context.Node.Children.Count;
 
+			bool needsparen = false;
+
+			if (context.Node.Parent != null)
+			{
+				InstructionFunction op = context.Node.Parent.Instruction as InstructionFunction;
+
+				needsparen = inst == null || (op != null && HasPriority((Cdn.MathFunctionType)op.Id, (Cdn.MathFunctionType)inst.Id));
+			}
+
 			if (num == 1)
 			{
 				return String.Format("{0}{1}", glue, Translate(context, 0)).Trim();
@@ -181,15 +190,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			for (int i = 0; i < num; ++i)
 			{
 				args[i] = Translate(context, i);
-			}
-
-			bool needsparen = false;
-
-			if (context.Node.Parent != null)
-			{
-				InstructionFunction op = context.Node.Parent.Instruction as InstructionFunction;
-
-				needsparen = inst == null || (op != null && HasPriority((Cdn.MathFunctionType)op.Id, (Cdn.MathFunctionType)inst.Id));
 			}
 
 			if (!needsparen)
@@ -243,21 +243,23 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var def = context.MathFunction(Cdn.MathFunctionType.Modulo, context.Node.Children.Count);
 				Context.UsedMathFunctions.Add(def);
 
-				return String.Format("{0}({1})",
+				return String.Format("{0}({1}, {2})",
 					                 def,
-					                 SimpleOperator(context, null, ", "));
+				                     Translate(context, 0),
+				                     Translate(context, 1));
 			}
 			case MathFunctionType.Power:
 			{
 				var def = context.MathFunction(Cdn.MathFunctionType.Pow, context.Node.Children.Count);
 				Context.UsedMathFunctions.Add(def);
 
-				return String.Format("{0}({1})",
+				return String.Format("{0}({1}, {2})",
 					                 def,
-					                 SimpleOperator(context, null, ", "));
+					                 Translate(context, 0),
+				                     Translate(context, 1));
 			}
 			case MathFunctionType.Ternary:
-				return String.Format("({0} ? {1} : {2})",
+				return String.Format("(({0}) ? ({1}) : ({2}))",
 					                     Translate(context, 0),
 					                     Translate(context, 1),
 					                     Translate(context, 2));
