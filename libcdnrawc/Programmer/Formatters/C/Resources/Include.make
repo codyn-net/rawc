@@ -91,9 +91,11 @@ V =
 ifneq ($(V),)
 vecho =
 veecho =
+onull =
 else
 vecho = @echo [$1] $2;
 veecho = echo [$1] $2;
+onull = >/dev/null
 endif
 
 all: static shared
@@ -102,8 +104,8 @@ static: lib${name}.a
 shared: lib${name}.$(SHARED_EXT)
 
 lib${name}.a: $(STATIC_OBJECTS)
-	$(call vecho,AR,$@) 							\
-	$(LIBTOOL) -static -o $@ $^ $(ST_LIBS) 2>/dev/null
+	$(call vecho,LIBTOOL,$@) 							\
+	$(LIBTOOL) --mode=link gcc -o $@ $^ $(ST_LIBS) $(onull)
 
 lib${name}.$(SHARED_EXT): $(SHARED_OBJECTS)
 	$(call vecho,CC,$@) $(CC) -shared -o $@ $^ $(SH_LIBS) $(${NAME}_LDFLAGS) $(LDFLAGS)
