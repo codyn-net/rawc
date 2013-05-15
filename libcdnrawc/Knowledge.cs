@@ -116,7 +116,9 @@ namespace Cdn.RawC
 				Index = 0,
 			});
 
-			Scan();
+			Profile.Do("knowledge scan", () => {
+				Scan();
+			});
 		}
 
 		private delegate State StateCreator(Variable v, EdgeAction[] actions);
@@ -809,18 +811,41 @@ namespace Cdn.RawC
 		private void Scan()
 		{
 			// We also scan the integrator because the 't' and 'dt' properties are defined there
-			Scan(d_network.Integrator);
-			Scan(d_network);
+			Profile.Do("integrator", () => {
+				Scan(d_network.Integrator);
+			});
 
-			PromoteEdgeSlices();
-			PromoteConstraints();
+			Profile.Do("network", () => {
+				Scan(d_network);
+			});
 
-			ExtractStates();
-			ExtractDelayedStates();
-			ExtractEventStates();
+			Profile.Do("promote edge slices", () => {
+				PromoteEdgeSlices();
+			});
 
-			ExtractInitialize();
-			ExtractRand();
+			Profile.Do("promote constraints", () => {
+				PromoteConstraints();
+			});
+
+			Profile.Do("extract states", () => {
+				ExtractStates();
+			});
+
+			Profile.Do("extract delayed states", () => {
+				ExtractDelayedStates();
+			});
+
+			Profile.Do("extract event states", () => {
+				ExtractEventStates();
+			});
+
+			Profile.Do("extract initialize", () => {
+				ExtractInitialize();
+			});
+
+			Profile.Do("extract rand", () => {
+				ExtractRand();
+			});
 		}
 
 		private Cdn.Variable PromoteConstraint(Cdn.Variable variable)
