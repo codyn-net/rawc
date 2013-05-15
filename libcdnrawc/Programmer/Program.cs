@@ -414,25 +414,31 @@ namespace Cdn.RawC.Programmer
 			public Tree.Node Node { get; set; }
 			public List<Tree.Node> Nodes { get; set; }
 			public bool IsOperator { get; set; }
+			public Cdn.Function Function { get; set; }
+			public Cdn.Function Template { get; set; }
 
 			public CustomFunctionNode(Cdn.Function func)
 			{
 				Node = Tree.Node.Create(null, func.Expression.Instructions);
 				Nodes = new List<Tree.Node>();
+				Function = func;
 			}
 		}
 
-		private void CustomFunctionUsage(Tree.Node node, Dictionary<Cdn.Function, CustomFunctionNode> usage)
+		private void CustomFunctionUsage(Tree.Node node, Dictionary<object, CustomFunctionNode> usage)
 		{
 			CustomFunctionNode lst;
 			Cdn.Function f;
 			bool isop = false;
 
 			Cdn.InstructionCustomFunction func = node.Instruction as Cdn.InstructionCustomFunction;
+			Cdn.Function templ = null;
+			object id;
 
 			if (func != null)
 			{
 				f = func.Function;
+				id = Tree.Node.FunctionId(f, out templ);
 			}
 			else
 			{
@@ -444,13 +450,16 @@ namespace Cdn.RawC.Programmer
 				{
 					return;
 				}
+
+				id = f;
 			}
 
-			if (!usage.TryGetValue(f, out lst))
+			if (!usage.TryGetValue(id, out lst))
 			{
 				lst = new CustomFunctionNode(f);
+				lst.Template = templ;
 				lst.IsOperator = isop;
-				usage[f] = lst;
+				usage[id] = lst;
 
 				d_usedCustomFunctions.Add(f);
 
@@ -478,7 +487,7 @@ namespace Cdn.RawC.Programmer
 
 		private void ProgramCustomFunctions()
 		{
-			var usage = new Dictionary<Cdn.Function, CustomFunctionNode>();
+			var usage = new Dictionary<object, CustomFunctionNode>();
 
 			// Calculate map from a custom function to the nodes that use that function
 			foreach (KeyValuePair<State, Tree.Node> eq in d_equations)
@@ -511,7 +520,6 @@ namespace Cdn.RawC.Programmer
 			// Foreach custom function that is used
 			foreach (var pair in usage)
 			{
-				var function = pair.Key;
 				var fn = pair.Value;
 
 				// Create a new node for the custom function expression
@@ -522,11 +530,11 @@ namespace Cdn.RawC.Programmer
 				List<Cdn.Variable> arguments = new List<Cdn.Variable>();
 				List<Cdn.FunctionArgument> aa = new List<FunctionArgument>();
 
-				foreach (Cdn.FunctionArgument arg in function.Arguments)
+				foreach (Cdn.FunctionArgument arg in fn.Function.Arguments)
 				{
 					if (!arg.Unused)
 					{
-						arguments.Add(function.Variable(arg.Name));
+						arguments.Add(fn.Function.Variable(arg.Name));
 						aa.Add(arg);
 					}
 				}
@@ -553,7 +561,9 @@ namespace Cdn.RawC.Programmer
 				// function is used.
 				Tree.Embedding embedding = new Tree.Embedding(node, args);
 
-				var cfname = function.FullIdForDisplay.Replace(".", "_").ToLower();
+				var fforname = fn.Template != null ? fn.Template : fn.Function;
+
+				var cfname = fforname.FullIdForDisplay.Replace(".", "_").ToLower();
 				string name = GenerateFunctionName(String.Format("cf_{0}", cfname));
 
 				Function func = new Function(name, embedding, aa, !fn.IsOperator);
@@ -561,7 +571,7 @@ namespace Cdn.RawC.Programmer
 
 				d_embeddings.Add(embedding);
 
-				foreach (Tree.Node nn in usage[function].Nodes)
+				foreach (Tree.Node nn in pair.Value.Nodes)
 				{
 					embedding.Embed(nn);
 

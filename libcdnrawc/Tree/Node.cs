@@ -745,10 +745,18 @@ namespace Cdn.RawC.Tree
 			}
 		}
 
-		public string Serialize()
+		public string Serialize(bool strict = false)
 		{
 			StringBuilder ret = new StringBuilder();
-			ret.Append(Label);
+
+			if (!strict || d_instruction == null)
+			{
+				ret.Append(Label);
+			}
+			else
+			{
+				ret.Append(InstructionCode(d_instruction, true));
+			}
 
 			int[] slice = Slice;
 
@@ -852,6 +860,79 @@ namespace Cdn.RawC.Tree
 			return String.Format("{0}[{1},{2}]", label, dim.Rows, dim.Columns);
 		}
 
+		private struct FunctionIdMap
+		{
+			public string Id;
+			public Cdn.Function Template;
+		}
+
+		private static Dictionary<Cdn.Function, FunctionIdMap> s_functionIds;
+
+		public static string FunctionId(Cdn.Function f)
+		{
+			Cdn.Function templ;
+			return FunctionId(f, out templ);
+		}
+
+		public static string FunctionId(Cdn.Function f, out Cdn.Function rettempl)
+		{
+			if (s_functionIds == null)
+			{
+				s_functionIds = new Dictionary<Function, FunctionIdMap>();
+			}
+
+			FunctionIdMap retid;
+
+			if (s_functionIds.TryGetValue(f, out retid))
+			{
+				rettempl = retid.Template;
+				return retid.Id;
+			}
+
+			rettempl = null;
+
+			//return f.FullIdForDisplay;
+			var templs = f.AppliedTemplates;
+
+			if (templs.Length == 0)
+			{
+				return "ff_" + f.FullIdForDisplay;
+			}
+
+			var templ = templs[templs.Length - 1] as Cdn.Function;
+			string fid;
+
+			if (!templ.Expression.Equal(f.Expression, true))
+			{
+				fid = "ff_" + f.FullIdForDisplay;
+			}
+			else if (String.IsNullOrEmpty(f.Expression.AsString))
+			{
+				fid = "ff_" + f.FullIdForDisplay;
+			}
+			else
+			{
+				rettempl = templ;
+	
+				// Generate id based on template name, function dimensions and
+				// function expression
+				var smanip = f.StackManipulation;
+				fid = "ft_" + templ.FullIdForDisplay + "[" + smanip.Push.Dimension.Rows.ToString() + "," + smanip.Push.Dimension.Columns.ToString() + "](";
+	
+				for (int i = 0; i < smanip.Pop.Num; ++i)
+				{
+					var p = smanip.GetPopn(i);
+					fid += String.Format("[{0},{1}]", p.Dimension.Rows, p.Dimension.Columns);
+				}
+
+				fid += ") " + f.Expression.AsString;
+			}
+
+			retid = new FunctionIdMap { Id = fid, Template = rettempl };
+			s_functionIds[f] = retid;
+			return fid;
+		}
+
 		public static IEnumerable<string> InstructionCodes(Instruction inst, bool strict)
 		{
 			InstructionFunction ifunc;
@@ -866,7 +947,8 @@ namespace Cdn.RawC.Tree
 			if (InstructionIs(inst, out icusf))
 			{
 				// Generate byte code for this function by name
-				yield return InstructionIdentifier(HashMap("f_" + icusf.Function.FullId), inst);
+
+				yield return InstructionIdentifier(HashMap("f_" + FunctionId(icusf.Function)), inst);
 			}
 			else if (InstructionIs(inst, out icusop))
 			{
