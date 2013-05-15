@@ -1143,7 +1143,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			{
 				int row = i / cols;
 				int col = i % cols;
-				string val = table.NeedsInitialization ? translator.Translate(table[i].Key) : "0";
+				string val = table.NeedsInitialization ? translator.Translate(table.Unique ? table[i].Key : table[i].Object) : "0";
 				vals[row, col] = val;
 
 				if (val.Length > maxs)

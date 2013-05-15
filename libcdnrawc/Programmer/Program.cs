@@ -53,6 +53,7 @@ namespace Cdn.RawC.Programmer
 			d_eventStates = new DataTable("event_states", false);
 			d_initialEventStates = new DataTable("initial_event_states", true);
 			d_initialEventStates.IsConstant = true;
+			d_initialEventStates.Unique = false;
 
 			d_functions = new List<Function>();
 			d_embeddings = new List<Tree.Embedding>(embeddings);
@@ -310,15 +311,22 @@ namespace Cdn.RawC.Programmer
 			{
 				d_eventStates.Add(kv.Key);
 
-				if (kv.Key.State != null)
+				if (kv.Key.InitialState != null)
 				{
-					var idx = kv.Value.States.IndexOf(kv.Key.State);
-					d_initialEventStates.Add((uint)(idx + 1));
+					Knowledge.EventState evstate;
+
+					if (Knowledge.Instance.TryGetEventState(kv.Key, kv.Key.InitialState, out evstate))
+					{
+						d_initialEventStates.Add((uint)(evstate.Index));
+					}
+					else
+					{
+						d_initialEventStates.Add((uint)0);
+					}
 				}
 				else
 				{
 					d_initialEventStates.Add((uint)0);
-
 				}
 			}
 

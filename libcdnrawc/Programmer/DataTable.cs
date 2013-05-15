@@ -15,6 +15,7 @@ namespace Cdn.RawC.Programmer
 		private ulong d_integertypesize;
 		private bool d_locked;
 		private int d_size;
+		private bool d_unique;
 
 		public interface IKey
 		{
@@ -192,6 +193,7 @@ namespace Cdn.RawC.Programmer
 			d_columns = columns;
 			d_isconstant = false;
 			d_locked = false;
+			d_unique = true;
 		}
 
 		public void Lock()
@@ -202,6 +204,12 @@ namespace Cdn.RawC.Programmer
 		public bool Locked
 		{
 			get { return d_locked; }
+		}
+
+		public bool Unique
+		{
+			get { return d_unique; }
+			set { d_unique = value; }
 		}
 
 		private string TypeNameForSize(ulong s)
@@ -307,6 +315,11 @@ namespace Cdn.RawC.Programmer
 
 		private object BaseKey(object key)
 		{
+			if (!d_unique)
+			{
+				return String.Format("__unique_key_{0}", d_items.Count);
+			}
+
 			IKey keyed;
 
 			if (As(key, out keyed))
