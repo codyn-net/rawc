@@ -70,6 +70,92 @@ namespace Cdn.RawC
 			get { return d_object; }
 		}
 
+		public struct VariableDependency
+		{
+			public Cdn.Variable Variable;
+			public Cdn.InstructionVariable Instruction;
+		}
+
+		private static Dictionary<Cdn.Expression, List<VariableDependency>> s_variableDependencies;
+
+		private IEnumerable<VariableDependency> VariableExpressionDependencies(Cdn.Expression expr)
+		{
+			if (expr == null)
+			{
+				return new VariableDependency[] {};
+			}
+
+			if (s_variableDependencies == null)
+			{
+				s_variableDependencies = new Dictionary<Cdn.Expression, List<VariableDependency>>();
+			}
+
+			List<VariableDependency> lst;
+
+			if (s_variableDependencies.TryGetValue(expr, out lst))
+			{
+				return lst;
+			}
+
+			lst = new List<VariableDependency>();
+			s_variableDependencies[expr] = lst;
+
+			foreach (var instr in expr.Instructions)
+			{
+				InstructionVariable v = instr as InstructionVariable;
+
+				if (v != null)
+				{
+					lst.Add(new VariableDependency { Variable = v.Variable, Instruction = v });
+				}
+			}
+
+			foreach (var ex in expr.Dependencies)
+			{
+				lst.AddRange(VariableExpressionDependencies(ex));
+			}
+
+			return lst;
+		}
+
+		public IEnumerable<VariableDependency> VariableDependencies
+		{
+			get
+			{
+				if (d_expression != null)
+				{
+					foreach (var v in VariableExpressionDependencies(d_expression))
+					{
+						yield return v;
+					}
+
+					yield break;
+				}
+
+				foreach (var v in VariableExpressionDependencies(d_expressionUnexpanded))
+				{
+					yield return v;
+				}
+
+				foreach (var action in d_actions)
+				{
+					Cdn.Variable subvar;
+
+					if (Knowledge.Instance.EventActionProperties.TryGetValue(action, out subvar))
+					{
+						yield return new VariableDependency { Variable = subvar, Instruction = null };
+					}
+					else
+					{
+						foreach (var v in VariableExpressionDependencies(action.Equation))
+						{
+							yield return v;
+						}
+					}
+				}
+			}
+		}
+
 		private void Expand()
 		{
 			if (d_expression != null)

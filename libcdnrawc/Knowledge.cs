@@ -430,23 +430,6 @@ namespace Cdn.RawC
 				}
 			}
 
-			// Add multidim variables which are used more than once
-			foreach (var v in d_variables)
-			{
-				if (unique.Contains(v))
-				{
-					continue;
-				}
-
-				if (!v.Dimension.IsOne && v.UseCount() > 1)
-				{
-					var s = ExpandedState(v);
-
-					AddState(unique, s);
-					AddAux(s, auxset);
-				}
-			}
-
 			// Add function help variables
 			foreach (var v in d_functionHelperVariables)
 			{
@@ -473,17 +456,33 @@ namespace Cdn.RawC
 				}
 			}
 
-			d_network.ForeachExpression((e) => {
-				foreach (var i in e.Instructions)
+			Profile.Do("promot deps", () => {
+				var allst = new List<State>(AllStates);
+
+				// For all the states up to now, see which variables it depends on.
+				// Those variables are then also promoted to the state table if
+				// they are multidimensional and used more than once. Also,
+				// variables with slices are promoted to the states.
+				foreach (var st in allst)
 				{
-					var v = i as InstructionVariable;
+					IEnumerable<RawC.State.VariableDependency> vd;
 
-					if (v != null && !unique.Contains(v.Variable) && v.HasSlice)
+					vd = st.VariableDependencies;
+
+					foreach (var v in vd)
 					{
-						var s = ExpandedState(v.Variable);
-
-						AddState(unique, s);
-						AddAux(s, auxset);
+						if (unique.Contains(v.Variable))
+						{
+							continue;
+						}
+	
+						if ((v.Instruction != null && v.Instruction.HasSlice) || (!v.Variable.Dimension.IsOne && v.Variable.UseCount() > 1))
+						{
+							var s = ExpandedState(v.Variable);
+	
+							AddState(unique, s);
+							AddAux(s, auxset);
+						}
 					}
 				}
 			});
