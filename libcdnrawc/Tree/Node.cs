@@ -1062,6 +1062,11 @@ namespace Cdn.RawC.Tree
 			}
 			else if (strict)
 			{
+				RawC.Tree.Embedding.Instance iinst;
+				Programmer.Instructions.Function iifunc;
+				Programmer.Instructions.Variable iivar;
+				Programmer.Instructions.State iistat;
+
 				if (InstructionIs(inst, out ivar))
 				{
 					var n = String.Format("var_{0}", ivar.Variable.FullName);
@@ -1074,6 +1079,22 @@ namespace Cdn.RawC.Tree
 				else if (InstructionIs(inst, out irand))
 				{
 					yield return InstructionIdentifier(HashMap(String.Format("rand_{0}", irand.Handle)), inst);
+				}
+				else if (InstructionIs(inst, out iinst))
+				{
+					yield return InstructionIdentifier(HashMap(String.Format("emb_{0}", iinst.Handle)), inst);
+				}
+				else if (InstructionIs(inst, out iifunc))
+				{
+					yield return InstructionIdentifier(HashMap(String.Format("pfu_{0}", iifunc.FunctionCall.Name)), inst);
+				}
+				else if (InstructionIs(inst, out iivar))
+				{
+					yield return InstructionIdentifier(HashMap(String.Format("ivar_{0}", iivar.Name)), inst);
+				}
+				else if (InstructionIs(inst, out iistat))
+				{
+					yield return InstructionIdentifier(HashMap(String.Format("ist_{0}_{1}", iistat.Item.Table.Name, iistat.Item.DataIndex)), inst);
 				}
 				else
 				{
