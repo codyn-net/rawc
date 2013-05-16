@@ -498,6 +498,10 @@ class Network:
     def default_timestep(self):
         return self.network.contents.default_timestep
 
+    @property
+    def minimum_timestep(self):
+        return self.network.contents.minimum_timestep
+
     def set_integrator(self, integrator):
         self.integrator = integrator
 

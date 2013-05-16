@@ -135,6 +135,12 @@ cdn_rawc_network_get_default_timestep (CdnRawcNetwork *network)
 	return network->default_timestep;
 }
 
+ValueType
+cdn_rawc_network_get_minimum_timestep (CdnRawcNetwork *network)
+{
+	return network->minimum_timestep;
+}
+
 #ifdef ENABLE_META_LOOKUP
 static uint8_t
 compare_names (char const *name, char const *cmpto, int len)

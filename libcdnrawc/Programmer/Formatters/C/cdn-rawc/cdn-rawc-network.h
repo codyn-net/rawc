@@ -57,6 +57,8 @@ CdnRawcDimension const *
                                              uint32_t        i);
 
 ValueType cdn_rawc_network_get_default_timestep (CdnRawcNetwork *network);
+ValueType cdn_rawc_network_get_minimum_timestep (CdnRawcNetwork *network);
+
 #ifdef ENABLE_META_LOOKUP
 int32_t cdn_rawc_network_find_variable      (CdnRawcNetwork *network,
                                              char const     *name);
