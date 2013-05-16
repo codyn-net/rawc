@@ -40,6 +40,6 @@ diff (CdnRawcIntegrator *integrator,
 
 	for (i = 0; i < num; ++i)
 	{
-		states[i] += dt * derivatives[i];
+		states[i] = states[i] + derivatives[i] * dt;
 	}
 }

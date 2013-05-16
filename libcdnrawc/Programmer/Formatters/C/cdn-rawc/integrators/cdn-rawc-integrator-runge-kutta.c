@@ -96,8 +96,8 @@ update_total (CdnRawcNetwork *network,
 
 	for (i = 0; i < num; ++i)
 	{
-		current_state[i] = stored_state[i] + (1.0 / 6.0) *
-		                   (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) * dt;
+		current_state[i] = stored_state[i] + (1.0 / 6.0) * dt *
+		                   (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
 	}
 }
 
