@@ -173,6 +173,7 @@ typedef struct
 	uint8_t type_size;
 
 	ValueType minimum_timestep;
+	ValueType default_timestep;
 
 	CdnRawcNetworkMeta meta;
 } CdnRawcNetwork;

@@ -1675,6 +1675,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			writer.WriteLine("\t\t.event_refinement = {0},", NeedsSpaceForEvents() ? 1 : 0);
 			writer.WriteLine("\t\t.type_size = sizeof (ValueType),");
 			writer.WriteLine("\t\t.minimum_timestep = {0},", Knowledge.Instance.Network.Integrator.MinimumTimestep);
+			writer.WriteLine("\t\t.default_timestep = {0},", Knowledge.Instance.Network.Integrator.DefaultTimestep);
 
 			var t = d_program.StateTable[Knowledge.Instance.Time];
 			var dt = d_program.StateTable[Knowledge.Instance.TimeStep];

@@ -123,6 +123,7 @@ CdnRawcNetwork._fields_ = [('prepare', NetworkFuncT),
                            ('type_size', ctypes.c_uint8),
 
                            ('minimum_timestep', valuetype),
+                           ('default_timestep', valuetype),
 
                            ('meta', CdnRawcNetworkMeta)]
 
@@ -492,6 +493,10 @@ class Network:
     @property
     def dt(self):
         return self.data[self.network.contents.meta.dt]
+
+    @property
+    def default_timestep(self):
+        return self.network.contents.default_timestep
 
     def set_integrator(self, integrator):
         self.integrator = integrator
