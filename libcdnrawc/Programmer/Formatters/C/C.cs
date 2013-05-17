@@ -120,6 +120,229 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			return written.ToArray();
 		}
 
+		public string[] Bind(Cdn.Network ninp, Cdn.Network nout, IEnumerable<Binder.Binding> bindings)
+		{
+			// Generate glue to bind variables between ninp and nout
+			var options = RawC.Options.Instance;
+
+			var basename = options.Basename;
+
+			if (String.IsNullOrEmpty(basename))
+			{
+				basename = String.Format("{0}_to_{1}",
+				                         Path.GetFileNameWithoutExtension(ninp.Filename),
+				                         Path.GetFileNameWithoutExtension(nout.Filename));
+			}
+
+			var output = options.Output;
+
+			if (String.IsNullOrEmpty(output))
+			{
+				var dirname = Path.GetDirectoryName(ninp.Filename);
+				output = Path.Combine(dirname, "rawc_" + basename);
+			}
+
+			try
+			{
+				Directory.CreateDirectory(output);
+			}
+			catch {}
+
+			var headerFilename = Path.Combine(output, basename + ".h");
+			var sourceFilename = Path.Combine(output, basename + ".c");
+
+			TextWriter header = new StreamWriter(headerFilename);
+			TextWriter source = new StreamWriter(sourceFilename);
+
+			BindHeader(header, ninp, nout, bindings, basename);
+			BindSource(source, ninp, nout, bindings, basename);
+
+			header.Flush();
+			header.Close();
+
+			source.Flush();
+			source.Close();
+			
+			return new string[] {sourceFilename, headerFilename};
+		}
+
+		private void BindHeader(TextWriter header, Cdn.Network ninp, Cdn.Network nout, IEnumerable<Binder.Binding> bindings, string basename)
+		{
+			var up = Context.ToAsciiOnly(basename).ToUpper();
+			var down = up.ToLower();
+
+			header.WriteLine("#ifndef __RAWC_BINDING_{0}_H__", up);
+			header.WriteLine("#define __RAWC_BINDING_{0}_H__", up);
+
+			header.WriteLine();
+			header.WriteLine("#include <cdn-rawc/cdn-rawc-types.h>");
+			header.WriteLine();
+
+			header.WriteLine("void cdn_rawc_binding_{0}_init  (CdnRawcNetwork *input, CdnRawcNetwork *output);", down);
+			header.WriteLine("void cdn_rawc_binding_{0}_read  (CdnRawcNetwork *input, void *input_data, CdnRawcNetwork *output, void *output_data);", down);
+			header.WriteLine("void cdn_rawc_binding_{0}_write (CdnRawcNetwork *input, void *input_data, CdnRawcNetwork *output, void *output_data);", down);
+			header.WriteLine();
+
+			header.WriteLine("#endif /* __RAWC_BINDING_{0}_H__ */", up);
+		}
+
+		private void BindSource(TextWriter source, Cdn.Network ninp, Cdn.Network nout, IEnumerable<Binder.Binding> bindings, string basename)
+		{
+			var down = Context.ToAsciiOnly(basename).ToLower();
+
+			source.WriteLine("#include \"{0}.h\"", basename);
+			source.WriteLine("#include <stdint.h>", basename);
+			source.WriteLine("#include <string.h>", basename);
+
+			source.WriteLine();
+
+			if (d_options.CustomHeaders != null && d_options.CustomHeaders.Count > 0)
+			{
+				foreach (var inc in d_options.CustomHeaders)
+				{
+					source.WriteLine("#include \"{0}\"", inc);
+				}
+
+				source.WriteLine();
+			}
+
+			source.WriteLine(@"
+typedef struct
+{
+	int32_t input;
+	char const *input_name;
+
+	int32_t output;
+	char const *output_name;
+	
+	uint16_t size;
+} Binding;");
+
+			source.WriteLine();
+			source.WriteLine("static Binding inputs[] = {");
+
+			foreach (var b in bindings)
+			{
+				if ((b.Input.Flags & VariableFlags.Out) != 0 &&
+				    (b.Output.Flags & VariableFlags.In) != 0)
+				{
+					source.WriteLine("\t{{ -1, \"{0}\", -1, \"{1}\", {2} }},",
+					                 b.Input.FullNameForDisplay,
+					                 b.Output.FullNameForDisplay,
+					                 b.Input.Dimension.Size());
+				}
+			}
+
+			source.WriteLine("};\n");
+			source.WriteLine("#define NUM_INPUTS (sizeof(inputs) / sizeof(Binding))\n");
+
+			source.WriteLine("static Binding outputs[] = {");
+
+			foreach (var b in bindings)
+			{
+				if ((b.Input.Flags & VariableFlags.In) != 0 &&
+				    (b.Output.Flags & VariableFlags.Out) != 0)
+				{
+					source.WriteLine("\t{{ -1, \"{0}\", -1, \"{1}\", {2} }},",
+					                 b.Output.FullNameForDisplay,
+					                 b.Input.FullNameForDisplay,
+					                 b.Input.Dimension.Size());
+				}
+			}
+
+			source.WriteLine("};\n");
+
+			source.WriteLine("#define NUM_OUTPUTS (sizeof(outputs) / sizeof(Binding))\n");
+
+			source.WriteLine(@"void
+cdn_rawc_binding_{0}_init (CdnRawcNetwork *input,
+                           CdnRawcNetwork *output)
+{{
+	uint32_t i;
+
+	for (i = 0; i < NUM_INPUTS; ++i)
+	{{
+		inputs[i].input = cdn_rawc_network_find_variable (input, inputs[i].input_name);
+		inputs[i].output = cdn_rawc_network_find_variable (output, inputs[i].output_name);
+	}}
+
+	for (i = 0; i < NUM_OUTPUTS; ++i)
+	{{
+		outputs[i].input = cdn_rawc_network_find_variable (output, outputs[i].input_name);
+		outputs[i].output = cdn_rawc_network_find_variable (input, outputs[i].output_name);
+	}}
+}}", down);
+			source.WriteLine(@"void
+cdn_rawc_binding_{0}_read (CdnRawcNetwork *input,
+                           void           *input_data,
+                           CdnRawcNetwork *output,
+                           void           *output_data)
+{{
+	uint32_t i;
+	ValueType *input_values;
+	ValueType *output_values;
+
+	input_values = input->get_data (input_data);
+	output_values = output->get_data (output_data);
+	
+	for (i = 0; i < NUM_INPUTS; ++i)
+	{{
+		if (inputs[i].input < 0 || inputs[i].output < 0)
+		{{
+			continue;
+		}}
+
+		if (inputs[i].size == 1)
+		{{
+			output_values[inputs[i].output] =
+				input_values[inputs[i].input];
+		}}
+		else
+		{{
+			memcpy (output_values + inputs[i].output,
+			        input_values + inputs[i].input,
+			        sizeof (ValueType) * inputs[i].size);
+		}}
+	}}
+}}", down);
+
+			source.WriteLine();
+
+			source.WriteLine(@"void
+cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
+                            void           *input_data,
+                            CdnRawcNetwork *output,
+                            void           *output_data)
+{{
+	uint32_t i;
+	ValueType *input_values;
+	ValueType *output_values;
+
+	output_values = input->get_data (input_data);
+	input_values = output->get_data (output_data);
+
+	for (i = 0; i < NUM_OUTPUTS; ++i)
+	{{
+		if (outputs[i].input < 0 || outputs[i].output < 0)
+		{{
+			continue;
+		}}
+
+		if (outputs[i].size == 1)
+		{{
+			output_values[outputs[i].output] =
+				input_values[inputs[i].input];
+		}}
+		else
+		{{
+			memcpy (output_values + outputs[i].output,
+			        input_values + outputs[i].input,
+			        sizeof (ValueType) * outputs[i].size);
+		}}
+	}}
+}}", down);
+		}
+
 		private string WriteMakefile()
 		{
 			var filename = Path.Combine(d_program.Options.Output, "Makefile");

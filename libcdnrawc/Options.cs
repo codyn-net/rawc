@@ -44,6 +44,8 @@ namespace Cdn.RawC
 		public bool NoMetadata = false;
 		[CommandLine.Option("dependency-graph", ArgumentName="FILE", Description="Output dependency graph in DOT format to specified file")]
 		public string DependencyGraph;
+		[CommandLine.Option("bind", Description="Generate binding from first network to second network")]
+		public bool Bind = false;
 
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;

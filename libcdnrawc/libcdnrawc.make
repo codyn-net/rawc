@@ -45,6 +45,7 @@ RESGEN=resgen2
 all: $(ASSEMBLY) $(PROGRAMFILES) $(LINUX_PKGCONFIG)
 
 FILES = \
+	Binder.cs \
 	State.cs \
 	ConstraintState.cs \
 	DerivativeState.cs \

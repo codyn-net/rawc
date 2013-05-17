@@ -53,89 +53,118 @@ namespace Cdn.RawC.Application
 				Log.Base = null;
 			}
 
-			foreach (string filename in options.Files)
+			try
 			{
-				Generator generator = new Generator(filename);
-
-				try
+				if (options.Bind)
 				{
-					generator.Generate();
-
-					if (!options.Validate && !options.Compile)
-					{
-						string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, (a) => {
-							if (a.StartsWith(Environment.CurrentDirectory + "/"))
-							{
-								return String.Format("`{0}'", a.Substring(Environment.CurrentDirectory.Length + 1));
-							}
-							else
-							{
-								return String.Format("`{0}'", System.IO.Path.GetFileName(a));
-							}
-						});
-
-						string s;
-
-						if (files.Length <= 1)
-						{
-							s = String.Join(", ", files);
-						}
-						else
-						{
-							s = String.Format("{0} and {1}", String.Join(", ", files, 0, files.Length - 1), files[files.Length - 1]);
-						}
-
-						Log.WriteLine("Generated {0} from `{1}'...", s, filename);
-					}
+					Bind();
 				}
-				catch (System.Exception e)
+				else
 				{
-					System.Exception b = e.GetBaseException();
+					Generate();
+				}
 
-					if (!(b is NotImplementedException) && !(b is Cdn.RawC.Exception))
-					{
-						throw b;
-					}
+			}
+			catch (System.Exception e)
+			{
+				System.Exception b = e.GetBaseException();
 
-					if (b is Cdn.RawC.Exception)
-					{
-						Console.Error.WriteLine("\nAn exceptional error occurred while processing the network:\n\n{0}\n", b.Message);
-					}
-					else
-					{
-						Console.Error.WriteLine("\nYou are using a feature which is not yet implemented in rawc:");
-						Console.Error.WriteLine();
-						Console.Error.WriteLine("“{0}”\n", b.Message);
-					}
+				if (!(b is NotImplementedException) && !(b is Cdn.RawC.Exception))
+				{
+					throw b;
+				}
 
-					if (options.Verbose)
-					{
-						while (e != null)
-						{
-							Console.Error.WriteLine("Trace:");
-							Console.Error.WriteLine("======");
-							Console.Error.WriteLine("  - {0}", String.Join("\n  - ", e.StackTrace.Split('\n')));
-
-							e = e.InnerException;
-
-							if (e != null)
-							{
-								Console.Error.WriteLine("\n");
-							}
-						}
-					}
-					else
-					{
-						Console.Error.WriteLine("Use --verbose to see a stack trace of where the problem occurred");
-					}
-
+				if (b is Cdn.RawC.Exception)
+				{
+					Console.Error.WriteLine("\nAn exceptional error occurred while processing the network:\n\n{0}\n", b.Message);
+				}
+				else
+				{
+					Console.Error.WriteLine("\nYou are using a feature which is not yet implemented in rawc:");
 					Console.Error.WriteLine();
-
-					Environment.Exit(1);
+					Console.Error.WriteLine("“{0}”\n", b.Message);
 				}
+
+				if (options.Verbose)
+				{
+					while (e != null)
+					{
+						Console.Error.WriteLine("Trace:");
+						Console.Error.WriteLine("======");
+						Console.Error.WriteLine("  - {0}", String.Join("\n  - ", e.StackTrace.Split('\n')));
+
+						e = e.InnerException;
+
+						if (e != null)
+						{
+							Console.Error.WriteLine("\n");
+						}
+					}
+				}
+				else
+				{
+					Console.Error.WriteLine("Use --verbose to see a stack trace of where the problem occurred");
+				}
+
+				Console.Error.WriteLine();
+				Environment.Exit(1);
 			}
 
 			Profile.Report(Console.Error);
+		}
+
+		private static void Bind()
+		{
+			var options = Options.Instance;
+
+			if (options.Files.Length != 2)
+			{
+				Console.Error.WriteLine("Please provide two network files <from> -> <to>");
+				Environment.Exit(1);
+			}
+
+			Binder binder = new Binder();
+			binder.Generate(options.Files[0], options.Files[1]);
+
+		}
+
+		private static void Generate()
+		{
+			var options = Options.Instance;
+
+			foreach (var filename in options.Files)
+			{
+				Generator generator = new Generator(filename);
+					
+				generator.Generate();
+
+				if (!options.Validate && !options.Compile)
+				{
+					string[] files = Array.ConvertAll<string, string>(generator.WrittenFiles, (a) => {
+						if (a.StartsWith(Environment.CurrentDirectory + "/"))
+						{
+							return String.Format("`{0}'", a.Substring(Environment.CurrentDirectory.Length + 1));
+						}
+						else
+						{
+							return String.Format("`{0}'", System.IO.Path.GetFileName(a));
+						}
+					});
+
+					string s;
+
+					if (files.Length <= 1)
+					{
+						s = String.Join(", ", files);
+					}
+					else
+					{
+						s = String.Format("{0} and {1}", String.Join(", ", files, 0, files.Length - 1), files[files.Length - 1]);
+					}
+
+					Log.WriteLine("Generated {0} from `{1}'...", s, filename);
+				}
+			}
 		}
 
 		private static void ListPlugins(Type[] types)

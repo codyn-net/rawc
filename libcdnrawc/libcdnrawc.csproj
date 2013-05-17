@@ -126,6 +126,7 @@
     <Compile Include="Programmer\Formatters\C\Lapack.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Asciifyer.cs" />
+    <Compile Include="Binder.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

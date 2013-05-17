@@ -11,6 +11,8 @@ namespace Cdn.RawC.Programmer.Formatters
 
 		string CompileForValidation(string[] sources, bool verbose);
 		IEnumerator<double[]> RunForValidation(string[] sources, double t, double dt);
+
+		string[] Bind(Cdn.Network ninp, Cdn.Network nout, IEnumerable<Binder.Binding> bindings);
 	}
 }
 

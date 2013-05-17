@@ -44,6 +44,11 @@ namespace Cdn.RawC.Programmer.Formatters.JavaScript
 			return new string[] {filename};
 		}
 
+		public string[] Bind(Cdn.Network ninp, Cdn.Network nout, IEnumerable<Binder.Binding> bindings)
+		{
+			return null;
+		}
+
 		public CommandLine.OptionGroup Options
 		{
 			get { return d_options; }
