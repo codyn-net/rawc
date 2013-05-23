@@ -474,7 +474,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 				if (d1.Columns == d2.Rows && d1.Columns != 1)
 				{
-					if (d1.Rows == 1)
+					if (d1.Rows == 1 && d2.Columns == 1)
 					{
 						return "matrix_multiply";
 					}
