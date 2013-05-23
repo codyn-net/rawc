@@ -103,9 +103,15 @@ all: static shared
 static: lib${name}.a
 shared: lib${name}.$(SHARED_EXT)
 
+ifeq ($(UNAME),Darwin)
+lib${name}.a: $(STATIC_OBJECTS)
+	$(call vecho,LIBTOOL,$@) 							\
+	 $(LIBTOOL) -static -o $@ $^ $(ST_LIBS) $(onull)
+else
 lib${name}.a: $(STATIC_OBJECTS)
 	$(call vecho,LIBTOOL,$@) 							\
 	$(LIBTOOL) --mode=link gcc -o $@ $^ $(ST_LIBS) $(onull)
+endif
 
 lib${name}.$(SHARED_EXT): $(SHARED_OBJECTS)
 	$(call vecho,CC,$@) $(CC) -shared -o $@ $^ $(SH_LIBS) $(${NAME}_LDFLAGS) $(LDFLAGS)
