@@ -17,6 +17,7 @@ namespace Cdn.RawC
 			EventAction = 1 << 5,
 			EventNode = 1 << 6,
 			EventSet = 1 << 7,
+			Promoted = 1 << 8
 		}
 
 		private object d_object;
