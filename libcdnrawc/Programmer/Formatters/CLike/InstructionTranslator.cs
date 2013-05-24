@@ -429,10 +429,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				return toindex;
 			}
 
-			// Check if the result is just 1x1, then it must be an offset
+			// Check if the result is just 1x1
 			if (context.Node.Dimension.IsOne)
 			{
-				ret = String.Format("({0})[{1}]", toindex, instruction.Offset);
+				ret = String.Format("({0})[{1}]", toindex, instruction.Indices[0]);
 			}
 			else if (instruction.IndexType == Cdn.InstructionIndexType.Offset)
 			{
