@@ -949,6 +949,11 @@ namespace Cdn.RawC
 					continue;
 				}
 
+				if ((state.Type & Cdn.RawC.State.Flags.EventSet) != 0)
+				{
+					continue;
+				}
+
 				if (state == Time || state == TimeStep)
 				{
 					continue;
