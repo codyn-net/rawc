@@ -1046,19 +1046,30 @@ namespace Cdn.RawC.Programmer
 			var modset = rands;
 			var delays = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DelayedStates);
 
+			var auxout = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
+			auxout.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
+
 			modset.UnionWith(TDTModSet);
 			modset.UnionWith(delays);
 			modset.UnionWith(Knowledge.Instance.Integrated);
 			modset.UnionWith(Knowledge.Instance.FlaggedStates(VariableFlags.In));
 
 			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
+			aux.RemoveWhere((s) => (s.Type & State.Flags.EventSet) != 0);
+			aux.Filter().DependsOn(modset).Unfilter();
 
 			// Split postcompute in states that need to be computed before the delays (because delays depend on them)
 			// and those states that can be computed after the delays
-			aux.Filter().DependsOn(modset).Unfilter();
+			auxout.Filter().DependsOn(modset).Unfilter();
 
-			var now = aux.DependencyOf(delays);
+			var now = auxout.DependencyOf(delays);
 			var later = now.Not();
+
+			var nowaux = aux.DependencyOf(now);
+			var lateraux = nowaux.Not();
+
+			// Add remaining deps from other aux
+			now.UnionWith(nowaux);
 
 			ProgramDependencies(d_apiPost, now, "Auxiliary variables that depend on t, dt, states or rand and on which delays depend");
 
@@ -1081,6 +1092,9 @@ namespace Cdn.RawC.Programmer
 				d_apiPost.Body.Add(new Computation.IncrementDelayedCounters(d_delayedCounters, d_delayedCountersSize));
 				d_apiPost.Body.Add(new Computation.Empty());
 			}
+
+			// Add remaining deps from other aux
+			later.UnionWith(lateraux);
 
 			// Update aux variables that depend on delays
 			ProgramDependencies(d_apiPost, later, "Auxiliary variables that depend on delays (or just come last)");
