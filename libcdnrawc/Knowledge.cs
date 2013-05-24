@@ -511,6 +511,19 @@ namespace Cdn.RawC
 				{
 					yield return s;
 				}
+
+				foreach (var s in d_eventEquationStates)
+				{
+					yield return s;
+				}
+
+				foreach (var pair in d_eventSetStates)
+				{
+					foreach (var s in pair.Value)
+					{
+						yield return s;
+					}
+				}
 			}
 		}
 
