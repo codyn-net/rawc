@@ -829,14 +829,18 @@ namespace Cdn.RawC.Programmer
 
 		private void ProgramDependencies(Computation.IBlock api, DependencyFilter deps, string comment, List<State> ret)
 		{
+			bool first = true;
+
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
 				if (grp.Count > 0)
 				{
-					if (!string.IsNullOrEmpty(comment))
+					if (first && !string.IsNullOrEmpty(comment))
 					{
 						api.Body.Add(new Computation.Comment(comment));
 					}
+
+					first = false;
 
 					var eq = AssignmentStates(grp, grp.Embedding);
 
