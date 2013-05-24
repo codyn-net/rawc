@@ -415,6 +415,7 @@ namespace Cdn.RawC.Programmer
 			// 1) State does not represent an integrated state variable
 			// 2) State represents an initialization
 			// 3) State represents a derivative calculation
+			// 4) State represents an event set
 			//
 			// We do this because some states in the table have a double State
 			// associated with it (e.g. one representing initial value and
@@ -422,7 +423,8 @@ namespace Cdn.RawC.Programmer
 			if ((state.Type & State.Flags.Integrated) == 0 ||
 			    (state.Type & State.Flags.Initialization) != 0 ||
 			    (state.Type & State.Flags.Derivative) != 0 ||
-			    (state.Type & State.Flags.Constraint) != 0)
+			    (state.Type & State.Flags.Constraint) != 0 ||
+			    (state.Type & State.Flags.EventSet) != 0)
 			{
 				var v = state.Object as Cdn.Variable;
 
