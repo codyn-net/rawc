@@ -442,6 +442,8 @@ namespace Cdn.RawC
 
 				var s = ExpandedState(v);
 
+				s.Type |= Cdn.RawC.State.Flags.Promoted;
+
 				AddState(unique, s);
 				AddAux(s, auxset);
 			}
@@ -481,6 +483,7 @@ namespace Cdn.RawC
 						if ((v.Instruction != null && v.Instruction.HasSlice) || (!v.Variable.Dimension.IsOne && v.Variable.UseCount() > 1))
 						{
 							var s = ExpandedState(v.Variable);
+							s.Type |= Cdn.RawC.State.Flags.Promoted;
 	
 							AddState(unique, s);
 							AddAux(s, auxset);
