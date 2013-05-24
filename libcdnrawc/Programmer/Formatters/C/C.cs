@@ -2171,10 +2171,10 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 
 			writer.WriteLine("\tfor (event = 0; event < network->events_active_size; ++event)");
 			writer.WriteLine("\t{");
-			writer.WriteLine("\t\tuint32_t i = network->events_active[event];");
+			writer.WriteLine("\t\tuint32_t evactive = network->events_active[event];");
 
 			writer.WriteLine();
-			writer.WriteLine("\t\tswitch (i)");
+			writer.WriteLine("\t\tswitch (evactive)");
 			writer.WriteLine("\t\t{");
 
 			int i = 0;
