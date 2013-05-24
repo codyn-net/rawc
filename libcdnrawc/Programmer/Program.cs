@@ -1286,13 +1286,26 @@ namespace Cdn.RawC.Programmer
 
 			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsDistance));
 
+			var aux = new List<State>(Knowledge.Instance.AuxiliaryStates);
+			aux.RemoveAll((s) => (s.Type & State.Flags.Promoted) == 0);
+
 			foreach (var ev in Knowledge.Instance.Events)
 			{
 				var lst = Knowledge.Instance.EventSetStates[ev];
 
 				if (lst.Count > 0)
 				{
+					var h = new HashSet<State>(aux);
+					h.UnionWith(lst);
+
+					var dg = d_dependencyGraph.Collapse(h);
+					var auxpro = new DependencyFilter(dg, aux);
+
 					var b = new Computation.Block();
+					var auxdeps = auxpro.DependencyOf(lst);
+
+					ProgramDependencies(b, auxdeps, "Dependencies");
+
 					b.Body.AddRange(AssignmentStates(lst, null));
 					d_eventPrograms[ev] = b;
 				}
