@@ -406,8 +406,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			string tmp = null;
 			string toindex;
 
-			context.SaveTemporaryStack();
-
 			if (child.Dimension.IsOne || InstructionHasStorage(child.Instruction, context))
 			{
 				context.PushRet(null);
@@ -428,7 +426,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			// directly return that thing
 			if (child.Dimension.IsOne)
 			{
-				context.RestoreTemporaryStack();
 				return toindex;
 			}
 
@@ -505,8 +502,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					throw new Exception("Can't random index without first class arrays support");
 				}
 			}
-
-			context.RestoreTemporaryStack();
 
 			return ret;
 		}
@@ -863,7 +858,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			List<string> args = new List<string>(context.Node.Children.Count + 1);
 
 			int cnt = 0;
-			context.SaveTemporaryStack();
 
 			for (int i = 0; i < context.Node.Children.Count; ++i)
 			{
@@ -878,8 +872,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					cnt = s;
 				}
 			}
-
-			context.RestoreTemporaryStack();
 
 			context.TranslateFunctionDimensionArguments(instruction, args, cnt);
 
@@ -1017,8 +1009,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				args.Add(ret);
 			}
 
-			context.SaveTemporaryStack();
-
 			if (!instruction.FunctionCall.IsCustom)
 			{
 				foreach (Tree.Embedding.Argument argument in instruction.FunctionCall.OrderedArguments)
@@ -1033,8 +1023,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					args.Add(TranslateChildV(child, context));
 				}
 			}
-
-			context.RestoreTemporaryStack();
 
 			return String.Format("{0}({1})", name, String.Join(", ", args.ToArray()));
 		}

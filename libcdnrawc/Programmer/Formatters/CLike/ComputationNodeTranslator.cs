@@ -34,6 +34,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			ret.AppendLine(context.BeginBlock);
 
+			context.SaveTemporaryStack();
+
 			for (int i = 0; i < node.Body.Count; ++i)
 			{
 				var child = node.Body[i];
@@ -43,6 +45,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					ret.AppendLine(Context.Reindent(Translate(child, context), "\t"));
 				}
 			}
+
+			context.RestoreTemporaryStack();
 
 			ret.AppendLine(context.EndBlock);
 
@@ -411,6 +415,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 			var slice = ctx.Node.Slice;
 
+			ctx.SaveTemporaryStack();
+
 			// Compute the equation
 			if (ctx.Node.Dimension.IsOne)
 			{
@@ -588,7 +594,10 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				}
 			}
 
-			return WriteWithTemporaryStorage(ctx, ret.ToString());
+			var reteq = WriteWithTemporaryStorage(ctx, ret.ToString());
+			ctx.RestoreTemporaryStack();
+
+			return reteq;
 		}
 
 		protected virtual string Translate(Computation.Assignment node, Context context)

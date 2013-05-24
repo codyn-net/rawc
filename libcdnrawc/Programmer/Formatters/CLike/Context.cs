@@ -30,8 +30,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		private Stack<Item> d_stack;
 		private Dictionary<Tree.NodePath, object> d_mapping;
 		private Options d_options;
-		private List<Temporary> d_tempstorage;
-		private Dictionary<Tree.Node, int> d_tempactive;
 		private Stack<string> d_ret;
 		private Stack<List<Temporary>> d_tempstack;
 		private static HashSet<string> s_usedMathFunctions;
@@ -57,8 +55,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				d_mapping = new Dictionary<Tree.NodePath, object>();
 			}
 
-			d_tempstorage = new List<Temporary>();
-			d_tempactive = new Dictionary<Tree.Node, int>();
 			d_tempstack = new Stack<List<Temporary>>();
 
 			d_ret = new Stack<string>();
@@ -83,17 +79,9 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			d_tempstack.Push(new List<Temporary>());
 		}
 
-		public void RestoreTemporaryStack()
+		public List<Temporary> RestoreTemporaryStack()
 		{
-			var lst = d_tempstack.Pop();
-
-			foreach (var item in lst)
-			{
-				if (item != null)
-				{
-					ReleaseTemporary(item.Node);
-				}
-			}
+			return d_tempstack.Pop();
 		}
 
 		public string AcquireTemporary(Tree.Node node)
@@ -127,7 +115,8 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				return String.Format("tmp{0}", i);
 			}*/
 
-			var idx = d_tempstorage.Count;
+			var tmpstack = d_tempstack.Peek();
+			var idx = tmpstack.Count;
 
 			var newtmp = new Temporary {
 				Node = node,
@@ -135,16 +124,13 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				Name = String.Format("tmp{0}", idx),
 			};
 
-			d_tempstorage.Add(newtmp);
-			d_tempactive[node] = idx;
-
-			d_tempstack.Peek().Add(newtmp);
+			tmpstack.Add(newtmp);
 			return newtmp.Name;
 		}
 
 		public List<Temporary> TemporaryStorage
 		{
-			get { return d_tempstorage; }
+			get { return d_tempstack.Peek(); }
 		}
 
 		public void PushRet(string ret)
@@ -181,17 +167,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return d_ret.Peek();
 		}
 
-		public void ReleaseTemporary(Tree.Node node)
-		{
-			int i;
-
-			if (d_tempactive.TryGetValue(node, out i))
-			{
-				d_tempstorage[i].Node = null;
-				d_tempactive.Remove(node);
-			}
-		}
-
 		protected Context Clone()
 		{
 			return Clone(d_program, d_options);
@@ -202,8 +177,6 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			var ctx = Clone();
 
 			ctx.d_ret = new Stack<string>(d_ret);
-			ctx.d_tempstorage = d_tempstorage;
-			ctx.d_tempactive = d_tempactive;
 
 			return ctx;
 		}
