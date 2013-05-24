@@ -292,6 +292,13 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
+		public DependencyGraph Collapse(HashSet<State> states)
+		{
+			HashSet<Node> leafs;
+
+			return Collapse(states, out leafs);
+		}
+
 		private DependencyGraph Collapse(HashSet<State> states, out HashSet<Node> leafs)
 		{
 			DependencyGraph ret = new DependencyGraph();
