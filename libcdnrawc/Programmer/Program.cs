@@ -1270,7 +1270,12 @@ namespace Cdn.RawC.Programmer
 			}
 
 			ProgramDependencies(d_apiInit, depontimeLeft, "Finally, compute values that depended on t/dt or delays");
-			d_apiInit.Body.Add(new Computation.CallAPI(d_apiEvents));
+			d_apiInit.Body.Add(new Computation.CallAPI(d_apiEventsEvaluate));
+
+			APIFunction postUpdate = new APIFunction("events_post_update", "void");
+			d_apiInit.Body.Add(new Computation.CallAPI(postUpdate));
+
+			d_apiInit.Body.Add(new Computation.CallAPI(d_apiEventsDistance));
 		}
 
 		private void ProgramReset()
