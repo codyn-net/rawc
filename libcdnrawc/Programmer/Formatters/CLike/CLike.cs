@@ -102,6 +102,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 						isdiff = true;
 					}
 				}
+				else if (item.Object is EventNodeState)
+				{
+					var state = item.Object as EventNodeState;
+
+					if (Cdn.RawC.Options.Instance.Verbose && options.SymbolicNames)
+					{
+						item.Alias = String.Format("{0} /* {1}.{2} */", item.DataIndex, state.Event.FullIdForDisplay, state.Type.ToString().ToLower());
+					}
+				}
 				else
 				{
 					prop = item.Key as Cdn.Variable;
