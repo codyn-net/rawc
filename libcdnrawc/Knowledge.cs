@@ -1114,21 +1114,11 @@ namespace Cdn.RawC
 			}
 		}
 
-		private EventState AddEventState(Cdn.Event ev)
+		private EventState EventStateContainerAdd(EventStateContainer states, Cdn.Event ev, string state)
 		{
-			EventStateContainer states;
-
-			var node = ev.Parent;
-			var state = ev.GotoState;
-
-			if (!d_eventStatesMap.TryGetValue(node, out states))
+			if (String.IsNullOrEmpty(state))
 			{
-				states = new EventStateContainer {
-					States = new List<string>(),
-					Index = d_eventStatesMap.Count,
-				};
-
-				d_eventStatesMap[node] = states;
+				return null;
 			}
 
 			if (!states.States.Contains(state))
@@ -1136,7 +1126,7 @@ namespace Cdn.RawC
 				states.States.Add(state);
 
 				var evs = new EventState {
-					Node = node,
+					Node = ev.Parent,
 					Name = state,
 					ActiveActions = new List<Cdn.EdgeAction>(),
 					Index = d_eventStates.Count,
@@ -1148,8 +1138,28 @@ namespace Cdn.RawC
 			}
 			else
 			{
-				return d_eventStateIdMap[EventStateId(node, state)];
+				return d_eventStateIdMap[EventStateId(ev.Parent, state)];
 			}
+		}
+
+		private void AddEventState(Cdn.Event ev)
+		{
+			EventStateContainer states;
+
+			var node = ev.Parent;
+
+			if (!d_eventStatesMap.TryGetValue(node, out states))
+			{
+				states = new EventStateContainer {
+					States = new List<string>(),
+					Index = d_eventStatesMap.Count,
+				};
+
+				d_eventStatesMap[node] = states;
+			}
+
+			EventStateContainerAdd(states, ev, ev.GotoState);
+			EventStateContainerAdd(states, ev, ev.Parent.InitialState);
 		}
 
 		private void ScanEvent(Cdn.Event ev)
@@ -1161,7 +1171,7 @@ namespace Cdn.RawC
 
 			d_events.Add(ev);
 
-			if (!String.IsNullOrEmpty(ev.GotoState))
+			if (!String.IsNullOrEmpty(ev.GotoState) || !String.IsNullOrEmpty(ev.Parent.InitialState))
 			{
 				AddEventState(ev);
 			}
