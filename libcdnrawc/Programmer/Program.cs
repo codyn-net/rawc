@@ -17,6 +17,7 @@ namespace Cdn.RawC.Programmer
 		private APIFunction d_apiReset;
 		private APIFunction d_apiEvents;
 		private APIFunction d_apiEventsDistance;
+		private APIFunction d_apiEventsEvaluate;
 
 		private List<Function> d_functions;
 		private List<Tree.Embedding> d_embeddings;
@@ -72,6 +73,7 @@ namespace Cdn.RawC.Programmer
 			d_apiPrepare = new APIFunction("prepare", "void", "ValueType", "t");
 			d_apiReset = new APIFunction("reset", "void", "ValueType", "t");
 			d_apiEvents = new APIFunction("events_update", "void");
+			d_apiEventsEvaluate = new APIFunction("events_evaluate", "void");
 			d_apiEventsDistance = new APIFunction("events_update_distance", "void");
 
 			d_usedCustomFunctions = new List<Cdn.Function>();
@@ -1282,8 +1284,9 @@ namespace Cdn.RawC.Programmer
 		private void ProgramEvents()
 		{
 			var eq = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
-			ProgramDependencies(d_apiEvents, eq, "Event conditions");
+			ProgramDependencies(d_apiEventsEvaluate, eq, "Event conditions");
 
+			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsEvaluate));
 			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsDistance));
 
 			var aux = new List<State>(Knowledge.Instance.AuxiliaryStates);
@@ -1335,6 +1338,7 @@ namespace Cdn.RawC.Programmer
 				yield return d_apiDiff;
 				yield return d_apiPost;
 				yield return d_apiEvents;
+				yield return d_apiEventsEvaluate;
 			}
 		}
 
