@@ -1,13 +1,16 @@
 initial-state "start"
 
-a = "0.5 - t"
-b = 0
-c = "min(2)" | out
+condition' = "(2 - condition)"
+int' = "1.5"
+direct = 0 | out
 
-event "start" to "next" when "min(1) < 0" {}
+event "start" to "next" when "condition < 0.5" {}
 
 edge self
 {
-    b <= "t" state "next"
-    b <= "t * 2" state "start"
+    direct <= "t * 2" state "start"
+    direct <= "t" state "next"
+
+    int' += "(1 - int)" state "start"
+    int' += "-0.5" state "next"
 }

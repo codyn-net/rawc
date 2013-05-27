@@ -11,6 +11,8 @@ namespace Cdn.RawC.Programmer
 			public HashSet<Node> Dependencies;
 			public HashSet<Node> DependencyFor;
 			public Tree.Embedding Embedding;
+			private Knowledge.EventStateGroup d_eventStateGroup;
+			private bool d_eventStateGroupComputed;
 
 			public Node(State state)
 			{
@@ -18,20 +20,48 @@ namespace Cdn.RawC.Programmer
 				Dependencies = new HashSet<Node>();
 				DependencyFor = new HashSet<Node>();
 			}
+
+			public Knowledge.EventStateGroup EventStateGroup
+			{
+				get
+				{
+					if (!d_eventStateGroupComputed)
+					{
+						var e = State as EventActionState;
+
+						if (e == null)
+						{
+							d_eventStateGroup = null;
+						}
+						else
+						{
+							d_eventStateGroup = Knowledge.Instance.EventStateToGroup[e];
+						}
+
+						d_eventStateGroupComputed = true;
+					}
+
+					return d_eventStateGroup;
+				}
+			}
 		}
 
 		private class Queue
 		{
+			private Dictionary<Knowledge.EventStateGroup, uint> d_eventStateMap;
 			private Dictionary<Tree.Embedding, uint> d_embeddingsMap;
-			private SortedDictionary<uint, Queue<Node>> d_storage;
+			private SortedDictionary<uint, SortedDictionary<uint, Queue<Node>>> d_storage;
 			private uint d_nextId;
+			private uint d_nextEvId;
 
 			public Queue()
 			{
 				d_embeddingsMap = new Dictionary<Tree.Embedding, uint>();
-				d_storage = new SortedDictionary<uint, Queue<Node>>();
+				d_eventStateMap = new Dictionary<Knowledge.EventStateGroup, uint>();
+				d_storage = new SortedDictionary<uint, SortedDictionary<uint, Queue<Node>>>();
 
-				d_nextId = 1;
+				d_nextId = 0;
+				d_nextEvId = 1;
 			}
 
 			public bool Empty
@@ -41,7 +71,28 @@ namespace Cdn.RawC.Programmer
 
 			public void Enqueue(Node n)
 			{
+				uint evid;
 				uint id;
+
+				if (n.EventStateGroup == null)
+				{
+					evid = 0;
+				}
+				else if (!d_eventStateMap.TryGetValue(n.EventStateGroup, out evid))
+				{
+					evid = d_nextEvId;
+
+					d_eventStateMap[n.EventStateGroup] = evid;
+					d_nextEvId++;
+				}
+
+				SortedDictionary<uint, Queue<Node>> embeddingStorage;
+
+				if (!d_storage.TryGetValue(evid, out embeddingStorage))
+				{
+					embeddingStorage = new SortedDictionary<uint, Queue<Node>>();
+					d_storage[evid] = embeddingStorage;
+				}
 
 				if (n.Embedding == null)
 				{
@@ -56,10 +107,10 @@ namespace Cdn.RawC.Programmer
 				}
 
 				Queue<Node> q;
-				if (!d_storage.TryGetValue(id, out q))
+				if (!embeddingStorage.TryGetValue(id, out q))
 				{
 					q = new Queue<Node>();
-					d_storage[id] = q;
+					embeddingStorage[id] = q;
 				}
 
 				q.Enqueue(n);
@@ -75,11 +126,23 @@ namespace Cdn.RawC.Programmer
 				}
 
 				var id = e.Current.Key;
-				var q = e.Current.Value;
+				var storage = e.Current.Value;
+
+				var ee = storage.GetEnumerator();
+
+				ee.MoveNext();
+
+				var qid = ee.Current.Key;
+				var q = ee.Current.Value;
 
 				var ret = q.Dequeue();
 
 				if (q.Count == 0)
+				{
+					storage.Remove(qid);
+				}
+
+				if (storage.Count == 0)
 				{
 					d_storage.Remove(id);
 				}
@@ -342,7 +405,7 @@ namespace Cdn.RawC.Programmer
 
 				// Append the node to the last group if it has the same
 				// embedding
-				if (ret.Count != 0 && ret[ret.Count - 1].Embedding == n.Embedding)
+				if (ret.Count != 0 && ret[ret.Count - 1].Embedding == n.Embedding && ret[ret.Count - 1].EventStateGroup == n.EventStateGroup)
 				{
 					ret[ret.Count - 1].Add(n.State);
 				}
@@ -350,7 +413,7 @@ namespace Cdn.RawC.Programmer
 				{
 					// Otherwise create a new group for it and append the group
 					// to the resulting set
-					DependencyGroup g = new DependencyGroup(n.Embedding);
+					DependencyGroup g = new DependencyGroup(n.Embedding, n.EventStateGroup);
 					g.Add(n.State);
 
 					ret.Add(g);

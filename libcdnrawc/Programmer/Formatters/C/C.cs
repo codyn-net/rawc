@@ -1292,14 +1292,14 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			{
 				string extrav = null;
 
-				if (api.NeedsEventStates)
+				if (api.NeedsEvents)
 				{
 					extrav = String.Format("\t{0} *{1};", EventStateType, d_program.EventStatesTable.Name);
 				}
 
 				WriteNetworkVariable(writer, extrav);
 
-				if (api.NeedsEventStates)
+				if (api.NeedsEvents)
 				{
 					writer.WriteLine("\t{0} = network->event_states;\n", d_program.EventStatesTable.Name);
 				}

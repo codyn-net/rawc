@@ -10,15 +10,13 @@ namespace Cdn.RawC.Programmer
 		private string d_returnType;
 		private string[] d_arguments;
 		private bool d_private;
-		private bool d_needsEventStates;
+		private bool d_needsEvents;
 
 		public APIFunction(string name, string returnType, params string[] arguments)
 		{
 			d_source = new List<Computation.INode>();
 			d_returnType = returnType;
 			d_arguments = arguments;
-			d_private = false;
-			d_needsEventStates = false;
 			d_name = name;
 		}
 
@@ -28,10 +26,29 @@ namespace Cdn.RawC.Programmer
 			set { d_private = value; }
 		}
 
-		public bool NeedsEventStates
+		public bool NeedsEvents
 		{
-			get { return d_needsEventStates; }
-			set { d_needsEventStates = value; }
+			get
+			{
+				if (d_needsEvents)
+				{
+					return d_needsEvents;
+				}
+
+				foreach (var node in d_source)
+				{
+					var block = node as Computation.IBlock;
+
+					if (block != null && block.NeedsEvents)
+					{
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			set { d_needsEvents = value; }
 		}
 
 		public List<Computation.INode> Body

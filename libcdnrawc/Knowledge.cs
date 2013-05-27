@@ -58,6 +58,8 @@ namespace Cdn.RawC
 		private Dictionary<Cdn.EdgeAction, Cdn.Variable> d_eventActionProperties;
 		private Dictionary<Cdn.Node, EventStateContainer> d_eventStatesMap;
 		private Dictionary<string, EventStateGroup> d_eventStateGroups;
+		private Dictionary<EventActionState, EventStateGroup> d_eventStateToGroup;
+
 
 		public static Knowledge Initialize(Cdn.Network network)
 		{
@@ -107,6 +109,7 @@ namespace Cdn.RawC
 			d_eventEquationStates = new List<State>();
 			d_eventNodeStates = new List<EventNodeState>();
 			d_eventSetStates = new Dictionary<Event, List<EventSetState>>();
+			d_eventStateToGroup = new Dictionary<EventActionState, EventStateGroup>();
 			d_actionedVariables = new Dictionary<Variable, EdgeAction[]>();
 			d_functionHelperVariables = new List<Variable>();
 
@@ -246,8 +249,14 @@ namespace Cdn.RawC
 		private List<State> ExtractEventActionStates(Cdn.Variable v)
 		{
 			var ret = new List<State>();
+			Cdn.EdgeAction[] actions;
 
-			foreach (Cdn.EdgeAction action in v.Actions)
+			if (!d_actionedVariables.TryGetValue(v, out actions))
+			{
+				return ret;
+			}
+
+			foreach (Cdn.EdgeAction action in actions)
 			{
 				var ph = action.Phases;
 				var eph = action.Edge.Phases;
@@ -314,11 +323,18 @@ namespace Cdn.RawC
 
 						grp.Actions.Add(action);
 						grp.States.Add(evst);
+
+						d_eventStateToGroup[evst] = grp;
 					}
 				}
 			}
 
 			return ret;
+		}
+
+		public Dictionary<EventActionState, EventStateGroup> EventStateToGroup
+		{
+			get { return d_eventStateToGroup; }
 		}
 
 		public bool TryGetEventState(Cdn.Node parent, string state, out EventState ret)
@@ -376,6 +392,28 @@ namespace Cdn.RawC
 				AddState(null, s);
 			}
 
+			HashSet<object> auxset = new HashSet<object>();
+
+			// Add acted upon variables
+			foreach (var v in d_actionedVariables)
+			{
+				if (!unique.Contains(v.Key))
+				{
+					var evpromoted = ExtractEventActionStates(v.Key);
+
+					foreach (var state in evpromoted)
+					{
+						AddState(unique, state);
+						AddAux(state, auxset);
+					}
+
+					var s = ExpandedState(v.Key);
+
+					AddState(unique, s);
+					AddAux(s, auxset);
+				}
+			}
+
 			// Add in variables
 			foreach (var v in FlaggedVariables(VariableFlags.In))
 			{
@@ -396,8 +434,6 @@ namespace Cdn.RawC
 				}
 			}
 
-			HashSet<object> auxset = new HashSet<object>();
-
 			// Add out variables
 			foreach (var v in FlaggedVariables(VariableFlags.Out))
 			{
@@ -417,18 +453,6 @@ namespace Cdn.RawC
 				{
 					var s = ExpandedState(v);
 					AddState(unique, s);
-				}
-			}
-
-			// Add acted upon variables
-			foreach (var v in d_actionedVariables)
-			{
-				if (!unique.Contains(v.Key))
-				{
-					var s = ExpandedState(v.Key);
-
-					AddState(unique, s);
-					AddAux(s, auxset);
 				}
 			}
 
@@ -975,7 +999,20 @@ namespace Cdn.RawC
 						instrs = v.Expression.Instructions;
 					}
 
-					AddInitialize(new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization, actions));
+					State s;
+					EventActionState evstate = state as EventActionState;
+
+					if (evstate != null)
+					{
+						s = new EventActionState(evstate.Action, evstate.Variable);
+						d_eventStateToGroup[(EventActionState)s] = d_eventStateToGroup[evstate];
+					}
+					else
+					{
+						s = new State(state.Object, instrs, state.Type | RawC.State.Flags.Initialization, actions);
+					}
+
+					AddInitialize(s);
 				}
 			}
 		}

@@ -4,8 +4,23 @@ namespace Cdn.RawC
 {
 	public class EventActionState : State
 	{
-		public EventActionState(Cdn.EdgeAction action, Cdn.Variable v) : base(v, action.Equation, State.Flags.EventAction | State.Flags.Derivative)
+		private Cdn.EdgeAction d_action;
+		private Cdn.Variable d_variable;
+
+		public EventActionState(Cdn.EdgeAction action, Cdn.Variable v) : base(v, action.Equation, State.Flags.EventAction | (action.TargetVariable.Integrated ? State.Flags.Derivative : 0))
 		{
+			d_action = action;
+			d_variable = v;
+		}
+
+		public Cdn.EdgeAction Action
+		{
+			get { return d_action; }
+		}
+
+		public Cdn.Variable Variable
+		{
+			get { return d_variable; }
 		}
 
 		public override string ToString()

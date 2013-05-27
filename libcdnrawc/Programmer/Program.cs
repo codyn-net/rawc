@@ -42,7 +42,7 @@ namespace Cdn.RawC.Programmer
 		private HashSet<State> d_initStates;
 		private DependencyFilter d_preparedStates;
 		private Dictionary<Cdn.Event, Computation.INode> d_eventPrograms;
-		private Tree.Node d_zeroNumberExpression;
+		private Dictionary<string, Tree.Node> d_zeroNumberExpression;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
 		{
@@ -60,7 +60,7 @@ namespace Cdn.RawC.Programmer
 			d_embeddings = new List<Tree.Embedding>(embeddings);
 			d_embeddingFunctionMap = new Dictionary<Tree.Embedding, Function>();
 
-			d_zeroNumberExpression = new Tree.Node(null, new InstructionNumber("0"));
+			d_zeroNumberExpression = new Dictionary<string, Tree.Node>();
 
 			d_apiTDT = new APIFunction("tdtdeps", "void");
 			d_apiTDT.Private = true;
@@ -113,6 +113,36 @@ namespace Cdn.RawC.Programmer
 			{
 				table.Lock();
 			}
+		}
+
+		private Tree.Node ZeroNumberExpression(Cdn.Dimension d)
+		{
+			string key = String.Format("{0}x{1}", d.Rows, d.Columns);
+			Tree.Node n;
+
+			if (d_zeroNumberExpression.TryGetValue(key, out n))
+			{
+				return n;
+			}
+
+			if (d.IsOne)
+			{
+				n = new Tree.Node(null, new InstructionNumber("0"));
+			}
+			else
+			{
+				var num = d.Size();
+
+				n = new Tree.Node(null, new InstructionMatrix(new Cdn.StackArgs(num), d));
+
+				for (int i = 0; i < num; ++i)
+				{
+					n.Children[i] = new Tree.Node(null, new InstructionNumber("0"));
+				}
+			}
+
+			d_zeroNumberExpression[key] = n;
+			return n;
 		}
 
 		public int[] StateRange(IEnumerable<State> states)
@@ -731,7 +761,7 @@ namespace Cdn.RawC.Programmer
 				if (loop.Instances.Count >= Cdn.RawC.Options.Instance.MinimumLoopSize)
 				{
 					// Create loop for this thing. Note that CreateLoop
-					// removes the states relevant for the loop from 'st'
+					// removes the states relevant for the loop from 'states'
 					Computation.Loop l = CreateLoop(loop);
 
 					ret.Add(l);
@@ -796,7 +826,7 @@ namespace Cdn.RawC.Programmer
 
 			if (dtzero)
 			{
-				dteq = d_zeroNumberExpression;
+				dteq = ZeroNumberExpression(new Cdn.Dimension { Rows = 1, Columns = 1 });
 			}
 			else
 			{
@@ -833,27 +863,59 @@ namespace Cdn.RawC.Programmer
 		{
 			bool first = true;
 
+			Knowledge.EventStateGroup evgrp = null;
+			Computation.StateConditional cond = null;
+			Computation.IBlock block = api;
+
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
-				if (grp.Count > 0)
+				if (grp.Count == 0)
 				{
-					if (first && !string.IsNullOrEmpty(comment))
-					{
-						api.Body.Add(new Computation.Comment(comment));
-					}
-
-					first = false;
-
-					var eq = AssignmentStates(grp, grp.Embedding);
-
-					if (ret != null)
-					{
-						ret.AddRange(grp);
-					}
-
-					api.Body.AddRange(eq);
-					api.Body.Add(new Computation.Empty());
+					continue;
 				}
+
+				if (first && !string.IsNullOrEmpty(comment))
+				{
+					api.Body.Add(new Computation.Comment(comment));
+				}
+
+				first = false;
+
+				if (evgrp != grp.EventStateGroup && cond != null)
+				{
+					cond = null;
+					block = api;
+				}
+
+				if (grp.EventStateGroup != null && cond == null)
+				{
+					cond = new Computation.StateConditional(grp.EventStateGroup);
+					api.Body.Add(cond);
+					block = cond;
+
+					api.NeedsEvents = true;
+				}
+
+				if (cond != null)
+				{
+					foreach (var s in grp)
+					{
+						var item = d_statetable[s];
+						cond.Else.Add(new Computation.Assignment(s, item, ZeroNumberExpression(item.Dimension)));
+					}
+				}
+
+				evgrp = grp.EventStateGroup;
+
+				var eq = AssignmentStates(grp, grp.Embedding);
+
+				if (ret != null)
+				{
+					ret.AddRange(grp);
+				}
+
+				block.Body.AddRange(eq);
+				block.Body.Add(new Computation.Empty());
 			}
 		}
 
@@ -968,7 +1030,8 @@ namespace Cdn.RawC.Programmer
 					// state diffs to 0 when event is not begin active
 					foreach (var s in conds)
 					{
-						cond.Else.Add(new Computation.Assignment(s, d_statetable[s], d_zeroNumberExpression));
+						var item = d_statetable[s];
+						cond.Else.Add(new Computation.Assignment(s, item, ZeroNumberExpression(item.Dimension)));
 					}
 
 					d_apiPreDiff.Body.Add(cond);
@@ -1000,23 +1063,15 @@ namespace Cdn.RawC.Programmer
 
 			foreach (var grp in Knowledge.Instance.EventStateGroups)
 			{
-				var cond = new Computation.StateConditional(grp);
 				var eq = new DependencyFilter(d_dependencyGraph, grp.States);
-				var conds = new List<State>();
+				eq.RemoveWhere((a) => (a.Type & State.Flags.Derivative) == 0);
 
-				ProgramDependencies(cond, eq, "Calculate event state dependent derivatives", conds);
+				ProgramDependencies(d_apiDiff, eq, "Calculate event state dependent derivatives");
 
-				// Set the "Else" of the state conditional to clear all
-				// state diffs to 0 when event is not begin active
-				foreach (var s in conds)
+				if (eq.Count > 0)
 				{
-					cond.Else.Add(new Computation.Assignment(s, d_statetable[s], d_zeroNumberExpression));
+					d_apiDiff.NeedsEvents = true;
 				}
-
-				d_apiDiff.Body.Add(cond);
-				d_apiDiff.Body.Add(new Computation.Empty());
-
-				d_apiDiff.NeedsEventStates = true;
 			}
 
 			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
@@ -1047,8 +1102,8 @@ namespace Cdn.RawC.Programmer
 			// Compute set of things that have changed
 			var modset = rands;
 			var delays = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DelayedStates);
-
 			var auxout = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
+
 			auxout.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
 
 			modset.UnionWith(TDTModSet);
@@ -1152,7 +1207,7 @@ namespace Cdn.RawC.Programmer
 			// Set initial states if needed
 			if (d_eventStates.Count > 0)
 			{
-				d_apiPrepare.NeedsEventStates = true;
+				d_apiPrepare.NeedsEvents = true;
 
 				d_apiPrepare.Body.Add(new Computation.Comment("Copy initial event states"));
 				d_apiPrepare.Body.Add(new Computation.CopyTable(d_initialEventStates, d_eventStates, -1));

@@ -30,6 +30,12 @@ namespace Cdn.RawC.Programmer.Computation
 		{
 			get { return d_else; }
 		}
+
+		public bool NeedsEvents
+		{
+			get { return false; }
+			set {}
+		}
 	}
 }
 
