@@ -33,7 +33,7 @@ namespace Cdn.RawC.Programmer.Computation
 
 		public bool NeedsEvents
 		{
-			get { return false; }
+			get { return true; }
 			set {}
 		}
 	}
