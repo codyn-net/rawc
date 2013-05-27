@@ -137,7 +137,7 @@ namespace Cdn.RawC.Programmer
 
 				for (int i = 0; i < num; ++i)
 				{
-					n.Children[i] = new Tree.Node(null, new InstructionNumber("0"));
+					n.Children.Add(new Tree.Node(null, new InstructionNumber("0")));
 				}
 			}
 
