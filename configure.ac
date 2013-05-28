@@ -1,7 +1,7 @@
 dnl Warning: This is an automatically generated file, do not edit!
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
-AC_INIT(cdnrawc, 2.0)
+AC_INIT(cdnrawc, 3.0)
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 AM_SILENT_RULES([yes])
@@ -16,7 +16,7 @@ PKG_PROG_PKG_CONFIG
 AM_PATH_PYTHON([2.6], [enable_python=yes], [enable_python=no])
 AM_CONDITIONAL([ENABLE_PYTHON], [test x$enable_python = xyes])
 
-LIBCDNRAWC_SHARP_API_VERSION=2.0
+LIBCDNRAWC_SHARP_API_VERSION=3.0
 AC_SUBST(LIBCDNRAWC_SHARP_API_VERSION)
 
 dnl pkg-config
