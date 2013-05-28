@@ -28,6 +28,7 @@ CdnRawcIntegratorEventResult
 cdn_rawc_integrator_process_events (CdnRawcIntegrator *integrator,
                                     CdnRawcNetwork    *network,
                                     void              *data,
+                                    ValueType          t,
                                     ValueType         *dt);
 
 CDN_RAWC_END_DECLS

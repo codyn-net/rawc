@@ -47,6 +47,7 @@ cdn_rawc_integrator_step (CdnRawcIntegrator *integrator,
 		if (cdn_rawc_integrator_process_events (integrator,
 		                                        network,
 		                                        data,
+		                                        t,
 		                                        &dt) == CDN_RAWC_INTEGRATOR_EVENT_RESULT_OK)
 		{
 			break;
@@ -64,6 +65,7 @@ CdnRawcIntegratorEventResult
 cdn_rawc_integrator_process_events (CdnRawcIntegrator *integrator,
                                     CdnRawcNetwork    *network,
                                     void              *data,
+                                    ValueType          t,
                                     ValueType         *dt)
 {
 	uint32_t num;
@@ -88,8 +90,9 @@ cdn_rawc_integrator_process_events (CdnRawcIntegrator *integrator,
 	{
 		// Fire all events
 		network->events_fire (data);
-
 		network->events_post_update (data);
+
+		network->post (data, t + *dt, *dt);
 		return CDN_RAWC_INTEGRATOR_EVENT_RESULT_OK;
 	}
 
