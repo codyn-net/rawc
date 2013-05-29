@@ -891,7 +891,11 @@ namespace Cdn.RawC.Tree
 
 			rettempl = null;
 
-			//return f.FullIdForDisplay;
+			if (!f.IsPure)
+			{
+				return "ff_" + f.FullIdForDisplay;
+			}
+
 			var templs = f.AppliedTemplates;
 
 			if (templs.Length == 0)
