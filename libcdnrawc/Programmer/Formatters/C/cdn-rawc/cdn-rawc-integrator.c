@@ -1,6 +1,28 @@
 #include "cdn-rawc-integrator.h"
+#include "cdn-rawc-network.h"
 #include <string.h>
 #include <stdio.h>
+
+void
+cdn_rawc_integrator_run (CdnRawcIntegrator *integrator,
+                         CdnRawcNetwork    *network,
+                         void              *data,
+                         ValueType          from,
+                         ValueType          step,
+                         ValueType          to)
+{
+	ValueType *values;
+
+	cdn_rawc_network_reset (network, data, from);
+
+	values = cdn_rawc_network_get_data (network, data);
+
+	while (from < to)
+	{
+		cdn_rawc_integrator_step (integrator, network, data, from, step);
+		from += values[network->meta.dt];
+	}
+}
 
 void
 cdn_rawc_integrator_step (CdnRawcIntegrator *integrator,

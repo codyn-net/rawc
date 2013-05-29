@@ -12,6 +12,13 @@ typedef enum
 	CDN_RAWC_INTEGRATOR_EVENT_RESULT_REFINE,
 } CdnRawcIntegratorEventResult;
 
+void cdn_rawc_integrator_run (CdnRawcIntegrator *integrator,
+                              CdnRawcNetwork    *network,
+                              void              *data,
+                              ValueType          from,
+                              ValueType          step,
+                              ValueType          to);
+
 void cdn_rawc_integrator_step (CdnRawcIntegrator *integrator,
                                CdnRawcNetwork    *network,
                                void              *data,

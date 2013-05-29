@@ -150,6 +150,14 @@ class API:
             ptr.restype = ctypes.POINTER(CdnRawcIntegrator)
             setattr(self, fullname, ptr)
 
+        self.cdn_rawc_integrator_run = lib.cdn_rawc_integrator_run
+        self.cdn_rawc_integrator_run.argtypes = [ctypes.POINTER(CdnRawcIntegrator),
+                                                 ctypes.POINTER(CdnRawcNetwork),
+                                                 ctypes.c_void_p,
+                                                 valuetype,
+                                                 valuetype,
+                                                 valuetype]
+
         self.cdn_rawc_integrator_step = lib.cdn_rawc_integrator_step
         self.cdn_rawc_integrator_step.argtypes = [ctypes.POINTER(CdnRawcIntegrator),
                                                   ctypes.POINTER(CdnRawcNetwork),
@@ -507,6 +515,14 @@ class Network:
 
         # Create enough data
         self.storage = self.api.cdn_rawc_network_alloc(self.network, self.integrator.order)
+
+    def run(self, start, step, end):
+        self.api.cdn_rawc_integrator_run(self.integrator.integrator,
+                                         self.network,
+                                         self.storage,
+                                         start,
+                                         step,
+                                         end)
 
     def init(self, t=0):
         self.api.cdn_rawc_network_init(self.network, self.storage, t)
