@@ -410,7 +410,17 @@ def load(name, libname=None):
         else:
             ext = '.so'
 
-        libname = "lib" + name + ext
+        libname = str(name)
+
+        if not libname.startswith('lib'):
+            libname = 'lib' + libname
+        else:
+            name = name[3:]
+
+        if not libname.endswith(ext):
+            libname += ext
+        else:
+            name = name[:-len(ext)]
 
     lib = ctypes.cdll.LoadLibrary(libname)
     return API(lib, name, libname)
