@@ -31,6 +31,10 @@ matrix_multiply_1 = "matrix * transpose(matrix)" | out
 matrix_multiply_2 = "eye(4) * [1; 2; 3; 4]" | out
 matrix_multiply_3 = "[1, 2, 3, 4] * [1; 2; 3; 4]" | out
 matrix_multiply_4 = "[1; 2; 3; 4] * [2]" | out
+matrix_multiply_5 = "[1, 2, 3, 4] * [2]" | out
+matrix_multiply_6 = "2 * [1; 2; 3; 4]" | out
+matrix_multiply_7 = "2 * [1, 2, 3, 4]" | out
+matrix_multiply_8 = "[1; 2; 3; 4] * [1, 2, 3, 4]" | out
 
 # test csign with some more interesting arguments than the general ones
 "csign_m_m"   = "csign(matrix,  [2, -3, -4; -2, 4, -4])" | out
@@ -94,5 +98,7 @@ min_m_m_2 = "min([1, 2; 3, 4], [4, 3; 2, 1])" | out
 
 csum_1 = "csum([1, 2, 3; 4, 5, 6; 7, 8, 9])" | out
 rsum_1 = "rsum([1, 2, 3; 4, 5, 6; 7, 8, 9])" | out
+
+multimin_1 = "[0.4, 0.1, 0.3, 0.2, -0.5] .* ([0.1, -0.3, -0.4, 0.5, -0.1] < 0)" | out
 
 # vi:ts=4:et
