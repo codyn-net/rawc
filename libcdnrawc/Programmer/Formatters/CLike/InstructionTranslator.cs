@@ -32,6 +32,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			s_operatorSpecs = new Dictionary<MathFunctionType, OperatorSpec>();
 
 			AddSpec(MathFunctionType.Multiply, 7, true);
+			AddSpec(MathFunctionType.Emultiply, 7, true);
 			AddSpec(MathFunctionType.Divide, 7, true);
 			AddSpec(MathFunctionType.Modulo, 7, true);
 			AddSpec(MathFunctionType.Plus, 6, true);

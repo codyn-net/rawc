@@ -14,4 +14,8 @@ v2 = "3.2"
 "bo_@binary_operator"   = "v1 @[op_@1] v1"  | out
 "bop_@binary_operator_positive"   = "v2 @[op_@1] v2"  | out
 
+minprec_1 = "-3 * (-2 < 0)" | out
+minprec_2 = "[-3] * ([-2] < 0)" | out
+minprec_3 = "[-3] .* ([-2] < 0)" | out
+
 # vi:ts=4:et
