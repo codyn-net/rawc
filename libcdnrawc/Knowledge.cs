@@ -259,7 +259,16 @@ namespace Cdn.RawC
 			foreach (Cdn.EdgeAction action in actions)
 			{
 				var ph = action.Phases;
-				var eph = action.Edge.Phases;
+				string[] eph;
+
+				if (action.Edge != null)
+				{
+					eph = action.Edge.Phases;
+				}
+				else
+				{
+					eph = new string[] {};
+				}
 
 				if (ph.Length != 0 || eph.Length != 0)
 				{
