@@ -204,12 +204,6 @@ namespace Cdn.RawC.Programmer
 				d_dependencyGraph.Add(st, null);
 			}
 
-			// Add initial states
-			foreach (State st in Knowledge.Instance.InitializeStates)
-			{
-				d_dependencyGraph.Add(st, initmap);
-			}
-
 			// Add event set states
 			foreach (var pair in Knowledge.Instance.EventSetStates)
 			{
@@ -217,6 +211,12 @@ namespace Cdn.RawC.Programmer
 				{
 					d_dependencyGraph.Add(st, null);
 				}
+			}
+
+			// Add initial states
+			foreach (State st in Knowledge.Instance.InitializeStates)
+			{
+				d_dependencyGraph.Add(st, initmap);
 			}
 
 			if (Cdn.RawC.Options.Instance.DependencyGraph != null)

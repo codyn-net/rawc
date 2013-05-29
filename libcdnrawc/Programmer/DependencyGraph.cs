@@ -445,7 +445,11 @@ namespace Cdn.RawC.Programmer
 			Node node = new Node(state);
 
 			d_stateMap[state] = node;
-			d_nodeMap[state.DataKey] = node;
+
+			if (!(state is EventSetState))
+			{
+				d_nodeMap[state.DataKey] = node;
+			}
 
 			Tree.Embedding embedding;
 
