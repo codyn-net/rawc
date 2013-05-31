@@ -107,8 +107,8 @@ namespace Cdn.RawC
 						failures.Add(String.Format("{0}[{1}] (got {2} but expected {3})",
 							         d_monitors[i].Variable.FullNameForDisplay,
 							         j,
-						             rawcval,
-						             cdnval));
+						             rawcval.ToString("R"),
+						             cdnval.ToString("R")));
 					}
 				}
 			}
