@@ -521,6 +521,11 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				args.Append(" V=1");
 			}
 
+			if (validating)
+			{
+				args.Append(" DEBUG=1");
+			}
+
 			List<string> ret = new List<string>();
 
 			bool all = !(d_options.CompileShared || d_options.CompileStatic);
