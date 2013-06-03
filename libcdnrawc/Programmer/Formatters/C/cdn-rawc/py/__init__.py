@@ -278,12 +278,12 @@ class MetaVariable:
         self._dimension = None
 
     def __getitem__(self, idx):
-        return self.flat_value(idx)
+        return self._flat_value(idx)
 
     def __setitem__(self, idx, v):
         idx = idx + self.index
 
-        if hasattr(v, '__getitem__'):
+        if hasattr(v, '__getitem__') and hasattr(v, '__len__'):
             for i in range(len(v)):
                 self._network.data[idx] = v[i]
                 idx += 1
@@ -297,8 +297,7 @@ class MetaVariable:
 
         return self._dimension
 
-    @property
-    def flat_value(self, idx=-1):
+    def _flat_value(self, idx=-1):
         start = self.index
 
         if idx == -1:
@@ -307,20 +306,27 @@ class MetaVariable:
             start += idx
             end = start
 
-        return self._network.data[start:end]
+        if start == end:
+            return self._network.data[start]
+        else:
+            return self._network.data[start:end]
 
     @property
     def value(self):
         dim = self.dimension
-        val = self.flat_value
+        val = self._flat_value()
 
-        if dim.rows > 1 and dim.columns > 1:
+        if dim.rows > 1 or dim.columns > 1:
             return self._make_matrix(val, dim)
         else:
-            return val
+            return val[0]
 
-    def update(self, v):
+    def __float__(self):
+        return self[0]
+
+    def assign(self, v):
         start = self.index
+        dim = self.dimension
 
         if dim.rows == 1 and dim.columns == 1:
             self._network.data[self.index] = v
