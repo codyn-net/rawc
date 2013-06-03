@@ -934,7 +934,7 @@ namespace Cdn.RawC
 
 			Cdn.EdgeAction[] actions;
 
-			if (!variable.Integrated && d_actionedVariables.TryGetValue(variable, out actions))
+			if (!variable.HasFlag(VariableFlags.Integrated) && d_actionedVariables.TryGetValue(variable, out actions))
 			{
 				foreach (var action in actions)
 				{
@@ -998,7 +998,7 @@ namespace Cdn.RawC
 					Instruction[] instrs;
 					Cdn.EdgeAction[] actions = null;
 
-					if (v == null || !v.Integrated || state.Actions.Length == 0)
+					if (v == null || !v.HasFlag(VariableFlags.Integrated) || state.Actions.Length == 0)
 					{
 						instrs = state.Instructions;
 						actions = state.Actions;

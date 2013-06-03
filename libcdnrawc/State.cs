@@ -53,7 +53,7 @@ namespace Cdn.RawC
 
 			Variable variable = obj as Variable;
 
-			if (variable != null && variable.Integrated)
+			if (variable != null && variable.HasFlag(VariableFlags.Integrated))
 			{
 				d_type = Flags.Integrated;
 			}

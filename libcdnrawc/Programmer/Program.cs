@@ -282,7 +282,7 @@ namespace Cdn.RawC.Programmer
 				{
 					item.Type |= DataTable.DataItem.Flags.State;
 
-					if (v.Integrated)
+					if (v.HasFlag(VariableFlags.Integrated))
 					{
 						item.Type |= DataTable.DataItem.Flags.Integrated;
 					}
