@@ -1,4 +1,4 @@
-import ctypes, platform
+import ctypes, platform, os
 
 valuetype = ctypes.c_double
 valuetypeptr = ctypes.POINTER(valuetype)
@@ -408,25 +408,33 @@ class MetaRoot:
         self.fullname_to_node = {}
 
 def load(name, libname=None):
-    if not libname:
-        if platform.system() == 'Darwin':
-            ext = '.dylib'
-        elif platform.system() == 'Windows':
-            ext = '.dll'
-        else:
-            ext = '.so'
+    if platform.system() == 'Darwin':
+        ext = '.dylib'
+    elif platform.system() == 'Windows':
+        ext = '.dll'
+    else:
+        ext = '.so'
 
+    hadlibname = True
+
+    if not libname:
+        hadlibname = False
         libname = str(name)
 
-        if not libname.startswith('lib'):
-            libname = 'lib' + libname
-        else:
-            name = name[3:]
+    libdir = os.path.dirname(libname)
+    libbase = os.path.basename(libname)
 
-        if not libname.endswith(ext):
-            libname += ext
-        else:
-            name = name[:-len(ext)]
+    if not libbase.startswith('lib'):
+        libbase = 'lib' + libbase
+    elif not hadlibname:
+        name = name[3:]
+
+    if not libbase.endswith(ext):
+        libbase += ext
+    elif not hadlibname:
+        name = name[:-len(ext)]
+
+    libname = os.path.join(libdir, libbase)
 
     lib = ctypes.cdll.LoadLibrary(libname)
     return API(lib, name, libname)
