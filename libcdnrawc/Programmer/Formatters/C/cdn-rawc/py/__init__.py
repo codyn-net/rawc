@@ -595,7 +595,10 @@ class Network:
     def diff(self, t, dt):
         self.api.cdn_rawc_network_diff(self.network, self.storage, t, dt)
 
-    def step(self, dt):
+    def step(self, dt=None):
+        if dt is None:
+            dt = self.default_timestep
+
         self.api.cdn_rawc_integrator_step(self.integrator.integrator,
                                           self.network,
                                           self.storage,
