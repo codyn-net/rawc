@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 void
 cdn_rawc_network_prepare (CdnRawcNetwork *network,
