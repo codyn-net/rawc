@@ -108,7 +108,6 @@ diff (CdnRawcIntegrator *integrator,
       ValueType          t,
       ValueType          dt)
 {
-	uint32_t i;
 	double hdt = 0.5 * dt;
 
 	// First, store original states in the next data segment
