@@ -23,7 +23,8 @@ INTEGRATOR_HEADER_FILES = \
 libcdnrawc_1_0_la_CFLAGS = \
 	-I $(srcdir)/../ \
 	-DENABLE_MALLOC \
-	-DENABLE_META_LOOKUP
+	-DENABLE_META_LOOKUP \
+	-Wall
 
 libcdnrawc_1_0_la_SOURCES = \
 	$(SOURCE_FILES) \
