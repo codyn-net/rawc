@@ -373,7 +373,18 @@ class MetaNode(object):
         self.name_to_child = {}
 
     def __getitem__(self, key):
+        if key in self.name_to_child:
+            return self.name_to_child[key]
+        else:
+            raise AttributeError('The node `{0}\' does not contain the variable `{1}\''.format(self.fullname, key))
+
         return self.name_to_child[key]
+
+    def __getattr__(self, key):
+        if key in self.name_to_child:
+            return self.name_to_child[key]
+        else:
+            raise AttributeError('The node `{0}\' does not contain the variable `{1}\''.format(self.fullname, key))
 
     @property
     def fullname(self):
