@@ -1,7 +1,11 @@
-import ctypes, platform, os
+import ctypes, platform, os, sys
 
 valuetype = ctypes.c_double
 valuetypeptr = ctypes.POINTER(valuetype)
+
+if sys.version_info.major >= 3:
+    def unicode(s):
+        return s
 
 # Bind data structures
 class CdnRawcRange(ctypes.Structure):
@@ -352,12 +356,12 @@ class MetaVariable:
     @property
     def fullname(self):
         if not self.parent.parent is None:
-            return u'{0}.{1}'.format(self.parent.fullname, self.name)
+            return unicode('{0}.{1}').format(self.parent.fullname, self.name)
         else:
             return self.name
 
     def __repr__(self):
-        return u'<{0} instance at 0x{1:x}, {2}: {3}>'.format(self.__class__,
+        return unicode('<{0} instance at 0x{1:x}, {2}: {3}>').format(self.__class__,
                                                              id(self),
                                                              self.fullname,
                                                              self.value).encode('utf-8')
@@ -389,7 +393,7 @@ class MetaNode(object):
     @property
     def fullname(self):
         if not self.parent is None and not self.parent.parent is None:
-            return u'{0}.{1}'.format(self.parent.fullname, self.name)
+            return unicode('{0}.{1}').format(self.parent.fullname, self.name)
         else:
             return self.name
 
@@ -413,7 +417,7 @@ class MetaNode(object):
 class MetaRoot:
     def __init__(self, network):
         self.network = MetaNode(network)
-        self.network.name = u"(cdn)"
+        self.network.name = unicode('(cdn)')
 
         self.template_to_nodes = {}
         self.fullname_to_node = {}
@@ -635,7 +639,7 @@ class Network:
             fullname = list(fullname)
             fullname.append(node.name)
 
-            meta_info.fullname_to_node[u".".join(fullname)] = node
+            meta_info.fullname_to_node[unicode('.').join(fullname)] = node
         else:
             fullname = []
 
