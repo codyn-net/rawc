@@ -1,5 +1,20 @@
-test_cdn_files = $(filter-out _%.cdn,$(wildcard *.cdn))
-test_names = $(foreach i,$(test_cdn_files),${i:%.cdn=%.test})
+test_cdn_files = 		\
+	dependencies.cdn	\
+	events.cdn		\
+	functions.cdn		\
+	indices.cdn		\
+	integrate.cdn		\
+	matrix.cdn		\
+	simplemath.cdn
+
+test_names =			\
+	dependencies.test	\
+	events.test		\
+	functions.test		\
+	indices.test		\
+	integrate.test		\
+	matrix.test		\
+	simplemath.test
 
 TESTS = $(test_names)
 
