@@ -15,6 +15,10 @@ void cdn_rawc_network_reset           (CdnRawcNetwork *network,
                                        void           *data,
                                        ValueType       t);
 
+void cdn_rawc_network_update          (CdnRawcNetwork *network,
+                                       void           *data,
+                                       ValueType       t);
+
 void cdn_rawc_network_pre             (CdnRawcNetwork *network,
                                        void           *data,
                                        ValueType       t,

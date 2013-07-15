@@ -15,6 +15,7 @@ namespace Cdn.RawC.Programmer
 		private APIFunction d_apiInit;
 		private APIFunction d_apiPrepare;
 		private APIFunction d_apiReset;
+		private APIFunction d_apiUpdate;
 		private APIFunction d_apiEvents;
 		private APIFunction d_apiEventsDistance;
 		private APIFunction d_apiEventsEvaluate;
@@ -72,6 +73,7 @@ namespace Cdn.RawC.Programmer
 			d_apiInit = new APIFunction("init", "void", "ValueType", "t");
 			d_apiPrepare = new APIFunction("prepare", "void", "ValueType", "t");
 			d_apiReset = new APIFunction("reset", "void", "ValueType", "t");
+			d_apiUpdate = new APIFunction("update", "void", "ValueType", "t");
 			d_apiEvents = new APIFunction("events_update", "void");
 			d_apiEventsEvaluate = new APIFunction("events_evaluate", "void");
 			d_apiEventsDistance = new APIFunction("events_update_distance", "void");
@@ -1341,6 +1343,18 @@ namespace Cdn.RawC.Programmer
 			d_apiReset.Body.Add(new Computation.CallAPI(d_apiInit, t));
 		}
 
+		private void ProgramUpdate()
+		{
+			var t = new Tree.Node(null, new Instructions.Variable("t"));
+			var d = new Dimension();
+
+			d.Columns = 1;
+			d.Rows = 1;
+
+			d_apiUpdate.Body.Add(new Computation.CallAPI(d_apiPre, t, ZeroNumberExpression(d)));
+			d_apiUpdate.Body.Add(new Computation.CallAPI(d_apiPost, t, ZeroNumberExpression(d)));
+		}
+
 		private void ProgramEvents()
 		{
 			var eq = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
@@ -1392,6 +1406,7 @@ namespace Cdn.RawC.Programmer
 				yield return d_apiPrepare;
 				yield return d_apiInit;
 				yield return d_apiReset;
+				yield return d_apiUpdate;
 				yield return d_apiTDT;
 				yield return d_apiPre;
 				yield return d_apiPreDiff;

@@ -124,6 +124,9 @@ typedef struct
 	void     (*reset)             (void        *data,
 	                               ValueType    t);
 
+	void     (*update)            (void        *data,
+	                               ValueType    t);
+
 	void     (*pre)               (void        *data,
 	                               ValueType    t,
 	                               ValueType    dt);
