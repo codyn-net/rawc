@@ -27,6 +27,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		public bool NoBlas;
 		[CommandLine.Option("no-lapack", Description="Disable use of lapack")]
 		public bool NoLapack;
+		[CommandLine.Option("no-run", Description="Disable generation of run sources")]
+		public bool NoRun;
 
 		public string EventStateType;
 

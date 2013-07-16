@@ -49,21 +49,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				WriteSource();
 			});
 
-			Profile.Do("c run", () => {
-				Profile.Do("header", () => {
-					WriteRunHeader();
-				});
-
-				Profile.Do("source", () => {
-					WriteRunSource();
-				});
-			});
-
 			written.Add(d_headerFilename);
 			written.Add(d_sourceFilename);
 
-			written.Add(d_runHeaderFilename);
-			written.Add(d_runSourceFilename);
+			if (!d_options.NoRun)
+			{
+				Profile.Do("c run", () => {
+					Profile.Do("header", () => {
+						WriteRunHeader();
+					});
+	
+					Profile.Do("source", () => {
+						WriteRunSource();
+					});
+				});
+
+				written.Add(d_runHeaderFilename);
+				written.Add(d_runSourceFilename);
+			}
 
 			if (IsStandalone)
 			{
@@ -367,8 +370,14 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			StreamReader reader = new StreamReader(res);
 			string ret = reader.ReadToEnd();
 
-			var sources = Path.GetFileName(d_sourceFilename) + " " + Path.GetFileName(d_runSourceFilename);
-			var headers = Path.GetFileName(d_headerFilename) + " " + Path.GetFileName(d_runHeaderFilename);
+			var sources = "";
+			var headers = "";
+
+			if (!d_options.NoRun)
+			{
+				sources = Path.GetFileName(d_sourceFilename) + " " + Path.GetFileName(d_runSourceFilename);
+				headers = Path.GetFileName(d_headerFilename) + " " + Path.GetFileName(d_runHeaderFilename);
+			}
 
 			if (IsStandalone)
 			{
@@ -1852,6 +1861,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				"prepare",
 				"init",
 				"reset",
+				"update",
 				"pre",
 				"prediff",
 				"diff",
