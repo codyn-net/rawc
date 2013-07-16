@@ -106,6 +106,7 @@ namespace Cdn.RawC.Programmer
 			ProgramPrepare();
 			ProgramInit();
 			ProgramReset();
+			ProgramUpdate();
 			ProgramSource();
 			ProgramEvents();
 
