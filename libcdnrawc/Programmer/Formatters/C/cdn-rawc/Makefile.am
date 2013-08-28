@@ -71,6 +71,4 @@ CLEANFILES = cdn-rawc-1.0.pc
 EXTRA_DIST =				\
 	$(pkgconfig_DATA)		\
 	$(matlabscripts_DATA)		\
-	$(srcdata_DATA)			\
-	$(srcintegratorsdata_DATA)	\
 	cdn-rawc-math.h.py
