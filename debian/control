@@ -16,7 +16,7 @@ Package: cdn-rawc
 Section: science
 Suggests: gcc
 Architecture: any
-Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libglib2.0-cil, libcodyn3 (>= 3.4)
+Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libglib2.0-cil, libcodyn3 (>= 3.4), libblas-dev, libatlas-base-dev, libtool
 Description: codyn network low level compiler
  A low level compiler for codyn networks
 
