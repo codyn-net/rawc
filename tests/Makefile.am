@@ -26,7 +26,7 @@ $(test_names):
 	cat runtest >> "$@"; \
 	chmod +x "$@";
 
-EXTRA_DIST = runtests $(test_cdn_files)
+EXTRA_DIST = runtest $(test_cdn_files)
 CLEANFILES = $(test_names)
 
 .NOTPARALLEL:
