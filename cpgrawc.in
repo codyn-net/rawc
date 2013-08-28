@@ -1,3 +1,0 @@
-#!/bin/sh
-
-exec mono @RUN_DEBUG@"@expanded_libdir@/@PACKAGE@/cpgrawc.exe" "$@"

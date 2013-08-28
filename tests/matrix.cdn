@@ -1,0 +1,104 @@
+include "_defines.cdn"
+
+matrix = "[-0.1, 0.2, 0.3; -0.4, 0.5, 0.6]"
+matrix_pos = "[0.1, 0.2, 0.3; 0.4, 0.5, 0.6]" | out
+
+"@unary_function"          = "@1(matrix)"        | out
+"@unary_function_positive" = "@1(matrix_pos)"    | out
+"@unary_operator"          = "@[op_@1](matrix)"     | out
+
+"@[binary_function]_m_m"   = "@1(matrix,  matrix)"  | out
+"@[binary_function]_1_m_p" = "@1(4.4,     matrix)"  | out
+"@[binary_function]_1_m_n" = "@1(-2.2,    matrix)"  | out
+"@[binary_function]_m_1_p" = "@1(matrix,  5.2)"     | out
+"@[binary_function]_m_1_n" = "@1(matrix, -2.5)"     | out
+
+"@[binary_function_positive]_m_m" = "@1(matrix_pos,  matrix_pos)"  | out
+"@[binary_function_positive]_1_m" = "@1(4.4,         matrix_pos)"  | out
+"@[binary_function_positive]_m_1" = "@1(matrix_pos,  5.2)"         | out
+
+"@[binary_operator]_m_m"   = "matrix @[op_@1] matrix"  | out
+"@[binary_operator]_1_m_p" = "4.4    @[op_@1] matrix"  | out
+"@[binary_operator]_1_m_n" = "-2.2   @[op_@1] matrix"  | out
+"@[binary_operator]_m_1_p" = "matrix @[op_@1] 5.2"     | out
+"@[binary_operator]_m_1_n" = "matrix @[op_@1] -2.5"    | out
+
+"@[binary_operator_positive]_m_m"   = "matrix @[op_@1] matrix"  | out
+"@[binary_operator_positive]_1_m"   = "4.4    @[op_@1] matrix"  | out
+"@[binary_operator_positive]_m_1"   = "matrix @[op_@1] 5.2"     | out
+
+matrix_multiply_1 = "matrix * transpose(matrix)" | out
+matrix_multiply_2 = "eye(4) * [1; 2; 3; 4]" | out
+matrix_multiply_3 = "[1, 2, 3, 4] * [1; 2; 3; 4]" | out
+matrix_multiply_4 = "[1; 2; 3; 4] * [2]" | out
+matrix_multiply_5 = "[1, 2, 3, 4] * [2]" | out
+matrix_multiply_6 = "2 * [1; 2; 3; 4]" | out
+matrix_multiply_7 = "2 * [1, 2, 3, 4]" | out
+matrix_multiply_8 = "[1; 2; 3; 4] * [1, 2, 3, 4]" | out
+
+# test csign with some more interesting arguments than the general ones
+"csign_m_m"   = "csign(matrix,  [2, -3, -4; -2, 4, -4])" | out
+"csign_1_m_p" = "csign(2,       matrix)"                 | out
+"csign_1_m_n" = "csign(-2,      matrix)"                 | out
+"csign_m_1_p" = "csign(matrix,  3)"                      | out
+"csign_m_1_n" = "csign(matrix, -3)"                      | out
+
+# test diagonal functions
+sqmatrix = "[1, 2, 3;
+             4, 5, 6;
+             7, 8, 9]" | out
+
+diag_m = "diag(sqmatrix)" | out
+diag_v = "diag(diag(sqmatrix))" | out
+
+triu_m_1 = "triu(sqmatrix)" | out
+tril_m_1 = "tril(sqmatrix)" | out
+
+triu_m_2 = "triu([1, 2, 3; 4, 5, 6])" | out
+tril_m_2 = "tril([1, 2, 3; 4, 5, 6])" | out
+
+triu_m_3 = "triu([1, 2; 3, 4; 5, 6])" | out
+tril_m_3 = "tril([1, 2; 3, 4; 5, 6])" | out
+
+linsolve = "linsolve([8 1 6; 3 5 7; 4 9 2], [1; 2; 3])" | out
+inverse = "inv([4, 3; 3, 2])" | out
+pseudo_inverse = "pinv([ 0.12,  -8.19,   7.69,  -2.26,  -4.71;
+                        -6.91,   2.22,  -5.12,  -9.08,   9.96;
+                        -3.33,  -8.94,  -6.72,  -4.40,  -9.98;
+                         3.97,   3.33,  -2.74,  -7.92,  -3.20])" | out
+
+slinsolve = "slinsolve([ 2.762, 1.008, -0.246;
+                         1.008, 1.508,  0.254;
+                        -0.246, 0.254,  0.254],
+                       [-19.62; 4.905; 4.905],
+                       [-1; 0; 1])" | out
+
+qr = "qr([1, 2; 3, 4; 5, 6])" | out
+
+vcat_helper() = "[1, 2, 3]"
+vcat = "[vcat_helper(); [4, 5, 6]]" | out
+
+vcat_mat = "[[1, 2;
+              3, 4];
+             5, 6]" | out
+
+plus_m_1 = "[1, 2] + [1, 2; 3, 4]" | out
+plus_m_2 = "[1, 2; 3, 4] + [1, 2]" | out
+plus_m_3 = "[1; 2] + [1, 2; 3, 4]" | out
+plus_m_4 = "[1, 2; 3, 4] + [1; 2]" | out
+
+min_m_1 = "min([1, 2, 3, 4])" | out
+min_m_2 = "min([1, 2; 3, 4])" | out
+
+min_m_1_1 = "min([1, 2], 3)" | out
+min_1_m_1 = "min(3, [-1, 4])" | out
+
+min_m_m_1 = "min([1, 2, 3, 4], [4, 3, 2, 1])" | out
+min_m_m_2 = "min([1, 2; 3, 4], [4, 3; 2, 1])" | out
+
+csum_1 = "csum([1, 2, 3; 4, 5, 6; 7, 8, 9])" | out
+rsum_1 = "rsum([1, 2, 3; 4, 5, 6; 7, 8, 9])" | out
+
+multimin_1 = "[0.4, 0.1, 0.3, 0.2, -0.5] .* ([0.1, -0.3, -0.4, 0.5, -0.1] < 0)" | out
+
+# vi:ts=4:et

@@ -1,0 +1,16 @@
+initial-state "start"
+
+condition' = "(2 - condition)"
+int' = "1.5"
+direct = 0 | out
+
+event "start" to "next" when "condition < 0.5" {}
+
+edge self
+{
+    direct <= "t * 2" state "start"
+    direct <= "t" state "next"
+
+    int' += "(1 - int)" state "start"
+    int' += "-0.5" state "next"
+}
