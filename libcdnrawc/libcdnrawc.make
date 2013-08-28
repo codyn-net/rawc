@@ -150,7 +150,8 @@ RESOURCES = \
 	Programmer/Formatters/JavaScript/Resources/Cdn.Integrators.RungeKutta.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Integrators.RungeKutta.js
 
 EXTRAS = \
-	codyn-rawc-sharp.pc.in
+	codyn-rawc-sharp.pc.in \
+	Cdn.RawC.dll.config
 
 REFERENCES =  \
 	System \
