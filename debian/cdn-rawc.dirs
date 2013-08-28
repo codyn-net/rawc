@@ -1,8 +1,8 @@
-bin
+usr/bin
 etc/bash_completion.d
-include/cdn-rawc-1.0/cdn-rawc
-lib
-lib/cdn-rawc
-lib/pkgconfig
-lib/python2.7/dist-packages/cdn-rawc
-share/cdn-rawc-1.0
+usr/include/cdn-rawc-1.0/cdn-rawc
+usr/lib
+usr/lib/cdn-rawc
+usr/lib/pkgconfig
+usr/lib/python2.7/dist-packages/cdn-rawc
+usr/share/cdn-rawc-1.0
