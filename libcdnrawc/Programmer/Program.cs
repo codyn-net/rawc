@@ -1126,7 +1126,7 @@ namespace Cdn.RawC.Programmer
 			var later = now.Not();
 
 			var nowaux = aux.DependencyOf(now);
-			var lateraux = nowaux.Not();
+			var lateraux = aux.DependencyOf(later);
 
 			// Add remaining deps from other aux
 			now.UnionWith(nowaux);
