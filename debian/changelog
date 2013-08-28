@@ -1,3 +1,9 @@
+cdn-rawc (3.4-1) UNRELEASED; urgency=low
+
+  * Release codyn
+
+ -- Jesse van den Kieboom <jesse.vandenkieboom@epfl.ch>  Wed, 28 Aug 2013 08:47:36 +0200
+
 cpgrawc (2.0-1) UNRELEASED; urgency=low
 
   * Initial release.
