@@ -1,0 +1,8 @@
+bin/cdn-rawc
+etc/bash_completion.d/cdn-rawc
+include/cdn-rawc-1.0/cdn-rawc
+lib/cdn-rawc
+lib/libcdnrawc-*
+lib/pkgconfig/cdn-rawc-1.0.pc
+lib/python2.7/dist-packages/cdn-rawc/__init__.py
+share/cdn-rawc-1.0

@@ -1,36 +1,27 @@
-Source: cpgrawc
+Source: cdn-rawc
 Priority: extra
 Maintainer: Jesse van den Kieboom <jesse.vandenkieboom@epfl.ch>
 Build-Depends: debhelper (>= 7),
                autotools-dev,
                cdbs,
                pkg-config,
-               mono-devel | mono-gmcs,
-               libglib2.0-cil,
-               libglib2.0-cil-dev,
-               cpg-network2-sharp (>= 2.0)
+               mono-dmcs,
+               codyn3-sharp (>= 3.4)
 Standards-Version: 3.8.0
 Section: science
 Homepage: http://biorob.epfl.ch
 
-Package: cpgrawc
+Package: cdn-rawc
 Section: science
 Suggests: gcc
 Architecture: any
-Depends: mono-runtime,
-         libmono-system2.0-cil,
-         libmono-corlib2.0-cil,
-         libmono2.0-cil,
-         cpg-network2-sharp (>= 2.0),
-         libglib2.0-cil
+Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libcodyn3 (>= 3.4)
 Description: cpg network low level compiler
  A low level compiler for cpg networks
 
-Package: cpgrawc-dev
+Package: cdn-rawc-dev
 Section: libdevel
 Architecture: any
-Depends: cpg-network2-sharp (>= 2.0),
-         mono-devel | mono-gmcs,
-         libglib2.0-cil-dev
+Depends: codyn3-sharp (>= 3.4), mono-dmcs
 Description: cpg network low level compiler development files
  A low level compiler for cpg networks (development files)
