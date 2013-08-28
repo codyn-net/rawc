@@ -16,12 +16,12 @@ Section: science
 Suggests: gcc
 Architecture: any
 Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libcodyn3 (>= 3.4)
-Description: cpg network low level compiler
- A low level compiler for cpg networks
+Description: codyn network low level compiler
+ A low level compiler for codyn networks
 
 Package: cdn-rawc-dev
 Section: libdevel
 Architecture: any
 Depends: codyn3-sharp (>= 3.4), mono-dmcs
-Description: cpg network low level compiler development files
- A low level compiler for cpg networks (development files)
+Description: codyn network low level compiler development files
+ A low level compiler for codyn networks (development files)
