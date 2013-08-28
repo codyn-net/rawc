@@ -66,6 +66,8 @@ matlabscriptsdir = $(datadir)/cdn-rawc-1.0/matlab
 matlabscripts_DATA = \
 	matlab/cdnrawc.m
 
+CLEANFILES = cdn-rawc-1.0.pc
+
 EXTRA_DIST =				\
 	$(pkgconfig_DATA)		\
 	$(matlabscripts_DATA)		\
