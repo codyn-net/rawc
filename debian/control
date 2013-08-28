@@ -6,7 +6,8 @@ Build-Depends: debhelper (>= 7),
                cdbs,
                pkg-config,
                mono-dmcs,
-               codyn3-sharp (>= 3.4)
+               codyn3-sharp (>= 3.4),
+               libglib2.0-cil-dev
 Standards-Version: 3.8.0
 Section: science
 Homepage: http://biorob.epfl.ch
@@ -15,13 +16,13 @@ Package: cdn-rawc
 Section: science
 Suggests: gcc
 Architecture: any
-Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libcodyn3 (>= 3.4)
+Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libglib2.0-cil, libcodyn3 (>= 3.4)
 Description: codyn network low level compiler
  A low level compiler for codyn networks
 
 Package: cdn-rawc-dev
 Section: libdevel
 Architecture: any
-Depends: codyn3-sharp (>= 3.4), mono-dmcs
+Depends: cdn-rawc, codyn3-sharp (>= 3.4), mono-dmcs
 Description: codyn network low level compiler development files
  A low level compiler for codyn networks (development files)
