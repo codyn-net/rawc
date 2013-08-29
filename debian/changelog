@@ -1,3 +1,9 @@
+cdn-rawc (3.4-2) UNRELEASED; urgency=low
+
+  * Do not install .so file in -dev (already installed by cdn-rawc)
+
+ -- Jesse van den Kieboom <jvanden@biorobpc21.epfl.ch>  Thu, 29 Aug 2013 11:18:54 +0200
+
 cdn-rawc (3.4-1) UNRELEASED; urgency=low
 
   * Release codyn
