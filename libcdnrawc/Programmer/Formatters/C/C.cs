@@ -1128,10 +1128,9 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 					writer.WriteLine("     uint32_t   CB,");
 					writer.WriteLine("     ValueType *L)");
 					writer.WriteLine("{");
-					writer.WriteLine("\tValueType Acp[{0}];", ws.Dimension.Size());
+					writer.WriteLine("\tValueType LTDL[{0}];", ws.Dimension.Size());
 					writer.WriteLine();
-					writer.WriteLine("\tmemcpy (Acp, A, sizeof(ValueType) * {0});", ws.Dimension.Size());
-					writer.WriteLine("\treturn CDN_MATH_SLINSOLVE_V(ret, Acp, {0}, b, CB, L);", ws.Dimension.Rows);
+					writer.WriteLine("\treturn CDN_MATH_SLINSOLVE_V(ret, A, {0}, b, CB, L, LTDL);", ws.Dimension.Rows);
 
 					break;
 				}
