@@ -93,6 +93,7 @@ IntegratorFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(CdnRawcIntegrator), ctype
 CdnRawcNetwork._fields_ = [('prepare', NetworkFuncT),
                            ('init', NetworkFuncT),
                            ('reset', NetworkFuncT),
+                           ('update', NetworkFuncT),
                            ('pre', NetworkFuncTDT),
                            ('prediff', NetworkFuncData),
                            ('diff', NetworkFuncTDT),
