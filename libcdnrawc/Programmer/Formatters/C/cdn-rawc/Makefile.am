@@ -59,7 +59,8 @@ cdn-rawc-math.h: cdn-rawc-math.h.py
 	$(PYTHON) $^ > $@
 
 if ENABLE_PYTHON
-pkgpython_PYTHON = py/__init__.py
+pycdnrawcdir = $(pythondir)/cdnrawc
+pycdnrawc_PYTHON = py/__init__.py
 endif
 
 matlabscriptsdir = $(datadir)/cdn-rawc-1.0/matlab
