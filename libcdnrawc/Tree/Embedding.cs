@@ -156,7 +156,7 @@ namespace Cdn.RawC.Tree
 
 			d_argumentIdx = 0;
 
-			d_pure = true;
+			d_pure = node.Dimension.IsOne;
 			d_inline = false;
 		}
 
