@@ -479,6 +479,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			}
 			case MathFunctionType.Slinsolve:
 				return String.Format("{0}_v", name.ToLower());
+			case MathFunctionType.Sltdl:
+			case MathFunctionType.SltdlDinv:
+			case MathFunctionType.SltdlDinvLinvt:
+			case MathFunctionType.SltdlLinv:
+			case MathFunctionType.SltdlLinvt:
+				return String.Format("{0}_v", name.ToLower());
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}

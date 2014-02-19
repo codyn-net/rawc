@@ -55,7 +55,13 @@ pkgconfig_DATA = \
 cdn-rawc-1.0.pc: cdn-rawc.pc
 	cp cdn-rawc.pc cdn-rawc-1.0.pc
 
-cdn-rawc-math.h: cdn-rawc-math.h.py
+CDN_RAWC_MATH_DEPS =			\
+	cdn-rawc-math.h.py		\
+	cdn-rawc-math-header.h		\
+	cdn-rawc-math-builtin.h		\
+	cdn-rawc-math-footer.h
+
+cdn-rawc-math.h: $(CDN_RAWC_MATH_DEPS)
 	$(PYTHON) $^ > $@
 
 if ENABLE_PYTHON
@@ -72,4 +78,4 @@ CLEANFILES = cdn-rawc-1.0.pc
 EXTRA_DIST =				\
 	$(pkgconfig_DATA)		\
 	$(matlabscripts_DATA)		\
-	cdn-rawc-math.h.py
+	$(CDN_RAWC_MATH_DEPS)

@@ -266,6 +266,42 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				args.Add(L);
 			}
 				break;
+			case MathFunctionType.Sltdl:
+			{
+				var A = args[0];
+				var L = args[1];
+
+				args[0] = A;
+				args[1] = Node.Children[1].Dimension.Rows.ToString();
+				args.Add(L);
+			}
+				break;
+			case MathFunctionType.SltdlDinvLinvt:
+			case MathFunctionType.SltdlLinvt:
+			case MathFunctionType.SltdlLinv:
+			{
+				var b = args[0];
+				var L = args[1];
+				var A = args[2];
+
+				args[0] = A;
+				args[1] = Node.Children[2].Dimension.Rows.ToString();
+				args[2] = b;
+				args.Add(Node.Children[0].Dimension.Columns.ToString());
+				args.Add(L);
+			}
+				break;
+			case MathFunctionType.SltdlDinv:
+			{
+				var b = args[0];
+				var A = args[1];
+
+				args[0] = A;
+				args[1] = Node.Children[1].Dimension.Rows.ToString();
+				args.Add(b);
+				args.Add(Node.Children[0].Dimension.Columns.ToString());
+			}
+				break;
 			case MathFunctionType.Inverse:
 			case MathFunctionType.PseudoInverse:
 			case MathFunctionType.Qr:
