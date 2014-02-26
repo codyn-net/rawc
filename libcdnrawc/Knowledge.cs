@@ -272,14 +272,7 @@ namespace Cdn.RawC
 
 				if (ph.Length != 0 || eph.Length != 0)
 				{
-					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
-					var nv = new Cdn.Variable(nm, action.Equation.Copy(), Cdn.VariableFlags.None);
-
-					action.Edge.AddVariable(nv);
-					d_eventActionProperties[action] = nv;
-
-					var evst = new EventActionState(action, nv);
-					ret.Add(evst);
+					var node = FindStateNode(action.Edge.Input as Cdn.Node);
 
 					HashSet<string> hs;
 
@@ -297,7 +290,28 @@ namespace Cdn.RawC
 						hs = new HashSet<string>(eph);
 					}
 
-					var node = FindStateNode(action.Edge.Input as Cdn.Node);
+					if (node == null)
+					{
+						return ret;
+					}
+
+					hs.RemoveWhere((a) => !d_eventStateIdMap.ContainsKey(EventStateId(node, a)));
+
+					if (hs.Count == 0)
+					{
+						// Early out if none of the states are reachable
+						return ret;
+					}
+
+					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
+					var nv = new Cdn.Variable(nm, action.Equation.Copy(), Cdn.VariableFlags.None);
+
+					action.Edge.AddVariable(nv);
+					d_eventActionProperties[action] = nv;
+
+					var evst = new EventActionState(action, nv);
+					ret.Add(evst);
+
 					List<int> indices = new List<int>();
 
 					foreach (var st in hs)
