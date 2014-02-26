@@ -297,7 +297,7 @@ namespace Cdn.RawC
 						hs = new HashSet<string>(eph);
 					}
 
-					var node = FindStateNode(action.Edge.Parent);
+					var node = FindStateNode(action.Edge.Input as Cdn.Node);
 					List<int> indices = new List<int>();
 
 					foreach (var st in hs)
