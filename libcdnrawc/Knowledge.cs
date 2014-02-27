@@ -300,12 +300,9 @@ namespace Cdn.RawC
 						return ret;
 					}
 
-					hs.RemoveWhere((a) => !d_eventStateIdMap.ContainsKey(EventStateId(node, a)));
-
-					if (hs.Count == 0)
+					foreach (var h in hs)
 					{
-						// Early out if none of the states are reachable
-						return ret;
+						EventStateContainerAdd(AddEventStateContainer(node), node, h);
 					}
 
 					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
