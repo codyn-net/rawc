@@ -1,20 +1,14 @@
 test_cdn_files = 		\
 	dependencies.cdn	\
 	events.cdn		\
+	multiple_events.cdn	\
 	functions.cdn		\
 	indices.cdn		\
 	integrate.cdn		\
 	matrix.cdn		\
 	simplemath.cdn
 
-test_names =			\
-	dependencies.test	\
-	events.test		\
-	functions.test		\
-	indices.test		\
-	integrate.test		\
-	matrix.test		\
-	simplemath.test
+test_names = $(test_cdn_files:.cdn=.test)
 
 TESTS = $(test_names)
 
