@@ -733,6 +733,41 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return context.Program.StateTable.Contains(instruction);
 		}
 
+		private bool IsZeroMatrix(Tree.Node node, Context context)
+		{
+			bool ret = true;
+			context.Push(node);
+
+			foreach (var child in node.Children)
+			{
+				if (context.IsMapping(child))
+				{
+					ret = false;
+					break;
+				}
+
+				if (child.Instruction is InstructionMatrix)
+				{
+					if (!IsZeroMatrix(child, context))
+					{
+						ret = false;
+						break;
+					}
+				}
+
+				var num = child.Instruction as InstructionNumber;
+
+				if (num == null || num.Value != 0)
+				{
+					ret = false;
+					break;
+				}
+			}
+
+			context.Pop();
+			return ret;
+		}
+
 		/*
 		 * Translators for multidimension values.
 		 *
@@ -782,11 +817,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					return context.ArrayConcat(args);
 				}
 			}
+			else if (IsZeroMatrix(context.Node, context))
+			{
+				var tmp = context.PeekRet();
+				return context.MemZero(tmp, "0", "ValueType", context.Node.Dimension.Size());
+			}
 			else
 			{
-				int argi = 0;
-
 				var tmp = context.PeekRet();
+				int argi = 0;
 
 				for (int i = 0; i < context.Node.Children.Count; ++i)
 				{
@@ -947,6 +986,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				else
 				{
 					offset = slice[0];
+					size = slice.Length;
 				}
 			}
 

@@ -240,6 +240,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			get { return d_options; }
 		}
 
+		public virtual bool IsMapping(Tree.Node node)
+		{
+			Tree.NodePath path = node.RelPath(d_root);
+			return d_mapping.ContainsKey(path);
+		}
+
 		public virtual bool TryMapping(Tree.Node node, out string ret)
 		{
 			Tree.NodePath path = node.RelPath(d_root);
