@@ -1283,12 +1283,12 @@ namespace Cdn.RawC
 				d_variables.AddRange(obj.Variables);
 			}
 
-			var node = obj as Cdn.Node;
+			Cdn.Node grp = obj as Cdn.Node;
 
-			if (node != null && node.InitialState != null)
+			if (grp != null && grp.InitialState != null)
 			{
-				var states = AddEventStateContainer(node);
-				EventStateContainerAdd(states, node, node.InitialState);
+				var states = AddEventStateContainer(grp);
+				EventStateContainerAdd(states, grp, grp.InitialState);
 			}
 
 			ScanEvent(obj as Cdn.Event);
@@ -1302,8 +1302,6 @@ namespace Cdn.RawC
 
 				AddFlaggedVariable(prop);
 			}
-
-			Cdn.Node grp = obj as Cdn.Node;
 
 			if (grp == null)
 			{
