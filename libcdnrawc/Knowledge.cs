@@ -201,6 +201,11 @@ namespace Cdn.RawC
 			if ((v.Flags & (VariableFlags.In | VariableFlags.Once)) == 0)
 			{
 				d_auxStates.Add(s);
+
+				if (unique != null)
+				{
+					unique.Add(s.Object);
+				}
 			}
 		}
 
