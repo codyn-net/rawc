@@ -923,12 +923,8 @@ namespace Cdn.RawC.Programmer
 		}
 
 		private void ProgramPre(DependencyFilter deps,
-		                        DependencyFilter derivatives,
-		                        DependencyFilter first)
+		                        DependencyFilter derivatives)
 		{
-			// Compute auxes
-			ProgramDependencies(d_apiPre, first, "Dependencies of derivatives that are internal auxilliary variables");
-
 			ProgramSetTDT(d_apiPre);
 
 			// All the instates
@@ -957,7 +953,6 @@ namespace Cdn.RawC.Programmer
 			ProgramDependencies(d_apiPre,
 			                    diffdeps,
 			                    "Dependencies of derivatives that depend on <in>");
-
 
 			instates.Not();
 			deps.Not();
@@ -1085,7 +1080,7 @@ namespace Cdn.RawC.Programmer
 			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
 		}
 
-		private DependencyFilter ProgramPost()
+		private void ProgramPost()
 		{
 			ProgramSetTDT(d_apiPost);
 
@@ -1131,10 +1126,7 @@ namespace Cdn.RawC.Programmer
 			var later = now.Not();
 
 			var nowaux = aux.DependencyOf(now);
-			var ret = nowaux.Not();
 			var lateraux = aux.DependencyOf(later);
-
-			ret.RemoveWhere((a) => lateraux.Contains(a));
 
 			// Add remaining deps from other aux
 			now.UnionWith(nowaux);
@@ -1166,8 +1158,6 @@ namespace Cdn.RawC.Programmer
 
 			// Update aux variables that depend on delays
 			ProgramDependencies(d_apiPost, later, "Auxiliary variables that depend on delays (or just come last)");
-
-			return ret;
 		}
 
 		private void ProgramSource()
@@ -1188,11 +1178,11 @@ namespace Cdn.RawC.Programmer
 			}
 
 			var deps = aux.DependencyOf(allderiv);
-			var rest = ProgramPost();
 
-			ProgramPre(deps, derivatives, rest);
+			ProgramPre(deps, derivatives);
 			ProgramPreDiff(deps, derivatives);
 			ProgramDiff(deps, derivatives);
+			ProgramPost();
 		}
 
 		private void ProgramPrepare()
