@@ -1105,18 +1105,24 @@ namespace Cdn.RawC.Programmer
 			// Compute set of things that have changed
 			var modset = rands;
 			var delays = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DelayedStates);
-			var auxout = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
-
-			auxout.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
 
 			modset.UnionWith(TDTModSet);
 			modset.UnionWith(delays);
 			modset.UnionWith(Knowledge.Instance.Integrated);
 			modset.UnionWith(Knowledge.Instance.FlaggedStates(VariableFlags.In));
 
+			foreach (var v in Knowledge.Instance.EventSetStates.Values)
+			{
+				modset.AddRange(v);
+			}
+
 			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
+
 			aux.RemoveWhere((s) => (s.Type & State.Flags.EventSet) != 0);
 			aux.Filter().DependsOn(modset).Unfilter();
+
+			var auxout = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
+			auxout.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
 
 			// Split postcompute in states that need to be computed before the delays (because delays depend on them)
 			// and those states that can be computed after the delays
