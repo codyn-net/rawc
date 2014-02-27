@@ -36,6 +36,13 @@
 #define LP_ValueTypeReal(ValueType) LP_ValueTypeRealOneMore(ValueType)
 #define LP_ValueType LP_ValueTypeReal(ValueType)
 
+#define CDN_EPSILON_double DBL_EPSILON
+#define CDN_EPSILON_float  FLT_EPSILON
+
+#define CDN_EPSILON_REAL_ONE_MORE(ValueType) CDN_EPSILON_##ValueType
+#define CDN_EPSILON_REAL(ValueType) CDN_EPSILON_REAL_ONE_MORE(ValueType)
+#define CDN_EPSILON CDN_EPSILON_REAL(ValueType)
+
 #ifndef PLATFORM_OSX
 extern void dgetrf_ (LP_int *,
                      LP_int *,

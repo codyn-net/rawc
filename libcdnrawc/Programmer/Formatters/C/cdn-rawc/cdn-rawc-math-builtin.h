@@ -964,6 +964,8 @@ cdn_math_pseudoinverse_v_lapack_builtin (ValueType *ret,
 	uint32_t      i;
 	ValueType    *retptr;
 
+	rcond = CDN_EPSILON * RA;
+
 	CDN_MATH_VALUE_TYPE_FUNC(dgelsd_) (&lpRA,
 	                                   &lpCA,
 	                                   &lpRB,
