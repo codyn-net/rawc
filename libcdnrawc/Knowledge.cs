@@ -1544,15 +1544,24 @@ namespace Cdn.RawC
 
 					if (State(v) == null)
 					{
-						var sub = Inline(instmap, v.Expression);
-
-						// Expand the instruction
-						foreach (var i in sub.Instructions)
+						if (variable.HasSlice)
 						{
-							instructions.Add(i);
+							// Need to promote it here. Inlining a slice is
+							// complicated
+							AddState(null, ExpandedState(v));
 						}
+						else
+						{
+							var sub = Inline(instmap, v.Expression);
 
-						continue;
+							// Expand the instruction
+							foreach (var i in sub.Instructions)
+							{
+								instructions.Add(i);
+							}
+
+							continue;
+						}
 					}
 				}
 
