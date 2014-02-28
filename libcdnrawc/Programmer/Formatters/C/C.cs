@@ -2181,7 +2181,12 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				return;
 			}
 
-			WriteNetworkVariable(writer, "\tuint32_t event;");
+			var extrav = "\tuint32_t event;\n";
+			extrav += String.Format("\t{0} *{1};", EventStateType, d_program.EventStatesTable.Name);
+
+			WriteNetworkVariable(writer, extrav);
+
+			writer.WriteLine("\t{0} = network->event_states;\n", d_program.EventStatesTable.Name);
 
 			writer.WriteLine("\tfor (event = 0; event < network->events_active_size; ++event)");
 			writer.WriteLine("\t{");
@@ -2209,6 +2214,12 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				writer.WriteLine("\t\t\tif ({0}_event_active (data, {1}))", CPrefixDown, i - 1);
 				writer.WriteLine("\t\t\t{");
 
+				if (prg != null)
+				{
+					WriteComputationNode(writer, prg.Dependencies, "\t\t\t\t");
+					WriteComputationNode(writer, prg.SetStates, "\t\t\t\t");
+				}
+
 				if (!String.IsNullOrEmpty(state))
 				{
 					var parent = Knowledge.Instance.FindStateNode(ev);
@@ -2218,7 +2229,8 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 
 					if (Knowledge.Instance.TryGetEventState(parent, state, out st))
 					{
-						writer.WriteLine("\t\t\t\tnetwork->event_states[{0}] = {1};",
+						writer.WriteLine("\t\t\t\t{0}[{1}] = {2};",
+							             d_program.EventStatesTable.Name,
 					                     idx,
 					                     st.Index);
 					}
@@ -2226,7 +2238,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 
 				if (prg != null)
 				{
-					WriteComputationNode(writer, prg, "\t\t\t\t");
+					WriteComputationNode(writer, prg.PostCompute, "\t\t\t\t");
 				}
 
 				writer.WriteLine("\t\t\t}");

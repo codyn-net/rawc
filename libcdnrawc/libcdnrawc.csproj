@@ -127,6 +127,7 @@
     <Compile Include="Profile.cs" />
     <Compile Include="Asciifyer.cs" />
     <Compile Include="Binder.cs" />
+    <Compile Include="Programmer\Computation\EventProgram.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

@@ -114,6 +114,7 @@ FILES = \
 	Programmer/Computation/StateConditional.cs \
 	Programmer/Computation/InitializeDelayHistory.cs \
 	Programmer/Computation/Rand.cs \
+	Programmer/Computation/EventProgram.cs \
 	Programmer/Program.cs \
 	Programmer/Instructions/IInstruction.cs \
 	Programmer/Instructions/Variable.cs \
