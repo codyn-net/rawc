@@ -1080,7 +1080,7 @@ namespace Cdn.RawC.Programmer
 			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
 		}
 
-		private void ProgramPost()
+		private void ProgramPost(DependencyFilter deps, DependencyFilter derivatives)
 		{
 			ProgramSetTDT(d_apiPost);
 
@@ -1123,6 +1123,16 @@ namespace Cdn.RawC.Programmer
 
 			var auxout = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
 			auxout.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
+
+			var evcond = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
+
+			// Do not compute aux's that don't need computing
+			var ddeps = new DependencyFilter(d_dependencyGraph, states);
+			ddeps.AddRange(auxout);
+			ddeps.AddRange(evcond);
+			ddeps.AddRange(derivatives);
+
+			aux.Filter().DependencyOf(ddeps).Unfilter();
 
 			// Split postcompute in states that need to be computed before the delays (because delays depend on them)
 			// and those states that can be computed after the delays
@@ -1188,7 +1198,7 @@ namespace Cdn.RawC.Programmer
 			ProgramPre(deps, derivatives);
 			ProgramPreDiff(deps, derivatives);
 			ProgramDiff(deps, derivatives);
-			ProgramPost();
+			ProgramPost(deps, allderiv);
 		}
 
 		private void ProgramPrepare()
