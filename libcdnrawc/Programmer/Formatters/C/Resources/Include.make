@@ -24,7 +24,8 @@ WARNINGS = 					\
 	shadow					\
 	unused-function				\
 	unused-variable				\
-	return-type
+	return-type				\
+	no-unused-value
 
 ${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags} -DENABLE_MALLOC -DENABLE_META_LOOKUP -std=c99
 ${NAME}_LDFLAGS = -lm ${libs}
