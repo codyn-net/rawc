@@ -9,6 +9,19 @@ namespace Cdn.RawC.Programmer
 		private DependencyFilter d_not;
 		private bool d_filter;
 
+		public DependencyFilter Copy()
+		{
+			var ret = new DependencyFilter(d_graph, this);
+
+			if (d_not != null)
+			{
+				ret.d_not = d_not.Copy();
+			}
+
+			ret.d_filter = d_filter;
+			return ret;
+		}
+
 		public DependencyFilter(DependencyGraph graph)
 		{
 			d_graph = graph;
