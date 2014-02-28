@@ -1385,6 +1385,22 @@ namespace Cdn.RawC
 			return state;
 		}
 
+		public IEnumerable<State> FlaggedStates(Cdn.VariableFlags flags, Cdn.VariableFlags exclude)
+		{
+			foreach (var v in FlaggedVariables(flags))
+			{
+				if (!v.HasFlag(exclude))
+				{
+					State s = this.State(v);
+
+					if (s != null)
+					{
+						yield return s;
+					}
+				}
+			}
+		}
+
 		public IEnumerable<State> FlaggedStates(Cdn.VariableFlags flags)
 		{
 			foreach (var v in FlaggedVariables(flags))
