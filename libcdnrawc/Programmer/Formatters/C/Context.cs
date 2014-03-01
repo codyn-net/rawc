@@ -145,9 +145,24 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				return ret;
 			}
-			default:
-				return String.Format("CDN_MATH_{0}", base.MathFunctionV(type, node).ToUpper());
+			case MathFunctionType.Multiply:
+			{
+				var d1 = node.Children[0].Dimension;
+				var d2 = node.Children[1].Dimension;
+
+				if (d1.Columns == d2.Rows && !(d1.IsOne || d2.IsOne) &&
+				   d1.Rows <= 10 && d2.Columns <= 10)
+				{
+					return String.Format("CDN_MATH_{0}_NO_BLAS", base.MathFunctionV(type, node).ToUpper());
+				}
+
+				break;
 			}
+			default:
+				break;
+			}
+
+			return String.Format("CDN_MATH_{0}", base.MathFunctionV(type, node).ToUpper());
 		}
 
 		public override bool SupportsPointers

@@ -126,19 +126,22 @@ cdn_math_transpose_v_builtin (ValueType *ret,
 }
 #endif /* CDN_MATH_TRANSPOSE_V */
 
-#if defined(CDN_MATH_MATRIX_MULTIPLY_V_REQUIRED) && !defined(CDN_MATH_MATRIX_MULTIPLY_V)
-#define CDN_MATH_MATRIX_MULTIPLY_V_USE_BUILTIN
-#define CDN_MATH_MATRIX_MULTIPLY_V cdn_math_matrix_multiply_v_builtin
+#if (defined(CDN_MATH_MATRIX_MULTIPLY_V_REQUIRED) && !defined(ENABLE_BLAS)) || \
+     defined(CDN_MATH_MATRIX_MULTIPLY_V_NO_BLAS_REQUIRED) || \
+    (defined(CDN_MATH_MATRIX_MULTIPLY_REQUIRED) && !defined(ENABLE_BLAS)) || \
+     defined(CDN_MATH_MATRIX_MULTIPLY_NO_BLAS_REQUIRED)
 
+#if !defined(CDN_MATH_MATRIX_MULTIPLY_V_NO_BLAS)
+#define CDN_MATH_MATRIX_MULTIPLY_V_NO_BLAS_USE_BUILTIN
+#define CDN_MATH_MATRIX_MULTIPLY_V_NO_BLAS cdn_math_matrix_multiply_v_no_blas_builtin
 
-static ValueType *cdn_math_matrix_multiply_v_builtin (ValueType *ret,
-                                                      ValueType *x0,
-                                                      ValueType *x1,
-                                                      uint32_t   Rx0,
-                                                      uint32_t   Cx0,
-                                                      uint32_t   Cx1);
-
-#ifndef ENABLE_BLAS
+static ValueType *
+cdn_math_matrix_multiply_v_no_blas_builtin (ValueType *ret,
+                                            ValueType *x0,
+                                            ValueType *x1,
+                                            uint32_t   Rx0,
+                                            uint32_t   Cx0,
+                                            uint32_t   Cx1);
 
 static ValueType *
 cdn_math_matrix_multiply_v_no_blas_builtin (ValueType *ret,
@@ -176,7 +179,20 @@ cdn_math_matrix_multiply_v_no_blas_builtin (ValueType *ret,
 
 	return ret;
 }
+
 #endif
+#endif
+
+#if defined(CDN_MATH_MATRIX_MULTIPLY_V_REQUIRED) && !defined(CDN_MATH_MATRIX_MULTIPLY_V)
+#define CDN_MATH_MATRIX_MULTIPLY_V_USE_BUILTIN
+#define CDN_MATH_MATRIX_MULTIPLY_V cdn_math_matrix_multiply_v_builtin
+
+static ValueType *cdn_math_matrix_multiply_v_builtin (ValueType *ret,
+                                                      ValueType *x0,
+                                                      ValueType *x1,
+                                                      uint32_t   Rx0,
+                                                      uint32_t   Cx0,
+                                                      uint32_t   Cx1);
 
 #ifdef ENABLE_BLAS
 
@@ -226,11 +242,39 @@ cdn_math_matrix_multiply_v_builtin (ValueType *ret,
 #ifdef ENABLE_BLAS
 	return cdn_math_matrix_multiply_v_blas_builtin (ret, x0, x1, Rx0, Cx0, Cx1);
 #else
-	return cdn_math_matrix_multiply_v_no_blas_builtin (ret, x0, x1, Rx0, Cx0, Cx1);
+	return CDN_MATH_MATRIX_MULTIPLY_V_NO_BLAS (ret, x0, x1, Rx0, Cx0, Cx1);
 #endif
 }
 
 #endif /* CDN_MATH_MATRIX_MULTIPLY_V */
+
+#if defined(CDN_MATH_MATRIX_MULTIPLY_NO_BLAS_REQUIRED) && !defined(CDN_MATH_MATRIX_MULTIPLY_NO_BLAS)
+#define CDN_MATH_MATRIX_MULTIPLY_NO_BLAS_USE_BUILTIN
+#define CDN_MATH_MATRIX_MULTIPLY_NO_BLAS cdn_math_matrix_multiply_no_blas_builtin
+
+
+static ValueType cdn_math_matrix_multiply_no_blas_builtin (ValueType *x0,
+                                                           ValueType *x1,
+                                                           uint32_t   Rx0,
+                                                           uint32_t   Cx0,
+                                                           uint32_t   Cx1);
+
+static ValueType
+cdn_math_matrix_multiply_no_blas_builtin (ValueType *x0,
+                                          ValueType *x1,
+                                          uint32_t   Rx0,
+                                          uint32_t   Cx0,
+                                          uint32_t   Cx1)
+{
+       ValueType retval;
+
+       CDN_MATH_MATRIX_MULTIPLY_V_NO_BLAS (&retval, x0, x1, Rx0, Cx0, Cx1);
+       return retval;
+}
+
+
+#endif /* CDN_MATH_MATRIX_MULTIPLY_NO_BLAS */
+
 
 #if defined(CDN_MATH_MATRIX_MULTIPLY_REQUIRED) && !defined(CDN_MATH_MATRIX_MULTIPLY)
 #define CDN_MATH_MATRIX_MULTIPLY_USE_BUILTIN
@@ -250,14 +294,15 @@ cdn_math_matrix_multiply_builtin (ValueType *x0,
                                   uint32_t   Cx0,
                                   uint32_t   Cx1)
 {
-	ValueType retval;
+       ValueType retval;
 
-	CDN_MATH_MATRIX_MULTIPLY_V (&retval, x0, x1, Rx0, Cx0, Cx1);
-	return retval;
+       CDN_MATH_MATRIX_MULTIPLY_V (&retval, x0, x1, Rx0, Cx0, Cx1);
+       return retval;
 }
 
 
 #endif /* CDN_MATH_MATRIX_MULTIPLY */
+
 
 #if defined(CDN_MATH_LINSOLVE_V_REQUIRED) && !defined(CDN_MATH_LINSOLVE_V)
 #define CDN_MATH_LINSOLVE_V_USE_BUILTIN
