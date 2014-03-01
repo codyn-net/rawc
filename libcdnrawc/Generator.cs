@@ -48,6 +48,12 @@ namespace Cdn.RawC
 				Knowledge.Initialize(d_network);
 			});
 
+			if (!Options.Instance.NoSparsity)
+			{
+				var sparsity = new Sparsity();
+				sparsity.Optimize();
+			}
+
 			var t = Profile.Begin("collect");
 
 			// Collect all the equations

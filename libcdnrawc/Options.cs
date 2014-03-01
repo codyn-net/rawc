@@ -46,6 +46,8 @@ namespace Cdn.RawC
 		public string DependencyGraph;
 		[CommandLine.Option("bind", Description="Generate binding from first network to second network")]
 		public bool Bind = false;
+		[CommandLine.Option("no-sparsity", Description="Disable optimization of sparse expressions")]
+		public bool NoSparsity = false;
 
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;

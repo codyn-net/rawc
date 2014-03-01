@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using System.Collections.Generic;
 
-namespace Cdn.RawC.Programmer.Formatters
+namespace Cdn.RawC
 {
 	public class DynamicVisitor
 	{

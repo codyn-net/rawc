@@ -120,7 +120,6 @@
     <Compile Include="Programmer\Formatters\JavaScript\InstructionTranslator.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\JavaScript.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\Options.cs" />
-    <Compile Include="Programmer\Formatters\DynamicVisitor.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\NumberTranslator.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\InitialValueTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\Lapack.cs" />
@@ -128,6 +127,8 @@
     <Compile Include="Asciifyer.cs" />
     <Compile Include="Binder.cs" />
     <Compile Include="Programmer\Computation\EventProgram.cs" />
+    <Compile Include="Sparsity.cs" />
+    <Compile Include="DynamicVisitor.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
