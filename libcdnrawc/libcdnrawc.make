@@ -118,6 +118,7 @@ FILES = \
 	Programmer/Instructions/IInstruction.cs \
 	Programmer/Instructions/Variable.cs \
 	Programmer/Instructions/Function.cs \
+	Programmer/Instructions/SparseOperator.cs \
 	Programmer/Instructions/State.cs \
 	Programmer/Options.cs \
 	AssemblyInfo.cs \

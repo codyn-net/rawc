@@ -130,6 +130,7 @@
     <Compile Include="Sparsity.cs" />
     <Compile Include="DynamicVisitor.cs" />
     <Compile Include="SparsityBenchmarker.cs" />
+    <Compile Include="Programmer\Instructions\SparseOperator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />

@@ -287,6 +287,11 @@ namespace Cdn.RawC
 				Expand();
 				return d_expression;
 			}
+			set
+			{
+				d_expression = value;
+				d_instructions = null;
+			}
 		}
 
 		public EdgeAction[] Actions
@@ -332,6 +337,13 @@ namespace Cdn.RawC
 				}
 
 				return d_instructions;
+			}
+			set
+			{
+				d_instructions = value;
+
+				d_expression = new Cdn.Expression(Expression.AsString);
+				d_expression.Instructions = d_instructions;
 			}
 		}
 
