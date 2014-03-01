@@ -2,7 +2,7 @@
 
 namespace Cdn.RawC
 {
-	public class Sparsity : DynamicVisitor
+	public class Sparsity
 	{
 		public Sparsity()
 		{

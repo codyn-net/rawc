@@ -85,7 +85,6 @@ FILES = \
 	Programmer/Formatters/C/C.cs \
 	Programmer/Formatters/C/Lapack.cs \
 	Programmer/Formatters/IFormatter.cs \
-	Programmer/Formatters/DynamicVisitor.cs \
 	Programmer/Formatters/CLike/InitialValueTranslator.cs \
 	Programmer/Formatters/CLike/Options.cs \
 	Programmer/Formatters/CLike/InstructionTranslator.cs \
@@ -132,16 +131,23 @@ FILES = \
 	Config.cs \
 	Profile.cs \
 	Validator.cs \
-	Asciifyer.cs
+	Asciifyer.cs \
+	DynamicVisitor.cs \
+	Sparsity.cs \
+	SparsityBenchmarker.cs
 
 DATA_FILES =
 
 RESOURCES = \
+	Resources/SparsityBench.make,Cdn.RawC.Resources.SparsityBench.make \
+	\
 	Programmer/Formatters/C/Resources/Library.make,Cdn.RawC.Programmer.Formatters.C.Resources.Library.make \
 	Programmer/Formatters/C/Resources/Standalone.make,Cdn.RawC.Programmer.Formatters.C.Resources.Standalone.make \
 	Programmer/Formatters/C/Resources/Include.make,Cdn.RawC.Programmer.Formatters.C.Resources.Include.make \
 	Programmer/Formatters/C/Resources/RunSource.c,Cdn.RawC.Programmer.Formatters.C.Resources.RunSource.c \
 	Programmer/Formatters/C/Resources/RunHeader.h,Cdn.RawC.Programmer.Formatters.C.Resources.RunHeader.h \
+	Programmer/Formatters/C/cdn-rawc/cdn-rawc-math.h,Cdn.RawC.Programmer.Formatters.C.Resources.cdn-rawc-math.h \
+	Programmer/Formatters/C/cdn-rawc/cdn-rawc-macros.h,Cdn.RawC.Programmer.Formatters.C.Resources.cdn-rawc-macros.h \
 	\
 	Programmer/Formatters/JavaScript/Resources/Cdn.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.js \
 	Programmer/Formatters/JavaScript/Resources/Cdn.Utils.js,Cdn.RawC.Programmer.Formatters.JavaScript.Resources.Cdn.Utils.js \

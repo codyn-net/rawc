@@ -48,6 +48,8 @@ namespace Cdn.RawC
 		public bool Bind = false;
 		[CommandLine.Option("no-sparsity", Description="Disable optimization of sparse expressions")]
 		public bool NoSparsity = false;
+		[CommandLine.Option("sparsity-benchmark", Description="Generate sparsity benchmarking code")]
+		public bool SparsityBenchmark = false;
 
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;
@@ -111,12 +113,6 @@ namespace Cdn.RawC
 			if (d_showFormatters)
 			{
 				return;
-			}
-
-			if (d_files.Count == 0)
-			{
-				Console.Error.WriteLine("Please specify at least one network file");
-				Environment.Exit(1);
 			}
 		}
 
