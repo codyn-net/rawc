@@ -50,8 +50,10 @@ namespace Cdn.RawC
 
 			if (!Options.Instance.NoSparsity)
 			{
-				var sparsity = new Sparsity();
-				sparsity.Optimize();
+				Profile.Do("sparsity", () => {
+					var sparsity = new Sparsity();
+					sparsity.Optimize();
+				});
 			}
 
 			var t = Profile.Begin("collect");
