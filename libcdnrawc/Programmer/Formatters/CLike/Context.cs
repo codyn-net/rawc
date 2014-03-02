@@ -25,6 +25,15 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			public string Name;
 		}
 
+		public struct SparseFunction
+		{
+			public Cdn.MathFunctionType Type;
+			public string Name;
+
+			public SparsityInfo RetSparsity;
+			public SparsityInfo[] ArgSparsity;
+		}
+
 		private Program d_program;
 		private Tree.Node d_root;
 		private Stack<Item> d_stack;
@@ -33,6 +42,13 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		private Stack<string> d_ret;
 		private Stack<List<Temporary>> d_tempstack;
 		private static HashSet<string> s_usedMathFunctions;
+		private static Dictionary<string, SparseFunction> s_usedSparseFunctions;
+		private static Dictionary<string, string> s_sparseFunctionNames;
+
+		static Context()
+		{
+			s_sparseFunctionNames = new Dictionary<string, string>();
+		}
 
 		public Context(Program program, Options options) : this(program, options, null, null)
 		{
@@ -71,6 +87,19 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				}
 
 				return s_usedMathFunctions;
+			}
+		}
+
+		public static Dictionary<string, SparseFunction> UsedSparseFunctions
+		{
+			get
+			{
+				if (s_usedSparseFunctions == null)
+				{
+					s_usedSparseFunctions = new Dictionary<string, SparseFunction>();
+				}
+
+				return s_usedSparseFunctions;
 			}
 		}
 
@@ -377,6 +406,34 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return val;
 		}
 
+		private string Sparsify(string val, Tree.Node node)
+		{
+			var isp = node.Instruction as Instructions.SparseOperator;
+
+			if (isp == null)
+			{
+				return val;
+			}
+
+			var args = Array.ConvertAll(isp.ArgSparsity, (a) => {
+				return String.Format("({0}-by-{1}) ({2})",
+					a.Dimension.Rows,
+					a.Dimension.Columns,
+					String.Join("|", Array.ConvertAll(a.Sparsity, (b) => b.ToString())));
+			});
+
+			var id = String.Format("{0} SP {1}", val, String.Join(", ", args));
+			string ret;
+
+			if (!s_sparseFunctionNames.TryGetValue(id, out ret))
+			{
+				ret = val + "_sp_" + s_sparseFunctionNames.Count;
+				s_sparseFunctionNames[id] = ret;
+			}
+
+			return ret;
+		}
+
 		public virtual string MathFunctionV(Cdn.MathFunctionType type, Tree.Node node)
 		{
 			string name = Enum.GetName(typeof(Cdn.MathFunctionType), type);
@@ -439,7 +496,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				val = String.Format("{0}_v", name.ToLower());
 				break;
 			case MathFunctionType.Vcat:
-				return "vcat_v";
+				return Sparsify("vcat_v", node);
 			case MathFunctionType.Power:
 				val = "pow_v";
 				break;
@@ -455,11 +512,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				{
 					if (d1.Rows == 1 && d2.Columns == 1)
 					{
-						return "matrix_multiply";
+						return Sparsify("matrix_multiply", node);
 					}
 					else
 					{
-						return "matrix_multiply_v";
+						return Sparsify("matrix_multiply_v", node);
 					}
 				}
 				else
@@ -481,19 +538,21 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					val = "diag_v_m";
 				}
 
-				return val;
+				return Sparsify(val, node);
 			}
 			case MathFunctionType.Slinsolve:
-				return String.Format("{0}_v", name.ToLower());
+				return Sparsify(String.Format("{0}_v", name.ToLower()), node);
 			case MathFunctionType.Sltdl:
 			case MathFunctionType.SltdlDinv:
 			case MathFunctionType.SltdlDinvLinvt:
 			case MathFunctionType.SltdlLinv:
 			case MathFunctionType.SltdlLinvt:
-				return String.Format("{0}_v", name.ToLower());
+				return Sparsify(String.Format("{0}_v", name.ToLower()), node);
 			default:
 				throw new NotImplementedException(String.Format("The math function `{0}' is not supported...", name));
 			}
+
+			val = Sparsify(val, node);
 
 			if (node.Children.Count == 2)
 			{

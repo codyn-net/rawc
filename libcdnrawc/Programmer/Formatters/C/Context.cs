@@ -151,7 +151,8 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				var d2 = node.Children[1].Dimension;
 
 				if (d1.Columns == d2.Rows && !(d1.IsOne || d2.IsOne) &&
-				   d1.Rows <= 10 && d2.Columns <= 10)
+						d1.Rows <= 10 && d2.Columns <= 10 &&
+						!(node.Instruction is Instructions.SparseOperator))
 				{
 					return String.Format("CDN_MATH_{0}_NO_BLAS", base.MathFunctionV(type, node).ToUpper());
 				}

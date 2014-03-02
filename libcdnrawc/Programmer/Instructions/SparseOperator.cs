@@ -2,23 +2,13 @@
 
 namespace Cdn.RawC.Programmer.Instructions
 {
-	public struct Sparsity
-	{
-		public int[] Sparse;
-
-		public Sparsity(int[] sparse)
-		{
-			Sparse = sparse;
-		}
-	}
-
 	public class SparseOperator : Instruction, IInstruction
 	{
 		private Cdn.InstructionFunction d_original;
-		private Sparsity d_retsparse;
-		private Sparsity[] d_argsparse;
+		private SparsityInfo d_retsparse;
+		private SparsityInfo[] d_argsparse;
 
-		public SparseOperator(Cdn.InstructionFunction original, Sparsity retsparse, Sparsity[] argsparse)
+		public SparseOperator(Cdn.InstructionFunction original, SparsityInfo retsparse, SparsityInfo[] argsparse)
 		{
 			d_original = original;
 			d_retsparse = retsparse;
@@ -30,12 +20,12 @@ namespace Cdn.RawC.Programmer.Instructions
 			get { return d_original; }
 		}
 
-		public Sparsity[] ArgSparsity
+		public SparsityInfo[] ArgSparsity
 		{
 			get { return d_argsparse; }
 		}
 
-		public Sparsity RetSparsity
+		public SparsityInfo RetSparsity
 		{
 			get { return d_retsparse; }
 		}
@@ -43,6 +33,22 @@ namespace Cdn.RawC.Programmer.Instructions
 		public Cdn.Dimension Dimension
 		{
 			get { return d_original.GetStackManipulation().Push.Dimension; }
+		}
+
+		public Cdn.Dimension[] Pop
+		{
+			get
+			{
+				var smanip = d_original.GetStackManipulation();
+				var ret = new Cdn.Dimension[smanip.Pop.Num];
+
+				for (int i = 0; i < smanip.Pop.Num; i++)
+				{
+					ret[i] = smanip.GetPopn(i).Dimension;
+				}
+
+				return ret;
+			}
 		}
 
 		public static new GLib.GType GType

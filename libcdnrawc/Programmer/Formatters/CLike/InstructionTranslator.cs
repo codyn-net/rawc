@@ -776,7 +776,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 		 */
 		protected virtual string TranslateV(Cdn.InstructionMatrix instruction, Context context)
 		{
-			string[] args = new string[context.Node.Children.Count];
+			List<string> args = new List<string>(context.Node.Children.Count);
 
 			if (context.SupportsFirstClassArrays)
 			{
@@ -785,7 +785,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				// Simply concatenate the arrays
 				for (int i = 0; i < context.Node.Children.Count; ++i)
 				{
-					args[i] = Translate(context, context.Node.Children[i]);
+					args.Add(Translate(context, context.Node.Children[i]));
 
 					if (!context.Node.Children[i].Dimension.IsOne)
 					{
@@ -807,14 +807,14 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					{
 						if (context.Node.Children[i].Dimension.IsOne)
 						{
-							args[i] = String.Format("{0}{1}{2}",
-							                        context.BeginArray,
-							                        args[i],
-							                        context.EndArray);
+							args.Add(String.Format("{0}{1}{2}",
+								context.BeginArray,
+								args[i],
+								context.EndArray));
 						}
 					}
 
-					return context.ArrayConcat(args);
+					return context.ArrayConcat(args.ToArray());
 				}
 			}
 			else if (IsZeroMatrix(context.Node, context))
@@ -830,21 +830,25 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				for (int i = 0; i < context.Node.Children.Count; ++i)
 				{
 					var child = context.Node.Children[i];
+					var inum = child.Instruction as InstructionNumber;
 
-					// Translate such that we compute the result of the child
-					// at the tmp + argi location
-					if (argi == 0)
+					if (context.IsMapping(child) || inum == null || inum.Value != 0)
 					{
-						args[i] = TranslateAssign(context, child, tmp);
-					}
-					else if (context.SupportsPointers)
-					{
-						// TODO: check how this works really, well it doesn't!
-						args[i] = TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi));
-					}
-					else
-					{
-						throw new Exception("Matrix instruction without pointers is not yet implemented");
+						// Translate such that we compute the result of the child
+						// at the tmp + argi location
+						if (args.Count == 0)
+						{
+							args.Add(TranslateAssign(context, child, tmp));
+						}
+						else if (context.SupportsPointers)
+						{
+							// TODO: check how this works really, well it doesn't!
+							args.Add(TranslateAssign(context, child, String.Format("{0} + {1}", tmp, argi)));
+						}
+						else
+						{
+							throw new Exception("Matrix instruction without pointers is not yet implemented");
+						}
 					}
 
 					argi += child.Dimension.Size();
@@ -877,6 +881,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return ret;
 		}
 
+		protected virtual string TranslateV(Instructions.SparseOperator instruction, Context context)
+		{
+			return TranslateV(instruction.Original, context);
+		}
+
 		/* Translate a builtin function which returns a multidimensional value.
 		 */
 		protected virtual string TranslateV(InstructionFunction instruction, Context context)
@@ -893,7 +902,31 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				ret = context.PeekRet();
 			}
 
-			Context.UsedMathFunctions.Add(def);
+			var isp = context.Node.Instruction as Instructions.SparseOperator;
+
+			if (isp != null)
+			{
+				if (!Context.UsedSparseFunctions.ContainsKey(def))
+				{
+					var sf = new Context.SparseFunction() {
+						Name = def,
+						Type = (Cdn.MathFunctionType)isp.Original.Id,
+						RetSparsity = isp.RetSparsity,
+						ArgSparsity = isp.ArgSparsity
+					};
+
+					Context.UsedSparseFunctions[def] = sf;
+
+					if (sf.Type == MathFunctionType.Pow || sf.Type == MathFunctionType.Power)
+					{
+						Context.UsedMathFunctions.Add("CDN_MATH_POW");
+					}
+				}
+			}
+			else
+			{
+				Context.UsedMathFunctions.Add(def);
+			}
 
 			List<string> args = new List<string>(context.Node.Children.Count + 1);
 
@@ -913,7 +946,12 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				}
 			}
 
-			context.TranslateFunctionDimensionArguments(instruction, args, cnt);
+			// Provide dimension except for sparse functions since they are generated
+			// for specific static dimensions already
+			if (isp == null)
+			{
+				context.TranslateFunctionDimensionArguments(instruction, args, cnt);
+			}
 
 			if (ret != null)
 			{

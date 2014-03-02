@@ -1141,6 +1141,367 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			}
 		}
 
+		private void WriteSparseUnaryElementWise(TextWriter writer, Context.SparseFunction f)
+		{
+			string uop = null;
+
+			switch (f.Type)
+			{
+			case Cdn.MathFunctionType.Minus:
+				uop = "-";
+				break;
+			default:
+				throw new NotImplementedException(String.Format("Support for the sparse unary element wise operator `{0}' has not yet been implemented", f.Type));
+			}
+
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				var ii = f.RetSparsity.Inverse();
+
+				foreach (var i in ii.Sparsity)
+				{
+					w.WriteLine("\tret[{0}] = {1}x0[{0}]", i, uop);
+				}
+			});
+		}
+
+		private delegate string BinaryOp(string a, string b);
+
+		private void WriteSparseElementWise(TextWriter writer, Context.SparseFunction f)
+		{
+			if (f.ArgSparsity.Length == 1)
+			{
+				WriteSparseUnaryElementWise(writer, f);
+				return;
+			}
+
+			BinaryOp binop;
+
+			switch (f.Type)
+			{
+			case MathFunctionType.Divide:
+				binop = (a, b) => String.Format("{0} / {1}", a, b);
+				break;
+			case MathFunctionType.Pow:
+			case MathFunctionType.Power:
+				binop = (a, b) => String.Format("CDN_MATH_POW ({0}, {1})", a, b);
+				break;
+			case MathFunctionType.Emultiply:
+			case MathFunctionType.Multiply:
+				binop = (a, b) => String.Format("{0} * {1}", a, b);
+				break;
+			case MathFunctionType.Minus:
+				binop = (a, b) => String.Format("{0} - {1}", a, b);
+				break;
+			case MathFunctionType.Plus:
+				binop = (a, b) => String.Format("{0} + {1}", a, b);
+				break;
+			default:
+				throw new NotSupportedException(String.Format("Support for the sparse element wise operation `{0} ({1})' is not yet implemented", f.Name, f.Type));
+			}
+
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				var l = f.ArgSparsity[0];
+				var r = f.ArgSparsity[1];
+
+				var reti = f.RetSparsity.Inverse();
+
+				foreach (var i in reti.Sparsity)
+				{
+					var a = "x0";
+					var b = "x1";
+					var idx = String.Format("[{0}]", i);
+
+					if (!l.Dimension.IsOne)
+					{
+						a += idx;
+					}
+
+					if (!r.Dimension.IsOne)
+					{
+						b += idx;
+					}
+
+					w.WriteLine("\tret[{0}] = {1};", i, binop(a, b));
+				}
+			});
+		}
+
+		private void WriteSparseCRSum(TextWriter writer, Context.SparseFunction f)
+		{
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				var ri = f.RetSparsity.Inverse().Sparsity;
+				var sp = f.ArgSparsity[0].Expand();
+
+				var stride = 1;
+
+				if (f.Type == MathFunctionType.Csum)
+				{
+					stride = f.ArgSparsity[0].Dimension.Rows;
+				}
+
+				foreach (var i in ri)
+				{
+					string val = null;
+					int start, end;
+
+					if (f.Type == MathFunctionType.Csum)
+					{
+						start = i;
+						end = start + stride * f.ArgSparsity[0].Dimension.Columns;
+					}
+					else
+					{
+						start = i * f.ArgSparsity[0].Dimension.Rows;
+						end = start + f.ArgSparsity[0].Dimension.Rows;
+					}
+
+					for (int ii = start; ii < end; ii += stride)
+					{
+						if (sp[ii])
+						{
+							continue;
+						}
+
+						string v = String.Format("x0[{0}]", ii);
+
+						if (val == null)
+						{
+							val = v;
+						}
+						else
+						{
+							val += String.Format(" + {0}", v);
+						}
+					}
+
+					w.WriteLine("\tret[{0}] = {1};", i, val);
+				}
+			});
+		}
+
+		private void WriteSparseCollect(TextWriter writer, Context.SparseFunction f)
+		{
+			BinaryOp binop;
+
+			switch (f.Type)
+			{
+			case MathFunctionType.Product:
+				binop = (a, b) => a == null ? b : String.Format("{0} * {1}", a, b);
+				break;
+			case MathFunctionType.Sqsum:
+				binop = (a, b) => a == null ? String.Format("{0} * {0}", b) : String.Format("{0} + {1} * {1}", a, b);
+				break;
+			case MathFunctionType.Sum:
+				binop = (a, b) => a == null ? b : String.Format("{0} + {1}", a, b);
+				break;
+			default:
+				throw new NotImplementedException(String.Format("Support for the sparse accumulative function `{0}' has not yet been implemented", f.Type));
+			}
+
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				var c = f.ArgSparsity[0].Inverse().Sparsity;
+				string retval = null;
+
+				for (var i = 0; i < c.Length; i++)
+				{
+					retval = binop(retval, String.Format("x0[{0}]", c[i]));
+				}
+
+				if (retval == null)
+				{
+					w.WriteLine("\treturn 0.0;");
+				}
+				else
+				{
+					w.WriteLine("\treturn {0};", retval);
+				}
+			});
+		}
+
+		private delegate void SparsityBodyWriter(TextWriter writer);
+
+		private void WriteSparseFunction(TextWriter writer, Context.SparseFunction f, SparsityBodyWriter body)
+		{
+			writer.WriteLine("#ifdef {0}_USE_BUILTIN", f.Name);
+
+			writer.Write("static ");
+
+			if (f.RetSparsity.Dimension.IsOne)
+			{
+				writer.WriteLine("ValueType");
+			}
+			else
+			{
+				writer.WriteLine("ValueType *");
+			}
+
+			writer.Write("{0}_builtin (", f.Name.ToLower());
+
+			if (!f.RetSparsity.Dimension.IsOne)
+			{
+				writer.Write("ValueType *ret");
+			}
+
+			for (var i = 0; i < f.ArgSparsity.Length; i++)
+			{
+				if (!f.RetSparsity.Dimension.IsOne || i != 0)
+				{
+					writer.Write(", ");
+				}
+
+				if (f.ArgSparsity[i].Dimension.IsOne)
+				{
+					writer.Write("ValueType ");
+				}
+				else
+				{
+					writer.Write("ValueType *");
+				}
+
+				writer.Write("x{0}", i);
+			}
+
+			writer.WriteLine(")");
+			writer.WriteLine("{");
+
+			body(writer);
+
+			if (!f.RetSparsity.Dimension.IsOne)
+			{
+				writer.WriteLine();
+				writer.WriteLine("\treturn ret;");
+			}
+
+			writer.WriteLine("}\n");
+			writer.WriteLine("#endif /* {0}_USE_BUILTIN */\n", f.Name);
+		}
+
+		private void WriteSparseMultiply(TextWriter writer, Context.SparseFunction f)
+		{
+			var l = f.ArgSparsity[0];
+			var r = f.ArgSparsity[1];
+
+			if (l.Dimension.Columns != r.Dimension.Rows)
+			{
+				WriteSparseElementWise(writer, f);
+				return;
+			}
+
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				var lb = l.Expand();
+				var rb = r.Expand();
+
+				int[] ins = f.RetSparsity.Inverse().Sparsity;
+
+				var eqs = new string[ins.Length];
+				var dim = f.RetSparsity.Dimension;
+
+				for (var i = 0; i < ins.Length; i++)
+				{
+					var ri = ins[i] % dim.Rows;
+					var ci = ins[i] / dim.Rows;
+
+					StringBuilder s = null;
+
+					for (int k = 0; k < l.Dimension.Columns; k++)
+					{
+						var lli = ri + k * l.Dimension.Rows;
+						var rri = ci * r.Dimension.Rows + k;
+
+						if (!lb[lli] && !rb[rri])
+						{
+							if (s == null)
+							{
+								s = new StringBuilder();
+							}
+							else
+							{
+								s.Append(" + ");
+							}
+
+							s.AppendFormat("x0[{0}] * x1[{1}]", lli, rri);
+						}
+					}
+
+					if (s != null)
+					{
+						eqs[i] = s.ToString();
+					}
+					else
+					{
+						eqs[i] = "0";
+					}
+				}
+
+				if (f.RetSparsity.Dimension.IsOne)
+				{
+					w.WriteLine("\treturn {0};", eqs[0]);
+				}
+				else
+				{
+					for (var i = 0; i < eqs.Length; i++)
+					{
+						w.WriteLine("\tret[{0}] = {1};", ins[i], eqs[i]);
+					}
+				}
+			});
+		}
+
+		private void WriteSparseFunctionDefine(TextWriter writer, CLike.Context.SparseFunction f)
+		{
+			writer.WriteLine("#ifndef {0}", f.Name);
+			writer.WriteLine("#define {0} {1}_builtin", f.Name, f.Name.ToLower());
+			writer.WriteLine("#define {0}_USE_BUILTIN", f.Name);
+			writer.WriteLine("#endif\n", f.Name);
+		}
+
+		private void WriteSparseFunction(TextWriter writer, CLike.Context.SparseFunction f)
+		{
+			switch (f.Type)
+			{
+			case MathFunctionType.Divide:
+			case MathFunctionType.Pow:
+			case MathFunctionType.Power:
+			case MathFunctionType.Emultiply:
+			case MathFunctionType.Minus:
+			case MathFunctionType.Plus:
+				WriteSparseElementWise(writer, f);
+				return;
+			case MathFunctionType.Product:
+			case MathFunctionType.Sqsum:
+			case MathFunctionType.Sum:
+				WriteSparseCollect(writer, f);
+				return;
+			case MathFunctionType.Multiply:
+				WriteSparseMultiply(writer, f);
+				return;
+			case MathFunctionType.Csum:
+			case MathFunctionType.Rsum:
+				WriteSparseCRSum(writer, f);
+				return;
+			}
+
+			throw new NotImplementedException(String.Format("The generator for the sparse function `{0}' is not yet implemented", f.Name));
+		}
+
+		private void WriteSparseFunctions(TextWriter writer)
+		{
+			foreach (var sp in Context.UsedSparseFunctions)
+			{
+				WriteSparseFunctionDefine(writer, sp.Value);
+			}
+
+			foreach (var sp in Context.UsedSparseFunctions)
+			{
+				WriteSparseFunction(writer, sp.Value);
+			}
+		}
+
 		private void WriteFunctions(TextWriter writer)
 		{
 			WriteMathDimFunctions(writer);
@@ -2457,6 +2818,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			WriteDataTables(source);
 
 			WriteFunctions(source);
+
 			WriteAPISource(source);
 
 			WriteEventsSource(source);
@@ -2492,6 +2854,9 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			WriteMathDimFunctions(writer);
 
 			writer.WriteLine();
+			WriteSparseFunctions(writer);
+			writer.WriteLine();
+
 			writer.Write(source.ToString());
 
 			writer.Close();

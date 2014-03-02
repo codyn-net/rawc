@@ -22,6 +22,11 @@ namespace Cdn.RawC.Programmer.Instructions
 			get { return new Cdn.Dimension { Rows = 1, Columns = 1}; }
 		}
 
+		public Cdn.Dimension[] Pop
+		{
+			get { return new Cdn.Dimension[0]; }
+		}
+
 		public string Name
 		{
 			get { return d_name; }

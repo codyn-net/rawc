@@ -16,6 +16,22 @@ namespace Cdn.RawC.Programmer.Instructions
 			get { return d_function.Expression.Dimension; }
 		}
 
+		public Cdn.Dimension[] Pop
+		{
+			get
+			{
+				var smanip = d_function.Expression.Instruction.GetStackManipulation();
+				var ret = new Cdn.Dimension[smanip.Pop.Num];
+
+				for (int i = 0; i < smanip.Pop.Num; i++)
+				{
+					ret[i] = smanip.GetPopn(i).Dimension;
+				}
+
+				return ret;
+			}
+		}
+
 		public Programmer.Function FunctionCall
 		{
 			get { return d_function; }

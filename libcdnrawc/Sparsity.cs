@@ -3,17 +3,59 @@ using System.Collections.Generic;
 
 namespace Cdn.RawC
 {
-	public class Sparsity : DynamicVisitor
+	public struct SparsityInfo
 	{
-		private struct SparsityInfo
+		public Dimension Dimension;
+		public int[] Sparsity;
+
+		public bool[] Expand()
 		{
-			public Dimension Dimension;
-			public int[] Sparsity;
+			var ret = new bool[Dimension.Size()];
+
+			for (var i = 0; i < Sparsity.Length; i++)
+			{
+				ret[Sparsity[i]] = true;
+			}
+
+			return ret;
 		}
 
+		public override string ToString()
+		{
+			return String.Format("S[{0}]", String.Join(", ", Array.ConvertAll(Sparsity, (a) => a.ToString())));
+		}
+
+		public SparsityInfo Inverse()
+		{
+			var ret = new int[Dimension.Size() - Sparsity.Length];
+			var si = 0;
+			var ri = 0;
+
+			for (var i = 0; i < Dimension.Size(); i++)
+			{
+				if (si < Sparsity.Length && Sparsity[si] == i)
+				{
+					si++;
+				}
+				else
+				{
+					ret[ri] = i;
+					ri++;
+				}
+			}
+
+			return new SparsityInfo() {
+				Dimension = Dimension,
+				Sparsity = ret
+			};
+		}
+	}
+
+	public class Sparsity : DynamicVisitor
+	{
 		private Dictionary<State, SparsityInfo> d_stateSparsity;
 
-		public Sparsity() : base(typeof(SparsityInfo),
+		public Sparsity() : base(typeof(int[]),
 			BindingFlags.Default,
 			System.Reflection.BindingFlags.Default |
 			System.Reflection.BindingFlags.NonPublic |
@@ -30,45 +72,15 @@ namespace Cdn.RawC
 
 		public void Optimize()
 		{
-			while (true)
+			foreach (var s in Knowledge.Instance.States)
 			{
-				foreach (var s in Knowledge.Instance.States)
-				{
-					CalculateSparsity(s);
-				}
-
-				var newmap = new Dictionary<State, SparsityInfo>();
-
-				foreach (var s in Knowledge.Instance.Integrated)
-				{
-					var info = d_stateSparsity[s];
-
-					var d = Knowledge.Instance.DerivativeState(s);
-					var dinfo = d_stateSparsity[d];
-
-					// Check if the derivative state would reduce sparsity
-					var inter = IntersectSparsity(info.Sparsity, dinfo.Sparsity);
-
-					if (inter.Length != info.Sparsity.Length)
-					{
-						// Pin sparsity of the state and recalculate
-						newmap[s] = new SparsityInfo() {
-							Sparsity = inter,
-							Dimension = info.Dimension
-						};
-					}
-				}
-
-				if (newmap.Count == 0)
-				{
-					break;
-				}
-
-				d_stateSparsity = newmap;
+				MakeSparse(s);
 			}
 
-			// Here we successfully have the full sparsity calculated.
-			// Now do instruction replacement.
+			foreach (var s in Knowledge.Instance.InitializeStates)
+			{
+				MakeSparse(s);
+			}
 		}
 
 		private SparsityInfo CalculateSparsity(State state)
@@ -88,16 +100,33 @@ namespace Cdn.RawC
 			return CalculateSparsity(instructions, null);
 		}
 
-		private Instruction ReplaceSparse(Instruction i, int[] sparsity, SparsityInfo[] children)
+		private bool CanSparse(Cdn.MathFunctionType type)
+		{
+			switch (type)
+			{
+			case MathFunctionType.Divide:
+			case MathFunctionType.Pow:
+			case MathFunctionType.Power:
+			case MathFunctionType.Emultiply:
+			case MathFunctionType.Product:
+			case MathFunctionType.Minus:
+			case MathFunctionType.Plus:
+			case MathFunctionType.Sqsum:
+			case MathFunctionType.Sum:
+			case MathFunctionType.Multiply:
+			case MathFunctionType.Csum:
+			case MathFunctionType.Rsum:
+				return true;
+			}
+
+			return false;
+		}
+
+		private Instruction ReplaceSparse(Instruction i, SparsityInfo sparsity, SparsityInfo[] children)
 		{
 			var f = i as InstructionFunction;
 
-			if (f == null)
-			{
-				return null;
-			}
-
-			if (sparsity.Length == 0)
+			if (f == null || !CanSparse((Cdn.MathFunctionType)f.Id))
 			{
 				return null;
 			}
@@ -105,11 +134,17 @@ namespace Cdn.RawC
 			int size = 0;
 			int sp = 0;
 			int maxs = 0;
+			bool ismultidim = false;
 
 			for (int ii = 0; ii < children.Length; ii++)
 			{
 				size += children[ii].Dimension.Size();
 				sp += children[ii].Sparsity.Length;
+
+				if (!children[ii].Dimension.IsOne)
+				{
+					ismultidim = true;
+				}
 
 				var ms = children[ii].Dimension.Size() - children[ii].Sparsity.Length;
 
@@ -119,32 +154,29 @@ namespace Cdn.RawC
 				}
 			}
 
+			if (!ismultidim)
+			{
+				return null;
+			}
+
 			if (maxs > 100)
 			{
 				// Too many calculations to special case
 				return null;
 			}
 
-			if ((double)size / (double)sp < 0.1)
+			if (sp == 0 || (double)size / (double)sp < 0.1)
 			{
 				// Not sparse enough
 				return null;
 			}
 
-			var retsparse = new Cdn.RawC.Programmer.Instructions.Sparsity(sparsity);
-			var argsparse = new Cdn.RawC.Programmer.Instructions.Sparsity[children.Length];
-
-			for (int ii = 0; ii < argsparse.Length; ii++)
-			{
-				argsparse[ii] = new Cdn.RawC.Programmer.Instructions.Sparsity(children[ii].Sparsity);
-			}
-
-			return new Cdn.RawC.Programmer.Instructions.SparseOperator(f, retsparse, argsparse);
+			return new Cdn.RawC.Programmer.Instructions.SparseOperator(f, sparsity, children);
 		}
 
 		private void MakeSparse(State s)
 		{
-			var instrs = new Queue<SparsityInfo>();
+			var instrs = new Stack<SparsityInfo>();
 			var newinst = new List<Instruction>();
 			bool didrepl = false;
 
@@ -156,12 +188,17 @@ namespace Cdn.RawC
 
 				for (int n = 0; n < num; n++)
 				{
-					children[n] = instrs.Dequeue();
+					children[num - n - 1] = instrs.Pop();
 				}
 
 				var sp = Invoke<int[]>(i, children, null);
 
-				var newi = ReplaceSparse(i, sp, children);
+				var spi = new SparsityInfo() {
+					Dimension = smanip.Push.Dimension,
+					Sparsity = sp
+				};
+
+				var newi = ReplaceSparse(i, spi, children);
 
 				if (newi != null)
 				{
@@ -173,10 +210,7 @@ namespace Cdn.RawC
 					newinst.Add(i);
 				}
 
-				instrs.Enqueue(new SparsityInfo() {
-					Dimension = smanip.Push.Dimension,
-					Sparsity = sp
-				});
+				instrs.Push(spi);
 			}
 
 			if (didrepl)
@@ -187,7 +221,7 @@ namespace Cdn.RawC
 
 		private SparsityInfo CalculateSparsity(Instruction[] instructions, Dictionary<Variable, SparsityInfo> varmapping)
 		{
-			var instrs = new Queue<SparsityInfo>();
+			var instrs = new Stack<SparsityInfo>();
 
 			foreach (var i in instructions)
 			{
@@ -197,18 +231,18 @@ namespace Cdn.RawC
 
 				for (int n = 0; n < num; n++)
 				{
-					children[n] = instrs.Dequeue();
+					children[num - n - 1] = instrs.Pop();
 				}
 
 				var sp = Invoke<int[]>(i, children, varmapping);
 
-				instrs.Enqueue(new SparsityInfo() {
+				instrs.Push(new SparsityInfo() {
 					Dimension = smanip.Push.Dimension,
 					Sparsity = sp
 				});
 			}
 
-			return instrs.Dequeue();
+			return instrs.Pop();
 		}
 
 		private int[] InstructionSparsity(InstructionMatrix instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
@@ -235,7 +269,7 @@ namespace Cdn.RawC
 		{
 			SparsityInfo info;
 
-			if (mapping.TryGetValue(v, out info))
+			if (mapping != null && mapping.TryGetValue(v, out info))
 			{
 				return info.Sparsity;
 			}
@@ -246,6 +280,14 @@ namespace Cdn.RawC
 			}
 
 			var st = Knowledge.Instance.State(v);
+
+			// Integrated states are like ins, they can never be assumed
+			// to be sparse
+			if ((st.Type & State.Flags.Integrated) != 0)
+			{
+				return new int[0];
+			}
+
 			return CalculateSparsity(st).Sparsity;
 		}
 
@@ -509,7 +551,7 @@ namespace Cdn.RawC
 					}
 					else
 					{
-						CopySparsity(r.Sparsity);
+						return CopySparsity(r.Sparsity);
 					}
 				}
 				else if (r.Dimension.IsOne)
@@ -520,7 +562,7 @@ namespace Cdn.RawC
 					}
 					else
 					{
-						CopySparsity(l.Sparsity);
+						return CopySparsity(l.Sparsity);
 					}
 				}
 				else
@@ -542,18 +584,6 @@ namespace Cdn.RawC
 			return new int[0];
 		}
 
-		private bool[] ExpandSparsity(SparsityInfo info)
-		{
-			var ret = new bool[info.Dimension.Size()];
-
-			for (var i = 0; i < info.Sparsity.Length; i++)
-			{
-				ret[i] = true;
-			}
-
-			return ret;
-		}
-
 		private int[] MultiplySparsity(SparsityInfo[] children)
 		{
 			var l = children[0];
@@ -565,8 +595,8 @@ namespace Cdn.RawC
 			}
 
 			// Compute matrix multiply sparsity
-			var s1 = ExpandSparsity(l);
-			var s2 = ExpandSparsity(r);
+			var s1 = l.Expand();
+			var s2 = r.Expand();
 
 			var ret = new List<int>();
 			int i = 0;
@@ -579,10 +609,13 @@ namespace Cdn.RawC
 
 					for (int k = 0; k < r.Dimension.Rows; k++)
 					{
-						var p1 = s1[ri + k * l.Dimension.Columns];
-						var p2 = s2[k + ci * r.Dimension.Rows];
+						var p1i = ri + k * l.Dimension.Rows;
+						var p1 = s1[p1i];
 
-						if (!(p1 || p2))
+						var p2i = k + ci * r.Dimension.Rows;
+						var p2 = s2[p2i];
+
+						if (!p1 && !p2)
 						{
 							issparse = false;
 							break;
@@ -606,7 +639,7 @@ namespace Cdn.RawC
 			var c = children[0];
 			var ret = new List<int>();
 
-			var s = ExpandSparsity(c);
+			var s = c.Expand();
 
 			for (int r = 0; r < c.Dimension.Rows; r++)
 			{
@@ -637,7 +670,7 @@ namespace Cdn.RawC
 			var c = children[0];
 			var ret = new List<int>();
 
-			var s = ExpandSparsity(c);
+			var s = c.Expand();
 			int i = 0;
 
 			for (int ci = 0; ci < c.Dimension.Columns; ci++)
@@ -664,6 +697,24 @@ namespace Cdn.RawC
 			return ret.ToArray();
 		}
 
+		private int[] TransposeSparsity(SparsityInfo[] children)
+		{
+			var c = children[0];
+
+			var ret = new int[c.Sparsity.Length];
+			var d = c.Dimension;
+
+			for (var i = 0; i < c.Sparsity.Length; i++)
+			{
+				var ri = c.Sparsity[i] % d.Rows;
+				var ci = c.Sparsity[i] / d.Rows;
+
+				ret[i] = ci + ri * d.Columns;
+			}
+
+			return ret;
+		}
+
 		private int[] InstructionSparsity(InstructionFunction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			switch ((Cdn.MathFunctionType)instr.Id)
@@ -688,6 +739,8 @@ namespace Cdn.RawC
 				return CSumSparsity(children);
 			case MathFunctionType.Rsum:
 				return RSumSparsity(children);
+			case MathFunctionType.Transpose:
+				return TransposeSparsity(children);
 			default:
 				break;
 			}
