@@ -836,7 +836,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 					{
 						// Translate such that we compute the result of the child
 						// at the tmp + argi location
-						if (args.Count == 0)
+						if (argi == 0)
 						{
 							args.Add(TranslateAssign(context, child, tmp));
 						}
