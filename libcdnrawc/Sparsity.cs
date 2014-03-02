@@ -83,18 +83,6 @@ namespace Cdn.RawC
 			}
 		}
 
-		private SparsityInfo CalculateSparsity(State state)
-		{
-			SparsityInfo ret;
-
-			if (d_stateSparsity.TryGetValue(state, out ret))
-			{
-				return ret;
-			}
-
-			return CalculateSparsity(state.Instructions);
-		}
-
 		private SparsityInfo CalculateSparsity(Instruction[] instructions)
 		{
 			return CalculateSparsity(instructions, null);
@@ -174,8 +162,15 @@ namespace Cdn.RawC
 			return new Cdn.RawC.Programmer.Instructions.SparseOperator(f, sparsity, children);
 		}
 
-		private void MakeSparse(State s)
+		private SparsityInfo MakeSparse(State s)
 		{
+			SparsityInfo info;
+
+			if (d_stateSparsity.TryGetValue(s, out info))
+			{
+				return info;
+			}
+
 			var instrs = new Stack<SparsityInfo>();
 			var newinst = new List<Instruction>();
 			bool didrepl = false;
@@ -183,6 +178,7 @@ namespace Cdn.RawC
 			foreach (var i in s.Instructions)
 			{
 				var smanip = i.GetStackManipulation();
+
 				var num = smanip.Pop.Num;
 				var children = new SparsityInfo[num];
 
@@ -217,6 +213,11 @@ namespace Cdn.RawC
 			{
 				s.Instructions = newinst.ToArray();
 			}
+
+			info = instrs.Pop();
+			d_stateSparsity[s] = info;
+
+			return info;
 		}
 
 		private SparsityInfo CalculateSparsity(Instruction[] instructions, Dictionary<Variable, SparsityInfo> varmapping)
@@ -288,7 +289,7 @@ namespace Cdn.RawC
 				return new int[0];
 			}
 
-			return CalculateSparsity(st).Sparsity;
+			return MakeSparse(st).Sparsity;
 		}
 
 		private int[] InstructionSparsity(InstructionVariable instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
@@ -340,19 +341,20 @@ namespace Cdn.RawC
 		private int[] DiagSparsity(SparsityInfo[] children)
 		{
 			var ret = new List<int>();
+			var c = children[0];
 
-			if (children[0].Dimension.Rows == 1 || children[0].Dimension.Columns == 1)
+			if (c.Dimension.Rows == 1 || c.Dimension.Columns == 1)
 			{
-				int n = children[0].Dimension.Size();
+				int n = c.Dimension.Size();
 				int i = 0;
 
-				for (int c = 0; c < n; c++)
+				for (int ci = 0; ci < n; ci++)
 				{
-					for (int r = 0; r < n; r++)
+					for (int ri = 0; ri < n; ri++)
 					{
-						if (c == r)
+						if (ci == ri)
 						{
-							if (children[c].Sparsity.Length != 0)
+							if (SparsityContains(c.Sparsity, ci * n + ci))
 							{
 								ret.Add(i);
 							}
@@ -368,12 +370,12 @@ namespace Cdn.RawC
 			}
 			else
 			{
-				int n = children[0].Dimension.Rows;
+				int n = c.Dimension.Rows;
 				int i = 0;
 
 				for (int d = 0; d < n; d++)
 				{
-					if (SparsityContains(children[0].Sparsity, i))
+					if (SparsityContains(c.Sparsity, i))
 					{
 						ret.Add(d);
 					}
