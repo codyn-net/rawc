@@ -780,7 +780,7 @@ namespace Cdn.RawC
 			return new int[0];
 		}
 
-		private int[] InstructionSparsity(InstructionCustomFunction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
+		private int[] FunctionSparsity(Cdn.Function function, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			// Get the sparsity of the result of evaluating the custom function expression
 			// under it's variables having the sparsity specified by children
@@ -788,7 +788,7 @@ namespace Cdn.RawC
 
 			int i = 0;
 
-			foreach (var arg in instr.Function.Arguments)
+			foreach (var arg in function.Arguments)
 			{
 				var v = arg.Variable;
 
@@ -809,7 +809,14 @@ namespace Cdn.RawC
 				i++;
 			}
 
-			return CalculateSparsity(instr.Function.Expression.Instructions, vmap).Sparsity;
+			var ret = CalculateSparsity(function.Expression.Instructions, vmap);
+
+			return ret.Sparsity;
+		}
+
+		private int[] InstructionSparsity(InstructionCustomFunction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
+		{
+			return FunctionSparsity(instr.Function, children, mapping);
 		}
 
 		private int[] InstructionSparsity(InstructionNumber instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
@@ -826,6 +833,18 @@ namespace Cdn.RawC
 		private int[] InstructionSparsity(Instruction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			// Nothing is assumed to be sparse by default
+			return new int[0];
+		}
+
+		private int[] InstructionSparsity(InstructionCustomOperator instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
+		{
+			var f = instr.Operator.PrimaryFunction;
+
+			if (f != null)
+			{
+				return FunctionSparsity(f, children, mapping);
+			}
+
 			return new int[0];
 		}
 	}
