@@ -715,6 +715,7 @@ namespace Cdn.RawC
 				ret[i] = ci + ri * d.Columns;
 			}
 
+			Array.Sort(ret);
 			return ret;
 		}
 
