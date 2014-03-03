@@ -1386,7 +1386,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			var l = f.ArgSparsity[0];
 			var r = f.ArgSparsity[1];
 
-			if (l.Dimension.Columns != r.Dimension.Rows)
+			if (l.Dimension.Columns != r.Dimension.Rows || l.Dimension.IsOne || r.Dimension.IsOne)
 			{
 				WriteSparseElementWise(writer, f);
 				return;
