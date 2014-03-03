@@ -51,6 +51,11 @@ namespace Cdn.RawC.Programmer.Instructions
 			}
 		}
 
+		public override string ToString()
+		{
+			return string.Format("[SPO: Original={0}, RetSparsity=[{1}]]", Original, String.Join(", ", Array.ConvertAll(RetSparsity.Sparsity, (a) => a.ToString())));
+		}
+
 		public static new GLib.GType GType
 		{
 			get { return Instruction.GType; }
