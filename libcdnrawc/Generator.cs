@@ -19,11 +19,6 @@ namespace Cdn.RawC
 
 		public void Generate()
 		{
-			if ((!Options.Instance.Compile && !Options.Instance.Validate) || Options.Instance.Verbose)
-			{
-				Log.WriteLine("Generating code for network...");
-			}
-
 			Profile.Do("load network", () => {
 				LoadNetwork();
 			});
