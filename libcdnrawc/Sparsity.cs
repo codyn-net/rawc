@@ -238,10 +238,12 @@ namespace Cdn.RawC
 
 				var sp = Invoke<int[]>(i, children, varmapping);
 
-				instrs.Push(new SparsityInfo() {
+				var info = new SparsityInfo() {
 					Dimension = smanip.Push.Dimension,
 					Sparsity = sp
-				});
+				};
+
+				instrs.Push(info);
 			}
 
 			return instrs.Pop();
