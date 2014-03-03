@@ -81,6 +81,61 @@ namespace Cdn.RawC
 			{
 				MakeSparse(s);
 			}
+
+			if (Options.Instance.PrintSparsity != null)
+			{
+				foreach (var v in Knowledge.Instance.Network.FindVariables(Options.Instance.PrintSparsity))
+				{
+					var s = Knowledge.Instance.State(v);
+
+					if (s != null)
+					{
+						PrintSparsity(s, v);
+					}
+					else
+					{
+						Console.Error.WriteLine("Could not find state to print sparsity for variable `{0}'", v.FullNameForDisplay);
+					}
+				}
+
+				Environment.Exit(1);
+			}
+		}
+
+		private void PrintSparsity(State s, Cdn.Variable v)
+		{
+			SparsityInfo info;
+
+			if (!d_stateSparsity.TryGetValue(s, out info))
+			{
+				Console.Error.WriteLine("Did not compute sparsity for state `{0}'", v.FullNameForDisplay);
+				return;
+			}
+
+			Console.WriteLine("{0}:", v.FullNameForDisplay);
+			Console.Write("  [ ");
+
+			var ex = info.Expand();
+
+			for (int i = 0; i < ex.Length; i++)
+			{
+				int ci = i % info.Dimension.Columns;
+				int ri = i / info.Dimension.Columns;
+
+				if (i != 0 && i % info.Dimension.Columns == 0)
+				{
+					Console.WriteLine();
+					Console.Write("    ");
+				}
+				else if (i != 0)
+				{
+					Console.Write(", ");
+				}
+
+				Console.Write("{0}", ex[ri + ci * info.Dimension.Rows] ? 0 : 1);
+			}
+
+			Console.WriteLine(" ]");
 		}
 
 		private SparsityInfo CalculateSparsity(Instruction[] instructions)

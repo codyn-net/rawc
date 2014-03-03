@@ -48,6 +48,8 @@ namespace Cdn.RawC
 		public bool Bind = false;
 		[CommandLine.Option("no-sparsity", Description="Disable optimization of sparse expressions")]
 		public bool NoSparsity = false;
+		[CommandLine.Option("print-sparsity", Description="Print sparsity pattern for given selector")]
+		public string PrintSparsity = null;
 		[CommandLine.Option("sparsity-benchmark", Description="Generate sparsity benchmarking code")]
 		public bool SparsityBenchmark = false;
 
