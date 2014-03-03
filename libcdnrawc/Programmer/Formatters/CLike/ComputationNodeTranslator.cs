@@ -30,6 +30,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 		protected virtual string Translate(Computation.Block node, Context context)
 		{
+			if (node.Body.Count == 0)
+			{
+				return "";
+			}
+
 			var ret = new StringBuilder();
 
 			ret.AppendLine(context.BeginBlock);
