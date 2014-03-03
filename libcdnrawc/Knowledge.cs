@@ -41,9 +41,11 @@ namespace Cdn.RawC
 
 		public class EventStateGroup
 		{
+			public Node Node;
 			public List<int> Indices;
 			public List<Cdn.EdgeAction> Actions;
 			public List<State> States;
+			public HashSet<string> ActiveIn;
 		}
 
 		public class EventStateContainer
@@ -338,9 +340,11 @@ namespace Cdn.RawC
 						if (!d_eventStateGroups.TryGetValue(key, out grp))
 						{
 							grp = new EventStateGroup {
+								Node = node,
 								Actions = new List<Cdn.EdgeAction>(),
 								States = new List<State>(),
 								Indices = indices,
+								ActiveIn = hs
 							};
 
 							d_eventStateGroups[key] = grp;
@@ -1486,6 +1490,12 @@ namespace Cdn.RawC
 					yield return pair.Value;
 				}
 			}
+		}
+
+		public bool TryEventStateGroupLookup(Cdn.Node node, string state, out EventStateGroup grp)
+		{
+			var key = EventStateId(node, state);
+			return d_eventStateGroups.TryGetValue(key, out grp);
 		}
 
 		public int EventStateGroupsCount

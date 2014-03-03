@@ -1415,9 +1415,25 @@ namespace Cdn.RawC.Programmer
 
 					b.SetStates.Body.AddRange(AssignmentStates(lst, null));
 
+					var evstates = new DependencyFilter(d_dependencyGraph);
+
+					foreach (var grp in Knowledge.Instance.EventStateGroups)
+					{
+						if (grp.Node == ev.Parent)
+						{
+							evstates.AddRange(grp.States);
+						}
+					}
+
+					DependencyFilter allchmod = new DependencyFilter(d_dependencyGraph, lst);
+					allchmod.AddRange(evstates);
+
 					// After setting the new states, we need to compute any aux variables (again)
 					// which depend on our changes, and which are dependencies for PostDeps
-					var postcompute = categories.Aux.DependsOn(lst).DependencyOf(categories.PostDeps);
+					var recomp = categories.Aux.DependsOn(allchmod);
+					recomp.AddRange(evstates);
+
+					var postcompute = recomp.DependencyOf(categories.PostDeps);
 
 					ProgramDependencies(b.PostCompute, postcompute, "Auxilliary variables expected to be correct for derivatives (i.e. after post)");
 					b.PostCompute.NeedsEvents = true;
