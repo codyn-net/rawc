@@ -721,6 +721,29 @@ namespace Cdn.RawC
 			return ret;
 		}
 
+		private int[] VcatSparsity(Dimension d, SparsityInfo[] children)
+		{
+			var ret = new List<int>();
+			int offset = 0;
+
+			foreach (var c in children)
+			{
+				foreach (var s in c.Sparsity)
+				{
+					int ri = s % c.Dimension.Rows + offset;
+					int ci = s / c.Dimension.Rows;
+
+					ret.Add(ri + ci * d.Rows);
+				}
+
+				offset += c.Dimension.Rows;
+			}
+
+			ret.Sort();
+
+			return ret.ToArray();
+		}
+
 		private int[] InstructionSparsity(InstructionFunction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			switch ((Cdn.MathFunctionType)instr.Id)
@@ -748,6 +771,8 @@ namespace Cdn.RawC
 				return RSumSparsity(children);
 			case MathFunctionType.Transpose:
 				return TransposeSparsity(children);
+			case MathFunctionType.Vcat:
+				return VcatSparsity(instr.GetStackManipulation().Push.Dimension, children);
 			default:
 				break;
 			}
