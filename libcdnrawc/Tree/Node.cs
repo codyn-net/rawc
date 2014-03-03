@@ -182,7 +182,15 @@ namespace Cdn.RawC.Tree
 					size = instruction.GetStackManipulation().Pop.Num;
 				}
 
-				d_isCommutative = instruction.IsCommutative;
+				if (ii != null)
+				{
+					// TODO
+					d_isCommutative = false;
+				}
+				else
+				{
+					d_isCommutative = instruction.IsCommutative;
+				}
 			}
 
 			d_isLeaf = size == 0;
