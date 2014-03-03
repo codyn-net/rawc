@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Cdn.RawC
 {
@@ -18,6 +19,38 @@ namespace Cdn.RawC
 			}
 
 			return ret;
+		}
+
+		public string LogicalString
+		{
+			get
+			{
+				var sb = new StringBuilder();
+				sb.Append("  [ ");
+	
+				var ex = Expand();
+	
+				for (int i = 0; i < ex.Length; i++)
+				{
+					int ci = i % Dimension.Columns;
+					int ri = i / Dimension.Columns;
+	
+					if (i != 0 && i % Dimension.Columns == 0)
+					{
+						sb.AppendLine();
+						sb.Append("    ");
+					}
+					else if (i != 0)
+					{
+						sb.Append(", ");
+					}
+	
+					sb.AppendFormat("{0}", ex[ri + ci * Dimension.Rows] ? 0 : 1);
+				}
+	
+				sb.AppendLine(" ]");
+				return sb.ToString();
+			}
 		}
 
 		public override string ToString()
@@ -113,29 +146,7 @@ namespace Cdn.RawC
 			}
 
 			Console.WriteLine("{0}:", v.FullNameForDisplay);
-			Console.Write("  [ ");
-
-			var ex = info.Expand();
-
-			for (int i = 0; i < ex.Length; i++)
-			{
-				int ci = i % info.Dimension.Columns;
-				int ri = i / info.Dimension.Columns;
-
-				if (i != 0 && i % info.Dimension.Columns == 0)
-				{
-					Console.WriteLine();
-					Console.Write("    ");
-				}
-				else if (i != 0)
-				{
-					Console.Write(", ");
-				}
-
-				Console.Write("{0}", ex[ri + ci * info.Dimension.Rows] ? 0 : 1);
-			}
-
-			Console.WriteLine(" ]");
+			Console.Write(info.LogicalString);
 		}
 
 		private SparsityInfo CalculateSparsity(Instruction[] instructions)
