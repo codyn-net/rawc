@@ -93,7 +93,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.PseudoInverse:
 			{
 				var d2 = node.Children[0].Dimension;
-				var ret = String.Format("CDN_MATH_PSEUDOINVERSE_V_{0}_{1}", d2.Rows, d2.Columns);
+				var ret = Sparsify(String.Format("CDN_MATH_PSEUDOINVERSE_V_{0}_{1}", d2.Rows, d2.Columns), node);
 
 				if (!s_workspaces.ContainsKey(ret))
 				{

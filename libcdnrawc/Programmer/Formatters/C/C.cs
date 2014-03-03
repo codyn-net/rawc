@@ -1453,7 +1453,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			});
 		}
 
-		private void WriteSparseFunctionDefine(TextWriter writer, CLike.Context.SparseFunction f)
+		private void WriteSparseFunctionDefine(TextWriter writer, Context.SparseFunction f)
 		{
 			writer.WriteLine("#ifndef {0}", f.Name);
 			writer.WriteLine("#define {0} {1}_builtin", f.Name, f.Name.ToLower());
@@ -1461,7 +1461,88 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			writer.WriteLine("#endif\n", f.Name);
 		}
 
-		private void WriteSparseFunction(TextWriter writer, CLike.Context.SparseFunction f)
+		private void WriteSparsePseudoInverse(TextWriter writer, Context.SparseFunction f)
+		{
+			var ws = Context.Workspaces[f.Name];
+
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				// Remove all rows that are completely sparse
+				var c = f.ArgSparsity[0];
+				var allsp = c.Expand();
+
+				bool[] sp = new bool[c.Dimension.Rows];
+				var nnspi = new List<int>();
+				int nnsp = 0;
+
+				for (int ri = 0; ri < c.Dimension.Rows; ri++)
+				{
+					sp[ri] = true;
+
+					for (int ci = 0; ci < c.Dimension.Columns; ci++)
+					{
+						if (!allsp[ri + ci * c.Dimension.Rows])
+						{
+							sp[ri] = false;
+							break;
+						}
+					}
+
+					if (!sp[ri])
+					{
+						nnspi.Add(ri);
+						nnsp++;
+					}
+				}
+
+				int maxdim = System.Math.Max(nnsp, ws.Dimension.Columns);
+				int mindim = System.Math.Min(nnsp, ws.Dimension.Columns);
+	
+				w.WriteLine("\tValueType Acp[{0}] = {{0,}};", nnsp * ws.Dimension.Columns);
+				w.WriteLine("\tValueType b[{0}] = {1};", maxdim * maxdim, Eye(maxdim));
+				w.WriteLine("\tValueType s[{0}];", mindim);
+				w.WriteLine("\tValueType tmpret[{0}] = {{0,}};", nnsp * ws.Dimension.Columns);
+				w.WriteLine("\tValueType work[{0}];", ws.WorkSize[0]);
+				w.WriteLine("\tint64_t   iwork[{0}];", ws.WorkSize[1]);
+				w.WriteLine();
+
+				var efrow = 0;
+
+				// Copy in Acp all the relevant rows
+				for (int ri = 0; ri < c.Dimension.Rows; ri++)
+				{
+					if (sp[ri])
+					{
+						continue;
+					}
+
+					for (int ci = 0; ci < c.Dimension.Columns; ci++)
+					{
+						w.WriteLine("\tAcp[{0}] = x0[{1}];", efrow + ci * nnsp, ri + ci * c.Dimension.Rows);
+					}
+
+					efrow++;
+				}
+
+				w.WriteLine();
+
+				w.WriteLine("\tCDN_MATH_PSEUDOINVERSE_V(tmpret, Acp, {0}, {1}, b, {2}, s, work, {3}, iwork);",
+				            nnsp,
+				            ws.Dimension.Columns,
+				            maxdim,
+				            ws.WorkSize[0]);
+
+				w.WriteLine();
+
+				// Copy back non-sparse columns to ret
+				for (int i = 0; i < nnsp; i++)
+				{
+					w.WriteLine("\tmemcpy (ret + {0}, tmpret + {1}, sizeof (ValueType) * {2});", nnspi[i] * c.Dimension.Columns, i * c.Dimension.Columns, c.Dimension.Columns);
+				}
+			});
+		}
+
+		private void WriteSparseFunction(TextWriter writer, Context.SparseFunction f)
 		{
 			switch (f.Type)
 			{
@@ -1485,6 +1566,9 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			case MathFunctionType.Csum:
 			case MathFunctionType.Rsum:
 				WriteSparseCRSum(writer, f);
+				return;
+			case MathFunctionType.PseudoInverse:
+				WriteSparsePseudoInverse(writer, f);
 				return;
 			}
 
@@ -2845,6 +2929,20 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				else
 				{
 					writer.WriteLine("#define {0}_REQUIRED", def);
+				}
+			}
+
+			foreach (var def in Context.UsedSparseFunctions)
+			{
+				Context.Workspace ws;
+
+				if (Context.Workspaces.TryGetValue(def.Value.Name, out ws))
+				{
+					if (seen.Add(ws.Type))
+					{
+						var nm = Enum.GetName(typeof(Cdn.MathFunctionType), ws.Type).ToUpper();
+						writer.WriteLine("#define CDN_MATH_{0}_V_REQUIRED", nm);
+					}
 				}
 			}
 

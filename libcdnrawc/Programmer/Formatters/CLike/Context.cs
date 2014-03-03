@@ -406,7 +406,7 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 			return val;
 		}
 
-		private string Sparsify(string val, Tree.Node node)
+		protected string Sparsify(string val, Tree.Node node)
 		{
 			var isp = node.Instruction as Instructions.SparseOperator;
 
