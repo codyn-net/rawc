@@ -836,6 +836,25 @@ namespace Cdn.RawC
 			return new int[0];
 		}
 
+		private int[] InstructionSparsity(InstructionIndex instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
+		{
+			var idx = instr.Indices;
+			var c = children[0];
+
+			var ret = new List<int>();
+
+			// Sample the sparsity of the child using the slice, correct for offset
+			for (int i = 0; i < idx.Length; i++)
+			{
+				if (SparsityContains(c.Sparsity, idx[i]))
+				{
+					ret.Add(i);
+				}
+			}
+
+			return ret.ToArray();
+		}
+
 		private int[] InstructionSparsity(InstructionCustomOperator instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			var f = instr.Operator.PrimaryFunction;
