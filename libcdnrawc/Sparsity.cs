@@ -105,6 +105,7 @@ namespace Cdn.RawC
 			case MathFunctionType.Csum:
 			case MathFunctionType.Rsum:
 			case MathFunctionType.UnaryMinus:
+			case MathFunctionType.PseudoInverse:
 				return true;
 			}
 
@@ -337,6 +338,26 @@ namespace Cdn.RawC
 		{
 			int[] ret = new int[sparsity.Length];
 			Array.Copy(sparsity, ret, sparsity.Length);
+
+			return ret;
+		}
+
+		private int[] MakeDiagSparsity(int n)
+		{
+			var ret = new int[n * n - n];
+			int i = 0;
+
+			for (int ci = 0; ci < n; ci++)
+			{
+				for (int ri = 0; ri < n; ri++)
+				{
+					if (ci != ri)
+					{
+						ret[i] = ri + ci * n;
+						i++;
+					}
+				}
+			}
 
 			return ret;
 		}
@@ -589,16 +610,8 @@ namespace Cdn.RawC
 			return new int[0];
 		}
 
-		private int[] MultiplySparsity(SparsityInfo[] children)
+		private int[] MatrixMultiplySparsity(SparsityInfo l, SparsityInfo r)
 		{
-			var l = children[0];
-			var r = children[1];
-
-			if (!(l.Dimension.Columns == r.Dimension.Rows && !l.Dimension.IsOne))
-			{
-				return UnionSparsity(children);
-			}
-
 			// Compute matrix multiply sparsity
 			var s1 = l.Expand();
 			var s2 = r.Expand();
@@ -637,6 +650,19 @@ namespace Cdn.RawC
 			}
 
 			return ret.ToArray();
+		}
+
+		private int[] MultiplySparsity(SparsityInfo[] children)
+		{
+			var l = children[0];
+			var r = children[1];
+
+			if (!(l.Dimension.Columns == r.Dimension.Rows && !l.Dimension.IsOne))
+			{
+				return UnionSparsity(children);
+			}
+
+			return MatrixMultiplySparsity(l, r);
 		}
 
 		private int[] CSumSparsity(SparsityInfo[] children)
@@ -744,6 +770,127 @@ namespace Cdn.RawC
 			return ret.ToArray();
 		}
 
+		private int[] MakeTrilSparsity(int[] sparsity, int n)
+		{
+			return MakeTrilSparsity(sparsity, n, 0);
+		}
+
+		private int[] MakeTrilSparsity(int[] sparsity, int n, int offset)
+		{
+			var ret = new List<int>(sparsity);
+
+			for (int ci = 1 + offset; ci < n; ci++)
+			{
+				for (int ri = 0; ri < ci; ri++)
+				{
+					ret.Add(ri + ci * n);
+				}
+			}
+
+			ret.Sort();
+			return ret.ToArray();
+		}
+
+		private int[] MakeTriuSparsity(int[] sparsity, int n)
+		{
+			return MakeTriuSparsity(sparsity, n, 0);
+		}
+
+		private int[] MakeTriuSparsity(int[] sparsity, int n, int offset)
+		{
+			var ret = new List<int>(sparsity);
+
+			for (int ri = 1 + offset; ri < n; ri++)
+			{
+				for (int ci = 0; ci < ri; ci++)
+				{
+					ret.Add(ri + ci * n);
+				}
+			}
+
+			ret.Sort();
+			return ret.ToArray();
+		}
+
+		private int[] SltdlDinvLinvtSparsity(SparsityInfo[] children)
+		{
+			var l = MakeTriuSparsity(children[2].Sparsity, children[2].Dimension.Rows);
+			var r = children[0];
+
+			return MatrixMultiplySparsity(new SparsityInfo() {
+				Dimension = children[2].Dimension,
+				Sparsity = l
+			}, r);
+		}
+
+		private int[] SltdlLinvSparsity(SparsityInfo[] children)
+		{
+			var l = MakeTrilSparsity(children[2].Sparsity, children[2].Dimension.Rows);
+			var r = children[0];
+
+			return MatrixMultiplySparsity(new SparsityInfo() {
+				Dimension = children[2].Dimension,
+				Sparsity = l
+			}, r);
+		}
+
+		private int[] SltdlLinvtSparsity(SparsityInfo[] children)
+		{
+			var l = MakeTriuSparsity(children[2].Sparsity, children[2].Dimension.Rows);
+			var r = children[0];
+
+			return MatrixMultiplySparsity(new SparsityInfo() {
+				Dimension = children[2].Dimension,
+				Sparsity = l
+			}, r);
+		}
+
+		private int[] SlinsolveSparsity(SparsityInfo[] children)
+		{
+			var ret = SltdlDinvLinvtSparsity(children);
+
+			return SltdlLinvSparsity(new SparsityInfo[] {
+				new SparsityInfo() {
+					Dimension = children[0].Dimension,
+					Sparsity = ret
+				},
+				new SparsityInfo() {},
+				children[2]
+			});
+		}
+
+		private int[] PseudoInverseSparsity(SparsityInfo[] children)
+		{
+			var c = children[0];
+			var sp = c.Expand();
+			var ret = new List<int>();
+
+			for (int ri = 0; ri < c.Dimension.Rows; ri++)
+			{
+				bool iszero = true;
+
+				for (int ci = 0; ci < c.Dimension.Columns; ci++)
+				{
+					if (!sp[ri + ci * c.Dimension.Rows])
+					{
+						iszero = false;
+						break;
+					}
+				}
+
+				if (iszero)
+				{
+					// Make whole row sparse
+					for (int k = 0; k < c.Dimension.Columns; k++)
+					{
+						ret.Add(ri * c.Dimension.Columns + k);
+					}
+				}
+			}
+
+			return ret.ToArray();
+		}
+
 		private int[] InstructionSparsity(InstructionFunction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			switch ((Cdn.MathFunctionType)instr.Id)
@@ -773,6 +920,22 @@ namespace Cdn.RawC
 				return TransposeSparsity(children);
 			case MathFunctionType.Vcat:
 				return VcatSparsity(instr.GetStackManipulation().Push.Dimension, children);
+			case MathFunctionType.Sltdl:
+				// The LTDL factorization has the same sparsity pattern as its
+				// first argument
+				return CopySparsity(children[0].Sparsity);
+			case MathFunctionType.SltdlDinv:
+				return MakeDiagSparsity(children[0].Dimension.Rows);
+			case MathFunctionType.SltdlDinvLinvt:
+				return SltdlDinvLinvtSparsity(children);
+			case MathFunctionType.SltdlLinv:
+				return SltdlLinvSparsity(children);
+			case MathFunctionType.SltdlLinvt:
+				return SltdlLinvtSparsity(children);
+			case MathFunctionType.Slinsolve:
+				return SlinsolveSparsity(children);
+			case MathFunctionType.PseudoInverse:
+				return PseudoInverseSparsity(children);
 			default:
 				break;
 			}
