@@ -1161,7 +1161,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 
 				foreach (var i in ii.Sparsity)
 				{
-					w.WriteLine("\tret[{0}] = {1}x0[{0}]", i, uop);
+					w.WriteLine("\tret[{0}] = {1}x0[{0}];", i, uop);
 				}
 			});
 		}
