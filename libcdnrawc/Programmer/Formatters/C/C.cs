@@ -1148,6 +1148,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			switch (f.Type)
 			{
 			case Cdn.MathFunctionType.Minus:
+			case Cdn.MathFunctionType.UnaryMinus:
 				uop = "-";
 				break;
 			default:
@@ -1469,6 +1470,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			case MathFunctionType.Power:
 			case MathFunctionType.Emultiply:
 			case MathFunctionType.Minus:
+			case MathFunctionType.UnaryMinus:
 			case MathFunctionType.Plus:
 				WriteSparseElementWise(writer, f);
 				return;

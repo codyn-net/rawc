@@ -104,6 +104,7 @@ namespace Cdn.RawC
 			case MathFunctionType.Multiply:
 			case MathFunctionType.Csum:
 			case MathFunctionType.Rsum:
+			case MathFunctionType.UnaryMinus:
 				return true;
 			}
 
@@ -734,6 +735,7 @@ namespace Cdn.RawC
 			case MathFunctionType.Plus:
 			case MathFunctionType.Sqsum:
 			case MathFunctionType.Sum:
+			case MathFunctionType.UnaryMinus:
 				return IntersectSparsity(children);
 			case MathFunctionType.Multiply:
 				return MultiplySparsity(children);
