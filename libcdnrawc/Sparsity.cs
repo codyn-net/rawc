@@ -946,6 +946,16 @@ namespace Cdn.RawC
 			return ret.ToArray();
 		}
 
+		private int[] SltdlDinvSparsity(SparsityInfo[] children)
+		{
+			var diag = MakeDiagSparsity(children[1].Dimension.Rows);
+
+			return MatrixMultiplySparsity(new SparsityInfo() {
+				Dimension = children[1].Dimension,
+				Sparsity = diag
+			}, children[0]);
+		}
+
 		private int[] InstructionSparsity(InstructionFunction instr, SparsityInfo[] children, Dictionary<Variable, SparsityInfo> mapping)
 		{
 			switch ((Cdn.MathFunctionType)instr.Id)
@@ -980,7 +990,7 @@ namespace Cdn.RawC
 				// first argument
 				return CopySparsity(children[0].Sparsity);
 			case MathFunctionType.SltdlDinv:
-				return MakeDiagSparsity(children[0].Dimension.Rows);
+				return SltdlDinvSparsity(children);
 			case MathFunctionType.SltdlDinvLinvt:
 				return SltdlDinvLinvtSparsity(children);
 			case MathFunctionType.SltdlLinv:
