@@ -43,6 +43,12 @@ namespace Cdn.RawC.Programmer
 
 					return d_eventStateGroup;
 				}
+
+				set
+				{
+					d_eventStateGroup = value;
+					d_eventStateGroupComputed = true;
+				}
 			}
 		}
 
@@ -311,7 +317,8 @@ namespace Cdn.RawC.Programmer
 		                          HashSet<State> states,
 		                          Node parent,
 		                          HashSet<Node> seen,
-		                          HashSet<Node> leafs)
+		                          HashSet<Node> leafs,
+		                          HashSet<Node> evgroups)
 		{
 			bool checkleaf = false;
 
@@ -331,6 +338,11 @@ namespace Cdn.RawC.Programmer
 				parent.Dependencies.Add(newnode);
 				newnode.DependencyFor.Add(parent);
 
+				if (node.EventStateGroup != null)
+				{
+					evgroups.Add(newnode);
+				}
+
 				// The newnode now becomes the new parent
 				parent = newnode;
 				checkleaf = true;
@@ -346,7 +358,7 @@ namespace Cdn.RawC.Programmer
 
 			foreach (var dependency in node.Dependencies)
 			{
-				CollapseNode(ret, dependency, states, parent, seen, leafs);
+				CollapseNode(ret, dependency, states, parent, seen, leafs, evgroups);
 			}
 
 			if (checkleaf && parent.Dependencies.Count == 0 && parent.State != null)
@@ -362,6 +374,54 @@ namespace Cdn.RawC.Programmer
 			return Collapse(states, out leafs);
 		}
 
+		private void CollapseEventStateGroups(HashSet<Node> evgroups)
+		{
+			foreach (var node in evgroups)
+			{
+				var ingrp = new HashSet<Node>();
+				var q = new Queue<Node>();
+
+				q.Enqueue(node);
+				ingrp.Add(node);
+
+				while (q.Count != 0)
+				{
+					var nn = q.Dequeue();
+
+					bool ok = true;
+
+					if (nn != node)
+					{
+						foreach (var dep in nn.DependencyFor)
+						{
+							if (!ingrp.Contains(dep))
+							{
+								ingrp.Remove(dep);
+								ok = false;
+								break;
+							}
+						}
+					}
+
+					if (!ok)
+					{
+						continue;
+					}
+
+					nn.EventStateGroup = node.EventStateGroup;
+
+					foreach (var n in nn.Dependencies)
+					{
+						if ((n.EventStateGroup == null || n.EventStateGroup == node.EventStateGroup) && !ingrp.Contains(n) && (n.State.Type & (State.Flags.Promoted | State.Flags.EventAction)) != 0)
+						{
+							q.Enqueue(n);
+							ingrp.Add(n);
+						}
+					}
+				}
+			}
+		}
+
 		private DependencyGraph Collapse(HashSet<State> states, out HashSet<Node> leafs)
 		{
 			DependencyGraph ret = new DependencyGraph();
@@ -373,13 +433,17 @@ namespace Cdn.RawC.Programmer
 			// appear
 			leafs = new HashSet<Node>();
 
+			var evgroups = new HashSet<Node>();
+
 			CollapseNode(ret,
 			             d_root,
 			             states,
 			             ret.d_root,
 			             new HashSet<Node>(),
-			             leafs);
+			             leafs,
+			             evgroups);
 
+			ret.CollapseEventStateGroups(evgroups);
 			return ret;
 		}
 
