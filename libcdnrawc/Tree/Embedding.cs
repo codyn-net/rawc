@@ -44,6 +44,7 @@ namespace Cdn.RawC.Tree
 		private uint d_argumentIdx;
 		private bool d_inline;
 		private bool d_pure;
+		private Dictionary<uint, List<Argument>> d_indexMap;
 
 		public struct InstanceArgs
 		{
@@ -142,6 +143,7 @@ namespace Cdn.RawC.Tree
 		public Embedding(Node node, IEnumerable<Argument> arguments) : this(node, new NodePath[] {})
 		{
 			d_arguments = new List<Argument>(arguments);
+			d_indexMap = new Dictionary<uint, List<Argument>>();
 
 			Sort.Insertion(d_arguments, (a, b) => a.Index.CompareTo(b.Index));
 		}
@@ -152,6 +154,7 @@ namespace Cdn.RawC.Tree
 
 			d_arguments = new List<Argument>();
 			d_instances = new List<Node>();
+			d_indexMap = new Dictionary<uint, List<Argument>>();
 			d_expression = node;
 
 			d_argumentIdx = 0;
@@ -262,15 +265,45 @@ namespace Cdn.RawC.Tree
 			return true;
 		}
 
+		private void AddIndexArgument(Argument arg)
+		{
+			List<Argument> args;
+
+			if (!d_indexMap.TryGetValue(arg.Index, out args))
+			{
+				args = new List<Argument>();
+				d_indexMap[arg.Index] = args;
+			}
+
+			args.Add(arg);
+		}
+
+		private void AddArgument(Argument arg)
+		{
+			AddIndexArgument(arg);
+			d_arguments.Add(arg);
+		}
+
 		private bool MergeArgument(NodePath path)
 		{
 			// See if this can be represented by a previous argument already
-			foreach (Argument argument in d_arguments)
+			foreach (var args in d_indexMap)
 			{
-				if (ArgumentMatch(argument, path))
+				bool ok = true;
+
+				foreach (var argument in args.Value)
+				{
+					if (!ArgumentMatch(argument, path))
+					{
+						ok = false;
+						break;
+					}
+				}
+
+				if (ok)
 				{
 					// Use same index
-					d_arguments.Add(new Argument(path, argument.Index));
+					AddArgument(new Argument(path, args.Key));
 					return true;
 				}
 			}
@@ -282,11 +315,20 @@ namespace Cdn.RawC.Tree
 			{
 				if (argument.Path == path)
 				{
+					var args = d_indexMap[argument.Index];
+					args.Remove(argument);
+
+					if (args.Count == 0)
+					{
+						d_indexMap.Remove(argument.Index);
+					}
+
 					argument.Index = idx;
+					AddIndexArgument(argument);
 				}
 			}
 
-			d_arguments.Add(new Argument(path, idx));
+			AddArgument(new Argument(path, idx));
 			return false;
 		}
 
