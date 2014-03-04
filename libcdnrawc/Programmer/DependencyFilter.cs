@@ -18,7 +18,6 @@ namespace Cdn.RawC.Programmer
 				ret.d_not = d_not.Copy();
 			}
 
-			ret.d_filter = d_filter;
 			return ret;
 		}
 
