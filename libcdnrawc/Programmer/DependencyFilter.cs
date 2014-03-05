@@ -48,11 +48,10 @@ namespace Cdn.RawC.Programmer
 
 			ret.RemoveWhere((s) => {
 				bool doesdepend = false;
-				object obj = s.Object;
 
 				foreach (State other in states)
 				{
-					if (d_graph.DependsOn(other, obj))
+					if (d_graph.DependsOn(other, s.Object))
 					{
 						doesdepend = true;
 						break;
@@ -90,9 +89,7 @@ namespace Cdn.RawC.Programmer
 
 				foreach (State other in states)
 				{
-					object obj = other.Object;
-
-					if (d_graph.DependsOn(s, obj))
+					if (d_graph.DependsOn(s, other.Object))
 					{
 						doesdepend = true;
 						break;
