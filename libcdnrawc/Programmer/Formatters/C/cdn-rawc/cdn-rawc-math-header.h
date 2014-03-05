@@ -23,6 +23,7 @@
 
 #ifdef ENABLE_LAPACK
 #ifdef PLATFORM_OSX
+#include <vecLib/clapack.h>
 #define LP_int __CLPK_integer
 #define LP_double __CLPK_doublereal
 #define LP_float __CLPK_floatreal
