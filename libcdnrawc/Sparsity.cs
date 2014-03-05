@@ -172,6 +172,7 @@ namespace Cdn.RawC
 			case MathFunctionType.Rsum:
 			case MathFunctionType.UnaryMinus:
 			case MathFunctionType.PseudoInverse:
+			case MathFunctionType.Transpose:
 				return true;
 			}
 

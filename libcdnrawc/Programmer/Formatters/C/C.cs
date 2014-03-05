@@ -1542,6 +1542,23 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			});
 		}
 
+		private void WriteSparseTranspose(TextWriter writer, Context.SparseFunction f)
+		{
+			WriteSparseFunction(writer, f, (w) =>
+			{
+				var c = f.ArgSparsity[0];
+				var idx = c.Inverse().Sparsity;
+
+				foreach (var i in idx)
+				{
+					var ri = i % c.Dimension.Rows;
+					var ci = i / c.Dimension.Rows;
+
+					w.WriteLine("\tret[{0}] = x0[{1}];", ci + f.RetSparsity.Dimension.Rows * ri, i);
+				}
+			});
+		}
+
 		private void WriteSparseFunction(TextWriter writer, Context.SparseFunction f)
 		{
 			switch (f.Type)
@@ -1569,6 +1586,9 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				return;
 			case MathFunctionType.PseudoInverse:
 				WriteSparsePseudoInverse(writer, f);
+				return;
+			case MathFunctionType.Transpose:
+				WriteSparseTranspose(writer, f);
 				return;
 			}
 
