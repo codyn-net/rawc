@@ -1427,6 +1427,9 @@ namespace Cdn.RawC.Programmer
 			var aux = categories.Aux.Copy();
 			aux.RemoveWhere((s) => categories.PostAux.Contains(s));
 
+			var t1 = Profile.Begin("recomp", false);
+			var t2 = Profile.Begin("postcomp", false);
+
 			foreach (var ev in Knowledge.Instance.Events)
 			{
 				var lst = Knowledge.Instance.EventSetStates[ev];
@@ -1473,16 +1476,23 @@ namespace Cdn.RawC.Programmer
 
 				// After setting the new states, we need to compute any aux variables (again)
 				// which depend on our changes, and which are dependencies for PostDeps
+				t1.Thaw();
 				var recomp = categories.Aux.DependsOn(allchmod);
+				t1.Freeze();
 				recomp.AddRange(evstates);
 
+				t2.Thaw();
 				var postcompute = recomp.DependencyOf(categories.PostDeps);
+				t2.Freeze();
 
 				ProgramDependencies(b.PostCompute, postcompute, "Auxilliary variables expected to be correct for derivatives (i.e. after post)");
 				b.PostCompute.NeedsEvents = true;
 
 				d_eventPrograms[ev] = b;
 			}
+
+			t1.End();
+			t2.End();
 		}
 
 		public IEnumerable<Cdn.Function> UsedCustomFunctions
