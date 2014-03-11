@@ -295,6 +295,12 @@ class MetaVariable:
         else:
             self._network.data[idx] = v
 
+    def __len__(self):
+        return self.dimension.size
+
+    def __iter__(self):
+        return iter(self._flat_value())
+
     @property
     def dimension(self):
         if self._dimension is None:
