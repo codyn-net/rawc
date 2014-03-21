@@ -42,7 +42,7 @@ namespace Cdn.RawC.Programmer
 		private DependencyGraph d_dependencyGraph;
 		private HashSet<State> d_initStates;
 		private DependencyFilter d_preparedStates;
-		private Dictionary<Cdn.Event, Computation.INode> d_eventPrograms;
+		private Dictionary<Cdn.Event, Computation.EventProgram> d_eventPrograms;
 		private Dictionary<string, Tree.Node> d_zeroNumberExpression;
 
 		public Program(Options options, IEnumerable<Tree.Embedding> embeddings, Dictionary<State, Tree.Node> equations)
@@ -86,7 +86,7 @@ namespace Cdn.RawC.Programmer
 			d_delayHistoryTables = new List<DataTable>();
 			d_delayedStates = new List<DelayedState>();
 			d_delayHistoryMap = new Dictionary<DelayedState, DataTable>();
-			d_eventPrograms = new Dictionary<Event, Computation.INode>();
+			d_eventPrograms = new Dictionary<Event, Computation.EventProgram>();
 
 			d_delayedCounters = new DataTable("delay_counters", true);
 
@@ -98,17 +98,43 @@ namespace Cdn.RawC.Programmer
 
 			ProgramDataTables();
 
-			ProgramFunctions();
-			ProgramCustomFunctions();
+			Profile.Do("functions", () => {
+				ProgramFunctions();
+			});
 
-			ComputeDependencies();
+			Profile.Do("custom functions", () => {
+				ProgramCustomFunctions();
+			});
 
-			ProgramPrepare();
-			ProgramInit();
-			ProgramReset();
-			ProgramUpdate();
-			ProgramSource();
-			ProgramEvents();
+			Profile.Do("dependencies", () => {
+				ComputeDependencies();
+			});
+
+			var categories = new StateCategories(d_dependencyGraph);
+
+			Profile.Do("prepare", () => {
+				ProgramPrepare();
+			});
+
+			Profile.Do("init", () => {
+				ProgramInit(categories);
+			});
+
+			Profile.Do("init", () => {
+				ProgramReset();
+			});
+
+			Profile.Do("update", () => {
+				ProgramUpdate();
+			});
+
+			Profile.Do("source", () => {
+				ProgramSource(categories);
+			});
+
+			Profile.Do("events", () => {
+				ProgramEvents(categories);
+			});
 
 			d_statetable.Lock();
 
@@ -262,9 +288,9 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		public Computation.INode EventProgram(Cdn.Event ev)
+		public Computation.EventProgram EventProgram(Cdn.Event ev)
 		{
-			Computation.INode ret;
+			Computation.EventProgram ret;
 
 			if (d_eventPrograms.TryGetValue(ev, out ret))
 			{
@@ -798,19 +824,6 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
-		private DependencyFilter TDTModSet
-		{
-			get
-			{
-				var ret = new DependencyFilter(d_dependencyGraph);
-
-				ret.Add(Knowledge.Instance.Time);
-				ret.Add(Knowledge.Instance.TimeStep);
-
-				return ret;
-			}
-		}
-
 		private void ProgramSetTDT(APIFunction func)
 		{
 			ProgramSetTDT(func, false);
@@ -842,9 +855,9 @@ namespace Cdn.RawC.Programmer
 			func.Body.Add(new Computation.Empty());
 		}
 
-		private void ProgramTDTDeps(DependencyFilter deps)
+		private void ProgramTDTDeps(StateCategories categories, DependencyFilter deps)
 		{
-			deps = deps.DependsOn(TDTModSet);
+			deps = deps.DependsOn(categories.TDTModSet);
 
 			foreach (var grp in d_dependencyGraph.Sort(deps))
 			{
@@ -903,8 +916,11 @@ namespace Cdn.RawC.Programmer
 				{
 					foreach (var s in grp)
 					{
-						var item = d_statetable[s];
-						cond.Else.Add(new Computation.Assignment(s, item, ZeroNumberExpression(item.Dimension)));
+						if (s is EventActionState)
+						{
+							var item = d_statetable[s];
+							cond.Else.Add(new Computation.Assignment(s, item, ZeroNumberExpression(item.Dimension)));
+						}
 					}
 				}
 
@@ -922,39 +938,36 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		private void ProgramPre(DependencyFilter deps,
-		                        DependencyFilter derivatives)
+		private void ProgramPre(StateCategories categories)
 		{
+			// Pre is used to update things that depend on IN
+
 			ProgramSetTDT(d_apiPre);
-
-			// All the instates
-			var ins = Knowledge.Instance.FlaggedStates(VariableFlags.In);
-			var instates = new DependencyFilter(d_dependencyGraph);
-
-			foreach (var i in ins)
-			{
-				Cdn.Variable v = (Cdn.Variable)i.Object;
-
-				if ((v.Flags & VariableFlags.Once) == 0)
-				{
-					instates.Add(i);
-				}
-			}
 
 			// The instates filtered by those that are dependencies of integrated
 			// states
-			instates.Filter().DependencyOf(derivatives);
+			var instates = categories.InNotOnce.DependencyOf(categories.DerivativeStates);
+			instates.Filter();
 
-			deps = new DependencyFilter(d_dependencyGraph, deps);
+			// Compute the auxilary states on which derivatives depend and which in turn depend
+			// on IN states. Also consider external constraint states.
+			var deps = new DependencyFilter(d_dependencyGraph, categories.DerivativeDependentAux);
 			deps.AddRange(Knowledge.Instance.ExternalConstraintStates);
+			deps.Filter();
 
-			var diffdeps = deps.Filter().DependsOn(instates);
+			var diffdeps = deps.DependsOn(instates);
 
 			ProgramDependencies(d_apiPre,
 			                    diffdeps,
 			                    "Dependencies of derivatives that depend on <in>");
 
+			// NOTE: both instates and deps are _filtered_. i.e. all functions hereafter
+			// modify instates and deps _in place_
+
+			// Convert instates to IN which aren't dependencies
 			instates.Not();
+
+			// Convert deps to derivative dependent aux that do _NOT_ depend on IN states
 			deps.Not();
 
 			// Check for derivative parts which are only "active" in a particular
@@ -988,7 +1001,7 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		private void ProgramPreDiff(DependencyFilter deps, DependencyFilter derivatives)
+		private void ProgramPreDiff(StateCategories categories)
 		{
 			// PreDiff is called from the integrator just before every
 			// diff, except for the first call to diff. This is used to
@@ -997,15 +1010,16 @@ namespace Cdn.RawC.Programmer
 
 			// Compute set of nodes which depend on real states and
 			// which in turn are dependencies for the derivatives
-			var states = new DependencyFilter(d_dependencyGraph,
-			                                  Knowledge.Instance.Integrated);
+			var deps = categories.DerivativeDependentAux.DependsOn(categories.IntegratedStates);
+			deps.Filter();
 
-			deps = deps.DependsOn(states).Filter().DependencyOf(derivatives);
+			deps.DependencyOf(categories.DerivativeStates);
+
 			ProgramDependencies(d_apiPreDiff, deps, "Dependencies of derivatives that depend on states");
 
 			deps.Not();
 
-			var alldiff = new DependencyFilter(d_dependencyGraph, derivatives);
+			var alldiff = new DependencyFilter(d_dependencyGraph, categories.DerivativeStates);
 
 			foreach (var grp in Knowledge.Instance.EventStateGroups)
 			{
@@ -1045,7 +1059,7 @@ namespace Cdn.RawC.Programmer
 			}
 
 			// Compute constraints on states on which derivatives depend
-			states.Filter().DependencyOf(alldiff);
+			var states = categories.IntegratedStates.DependencyOf(alldiff);
 
 			var filt = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.IntegratedConstraintStates);
 			filt.Filter().DependsOn(states);
@@ -1053,8 +1067,7 @@ namespace Cdn.RawC.Programmer
 			ProgramDependencies(d_apiPreDiff, filt, "Constraints on integrated states used for derivation");
 		}
 
-		private void ProgramDiff(DependencyFilter deps,
-		                         DependencyFilter derivatives)
+		private void ProgramDiff(StateCategories categories)
 		{
 			ProgramSetTDT(d_apiDiff);
 
@@ -1077,15 +1090,15 @@ namespace Cdn.RawC.Programmer
 				}
 			}
 
-			ProgramDependencies(d_apiDiff, derivatives, "Calculate derivatives");
+			ProgramDependencies(d_apiDiff, categories.DerivativeStates, "Calculate derivatives");
 		}
 
-		private void ProgramPost()
+		private void ProgramPost(StateCategories categories)
 		{
 			ProgramSetTDT(d_apiPost);
 
 			// Apply constraints for integrated states
-			var states = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.Integrated);
+			var states = categories.States;
 			var constraints = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.IntegratedConstraintStates);
 
 			constraints.Filter().DependsOn(states);
@@ -1093,48 +1106,30 @@ namespace Cdn.RawC.Programmer
 			ProgramDependencies(d_apiPost, constraints, "Integrated states constraints");
 
 			// Generate new random values
-			var rands  = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.RandStates);
-
-			if (rands.Count > 0)
+			if (categories.Rands.Count > 0)
 			{
 				d_apiPost.Body.Add(new Computation.Comment("Compute new random values"));
-				d_apiPost.Body.Add(new Computation.Rand(rands));
+				d_apiPost.Body.Add(new Computation.Rand(categories.Rands));
 				d_apiPost.Body.Add(new Computation.Empty());
 			}
 
-			// Compute set of things that have changed
-			var modset = rands;
-			var delays = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DelayedStates);
-			var auxout = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
-
-			auxout.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
-
-			modset.UnionWith(TDTModSet);
-			modset.UnionWith(delays);
-			modset.UnionWith(Knowledge.Instance.Integrated);
-			modset.UnionWith(Knowledge.Instance.FlaggedStates(VariableFlags.In));
-
-			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
-			aux.RemoveWhere((s) => (s.Type & State.Flags.EventSet) != 0);
-			aux.Filter().DependsOn(modset).Unfilter();
-
 			// Split postcompute in states that need to be computed before the delays (because delays depend on them)
 			// and those states that can be computed after the delays
-			auxout.Filter().DependsOn(modset).Unfilter();
+			var auxout = categories.AuxOut.DependsOn(categories.DerivativeModset);
 
-			var now = auxout.DependencyOf(delays);
-			var later = now.Not();
+			var nowout = auxout.DependencyOf(categories.Delays);
+			var laterout = nowout.Not();
 
-			var nowaux = aux.DependencyOf(now);
+			var nowaux = categories.PostAux.DependencyOf(nowout);
 			var lateraux = nowaux.Not();
 
 			// Add remaining deps from other aux
-			now.UnionWith(nowaux);
+			nowout.UnionWith(nowaux);
 
-			ProgramDependencies(d_apiPost, now, "Auxiliary variables that depend on t, dt, states or rand and on which delays depend");
+			ProgramDependencies(d_apiPost, nowout, "Auxiliary variables that depend on t, dt, states or rand and on which delays depend");
 
 			// Update delayed states
-			var grps = d_dependencyGraph.Sort(delays);
+			var grps = d_dependencyGraph.Sort(categories.Delays);
 
 			if (grps.Count > 0)
 			{
@@ -1154,35 +1149,100 @@ namespace Cdn.RawC.Programmer
 			}
 
 			// Add remaining deps from other aux
-			later.UnionWith(lateraux);
+			laterout.UnionWith(lateraux);
 
 			// Update aux variables that depend on delays
-			ProgramDependencies(d_apiPost, later, "Auxiliary variables that depend on delays (or just come last)");
+			ProgramDependencies(d_apiPost, laterout, "Auxiliary variables that depend on delays (or just come last)");
 		}
 
-		private void ProgramSource()
+		class StateCategories
 		{
-			// Get the list of integrated states
-			var derivatives = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.DerivativeStates);
+			public DependencyFilter TDTModSet;
+			public DependencyFilter Aux;
+			public DependencyFilter AuxOut;
+			public DependencyFilter States;
+			public DependencyFilter DerivativeStates;
+			public DependencyFilter IntegratedStates;
+			public DependencyFilter AllDerivatives;
+			public DependencyFilter DerivativeDependentAux;
+			public DependencyFilter InNotOnce;
+			public DependencyFilter In;
+			public DependencyFilter DerivativeModset;
+			public DependencyFilter PostDeps;
+			public DependencyFilter PostAux;
+			public DependencyFilter Rands;
+			public DependencyFilter Delays;
 
-			// Auxiliary states are outs and temporaries (i.e. things that
-			// were promoted to the state table and are not recomputed on the fly)
-			var aux = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.AuxiliaryStates);
-
-			// Compute subset of aux on which integrated depends
-			var allderiv = new DependencyFilter(d_dependencyGraph, derivatives);
-
-			foreach (var grp in Knowledge.Instance.EventStateGroups)
+			public StateCategories(DependencyGraph dependencies)
 			{
-				allderiv.AddRange(grp.States);
+				TDTModSet = new DependencyFilter(dependencies);
+
+				TDTModSet.Add(Knowledge.Instance.Time);
+				TDTModSet.Add(Knowledge.Instance.TimeStep);
+
+				Aux = new DependencyFilter(dependencies, Knowledge.Instance.AuxiliaryStates);
+				IntegratedStates = new DependencyFilter(dependencies, Knowledge.Instance.Integrated);
+				DerivativeStates = new DependencyFilter(dependencies, Knowledge.Instance.DerivativeStates);
+				States = new DependencyFilter(dependencies, Knowledge.Instance.States);
+				In = new DependencyFilter(dependencies, Knowledge.Instance.FlaggedStates(VariableFlags.In));
+
+				AllDerivatives = new DependencyFilter(dependencies, DerivativeStates);
+
+				foreach (var grp in Knowledge.Instance.EventStateGroups)
+				{
+					AllDerivatives.AddRange(grp.States);
+				}
+
+				DerivativeDependentAux = Aux.DependencyOf(AllDerivatives);
+
+				AuxOut = Aux.Copy();
+				AuxOut.IntersectWith(Knowledge.Instance.FlaggedStates(VariableFlags.Out));
+
+				InNotOnce = new DependencyFilter(dependencies, Knowledge.Instance.FlaggedStates(VariableFlags.In, VariableFlags.Once));
+
+				PostDeps = IntegratedStates.Copy();
+				PostDeps.AddRange(AuxOut);
+				PostDeps.AddRange(Knowledge.Instance.EventEquationStates);
+				PostDeps.AddRange(DerivativeStates);
+
+				Rands = new DependencyFilter(dependencies, Knowledge.Instance.RandStates);
+
+				DerivativeModset = Rands.Copy();
+
+				Delays = new DependencyFilter(dependencies, Knowledge.Instance.DelayedStates);
+
+				DerivativeModset.UnionWith(TDTModSet);
+				DerivativeModset.UnionWith(Delays);
+				DerivativeModset.UnionWith(IntegratedStates);
+				DerivativeModset.UnionWith(In);
+
+				PostAux = Aux.Copy();
+
+				// Do not compute EventSet aux states
+				PostAux.RemoveWhere((s) => (s.Type & State.Flags.EventSet) != 0);
+	
+				// Only keep those states that depend on things that have changed
+				PostAux.Filter().DependsOn(DerivativeModset).DependencyOf(PostDeps).Unfilter();
 			}
+		}
 
-			var deps = aux.DependencyOf(allderiv);
+		private void ProgramSource(StateCategories categories)
+		{
+			Profile.Do("pre", () => {
+				ProgramPre(categories);
+			});
 
-			ProgramPre(deps, derivatives);
-			ProgramPreDiff(deps, derivatives);
-			ProgramDiff(deps, derivatives);
-			ProgramPost();
+			Profile.Do("pre diff", () => {
+				ProgramPreDiff(categories);
+			});
+
+			Profile.Do("diff", () => {
+				ProgramDiff(categories);
+			});
+
+			Profile.Do("post", () => {
+				ProgramPost(categories);
+			});
 		}
 
 		private void ProgramPrepare()
@@ -1243,17 +1303,17 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
-		private void ProgramInit()
+		private void ProgramInit(StateCategories categories)
 		{
 			// Due to the way that delays are implemented, we are going to first
 			// initialize everything without a dependency on either t or dt
-			var delaymodset = new DependencyFilter(d_dependencyGraph, d_delayedStates);
-			delaymodset.UnionWith(TDTModSet);
+			var delaymodset = categories.Delays.Copy();
+			delaymodset.UnionWith(categories.TDTModSet);
 
 			// Make set of prepared states that are already computed in the
 			// prepare stage and which do not depend on any _in_ variables.
 			// Those can be removed from the init states
-			var prepped = d_preparedStates.DependsOn(Knowledge.Instance.FlaggedStates(Cdn.VariableFlags.In)).Not();
+			var prepped = d_preparedStates.DependsOn(categories.In).Not();
 
 			// Remove from initstates those that are already computed in 'prepare'
 			var initstates = new DependencyFilter(d_dependencyGraph, d_initStates);
@@ -1356,7 +1416,7 @@ namespace Cdn.RawC.Programmer
 			d_apiUpdate.Body.Add(new Computation.CallAPI(d_apiPost, t, ZeroNumberExpression(d)));
 		}
 
-		private void ProgramEvents()
+		private void ProgramEvents(StateCategories categories)
 		{
 			var eq = new DependencyFilter(d_dependencyGraph, Knowledge.Instance.EventEquationStates);
 			ProgramDependencies(d_apiEventsEvaluate, eq, "Event conditions");
@@ -1364,30 +1424,75 @@ namespace Cdn.RawC.Programmer
 			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsEvaluate));
 			d_apiEvents.Body.Add(new Computation.CallAPI(d_apiEventsDistance));
 
-			var aux = new List<State>(Knowledge.Instance.AuxiliaryStates);
-			aux.RemoveAll((s) => (s.Type & State.Flags.Promoted) == 0);
+			var aux = categories.Aux.Copy();
+			aux.RemoveWhere((s) => categories.PostAux.Contains(s));
+
+			var t1 = Profile.Begin("recomp", false);
+			var t2 = Profile.Begin("postcomp", false);
 
 			foreach (var ev in Knowledge.Instance.Events)
 			{
 				var lst = Knowledge.Instance.EventSetStates[ev];
 
-				if (lst.Count > 0)
+				var h = aux.Copy();
+				h.UnionWith(lst);
+
+				var dg = d_dependencyGraph.Collapse(h);
+				var auxpro = new DependencyFilter(dg, aux);
+
+				var b = new Computation.EventProgram();
+				var auxdeps = auxpro.DependencyOf(lst);
+
+				ProgramDependencies(b.Dependencies, auxdeps, "Dependencies");
+
+				b.SetStates.Body.AddRange(AssignmentStates(lst, null));
+
+				var evstates = new DependencyFilter(d_dependencyGraph);
+				var grps = new HashSet<Knowledge.EventStateGroup>();
+
+				foreach (var grp in Knowledge.Instance.EventStateGroups)
 				{
-					var h = new HashSet<State>(aux);
-					h.UnionWith(lst);
-
-					var dg = d_dependencyGraph.Collapse(h);
-					var auxpro = new DependencyFilter(dg, aux);
-
-					var b = new Computation.Block();
-					var auxdeps = auxpro.DependencyOf(lst);
-
-					ProgramDependencies(b, auxdeps, "Dependencies");
-
-					b.Body.AddRange(AssignmentStates(lst, null));
-					d_eventPrograms[ev] = b;
+					if (grp.Node == ev.Parent)
+					{
+						grps.Add(grp);
+						evstates.AddRange(categories.Aux.DependencyOf(grp.States));
+						evstates.AddRange(grp.States);
+					}
 				}
+
+				var only = d_dependencyGraph.Collapse(evstates).Sort(evstates);
+				evstates = new DependencyFilter(d_dependencyGraph);
+
+				foreach (var grp in only)
+				{
+					if (grps.Contains(grp.EventStateGroup))
+					{
+						evstates.AddRange(grp);
+					}
+				}
+
+				DependencyFilter allchmod = new DependencyFilter(d_dependencyGraph, lst);
+				allchmod.AddRange(evstates);
+
+				// After setting the new states, we need to compute any aux variables (again)
+				// which depend on our changes, and which are dependencies for PostDeps
+				t1.Thaw();
+				var recomp = categories.Aux.DependsOn(allchmod);
+				t1.Freeze();
+				recomp.AddRange(evstates);
+
+				t2.Thaw();
+				var postcompute = recomp.DependencyOf(categories.PostDeps);
+				t2.Freeze();
+
+				ProgramDependencies(b.PostCompute, postcompute, "Auxilliary variables expected to be correct for derivatives (i.e. after post)");
+				b.PostCompute.NeedsEvents = true;
+
+				d_eventPrograms[ev] = b;
 			}
+
+			t1.End();
+			t2.End();
 		}
 
 		public IEnumerable<Cdn.Function> UsedCustomFunctions

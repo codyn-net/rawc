@@ -16,14 +16,16 @@ endif
 CFLAGS ?=
 LDFLAGS ?=
 
-WARNINGS = 				\
-	inline				\
-	missing-prototypes		\
+WARNINGS = 					\
+	inline					\
+	missing-prototypes			\
 	error-implicit-function-declaration	\
-	strict-prototypes		\
-	shadow				\
-	unused-function		\
-	unused-variable
+	strict-prototypes			\
+	shadow					\
+	unused-function				\
+	unused-variable				\
+	return-type				\
+	no-unused-value
 
 ${NAME}_CFLAGS = -I. $(addprefix -W,$(WARNINGS)) -DValueType=${valuetype} ${cflags} -DENABLE_MALLOC -DENABLE_META_LOOKUP -std=c99
 ${NAME}_LDFLAGS = -lm ${libs}

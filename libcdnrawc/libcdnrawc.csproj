@@ -120,13 +120,17 @@
     <Compile Include="Programmer\Formatters\JavaScript\InstructionTranslator.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\JavaScript.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\Options.cs" />
-    <Compile Include="Programmer\Formatters\DynamicVisitor.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\NumberTranslator.cs" />
     <Compile Include="Programmer\Formatters\JavaScript\InitialValueTranslator.cs" />
     <Compile Include="Programmer\Formatters\C\Lapack.cs" />
     <Compile Include="Profile.cs" />
     <Compile Include="Asciifyer.cs" />
     <Compile Include="Binder.cs" />
+    <Compile Include="Programmer\Computation\EventProgram.cs" />
+    <Compile Include="Sparsity.cs" />
+    <Compile Include="DynamicVisitor.cs" />
+    <Compile Include="SparsityBenchmarker.cs" />
+    <Compile Include="Programmer\Instructions\SparseOperator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Tree\" />
@@ -143,6 +147,7 @@
     <Folder Include="Programmer\Formatters\CLike\" />
     <Folder Include="Programmer\Formatters\JavaScript\" />
     <Folder Include="Programmer\Formatters\JavaScript\Resources\" />
+    <Folder Include="Resources\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -157,5 +162,6 @@
     <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Integrators.js" />
     <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Integrators.RungeKutta.js" />
     <EmbeddedResource Include="Programmer\Formatters\JavaScript\Resources\Cdn.Integrators.Euler.js" />
+    <EmbeddedResource Include="Resources\SparsityBench.make" />
   </ItemGroup>
 </Project>

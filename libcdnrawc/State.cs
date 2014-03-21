@@ -309,6 +309,13 @@ namespace Cdn.RawC
 
 				if (i != null)
 				{
+					var ii = Object as Programmer.Instructions.IInstruction;
+
+					if (ii != null)
+					{
+						return ii.Dimension;
+					}
+
 					var smanip = i.GetStackManipulation();
 					return smanip.Push.Dimension;
 				}
@@ -332,6 +339,10 @@ namespace Cdn.RawC
 				}
 
 				return d_instructions;
+			}
+			set
+			{
+				d_instructions = value;
 			}
 		}
 

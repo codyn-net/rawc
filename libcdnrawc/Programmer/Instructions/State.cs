@@ -16,6 +16,11 @@ namespace Cdn.RawC.Programmer.Instructions
 			get { return d_item.Dimension; }
 		}
 
+		public Cdn.Dimension[] Pop
+		{
+			get { return new Cdn.Dimension[0]; }
+		}
+
 		public DataTable.DataItem Item
 		{
 			get { return d_item; }

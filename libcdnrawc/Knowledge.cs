@@ -41,9 +41,11 @@ namespace Cdn.RawC
 
 		public class EventStateGroup
 		{
+			public Node Node;
 			public List<int> Indices;
 			public List<Cdn.EdgeAction> Actions;
 			public List<State> States;
+			public HashSet<string> ActiveIn;
 		}
 
 		public class EventStateContainer
@@ -201,6 +203,11 @@ namespace Cdn.RawC
 			if ((v.Flags & (VariableFlags.In | VariableFlags.Once)) == 0)
 			{
 				d_auxStates.Add(s);
+
+				if (unique != null)
+				{
+					unique.Add(s.Object);
+				}
 			}
 		}
 
@@ -272,14 +279,7 @@ namespace Cdn.RawC
 
 				if (ph.Length != 0 || eph.Length != 0)
 				{
-					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
-					var nv = new Cdn.Variable(nm, action.Equation.Copy(), Cdn.VariableFlags.None);
-
-					action.Edge.AddVariable(nv);
-					d_eventActionProperties[action] = nv;
-
-					var evst = new EventActionState(action, nv);
-					ret.Add(evst);
+					var node = FindStateNode(action.Edge.Input as Cdn.Node);
 
 					HashSet<string> hs;
 
@@ -297,7 +297,25 @@ namespace Cdn.RawC
 						hs = new HashSet<string>(eph);
 					}
 
-					var node = FindStateNode(action.Edge.Parent);
+					if (node == null)
+					{
+						return ret;
+					}
+
+					foreach (var h in hs)
+					{
+						EventStateContainerAdd(AddEventStateContainer(node), node, h);
+					}
+
+					var nm = UniqueVariableName(action.Edge, String.Format("__action_{0}", action.Target));
+					var nv = new Cdn.Variable(nm, action.Equation.Copy(), Cdn.VariableFlags.None);
+
+					action.Edge.AddVariable(nv);
+					d_eventActionProperties[action] = nv;
+
+					var evst = new EventActionState(action, nv);
+					ret.Add(evst);
+
 					List<int> indices = new List<int>();
 
 					foreach (var st in hs)
@@ -322,9 +340,11 @@ namespace Cdn.RawC
 						if (!d_eventStateGroups.TryGetValue(key, out grp))
 						{
 							grp = new EventStateGroup {
+								Node = node,
 								Actions = new List<Cdn.EdgeAction>(),
 								States = new List<State>(),
 								Indices = indices,
+								ActiveIn = hs
 							};
 
 							d_eventStateGroups[key] = grp;
@@ -1160,7 +1180,7 @@ namespace Cdn.RawC
 			}
 		}
 
-		private EventState EventStateContainerAdd(EventStateContainer states, Cdn.Event ev, string state)
+		private EventState EventStateContainerAdd(EventStateContainer states, Cdn.Node cont, string state)
 		{
 			if (String.IsNullOrEmpty(state))
 			{
@@ -1172,7 +1192,7 @@ namespace Cdn.RawC
 				states.States.Add(state);
 
 				var evs = new EventState {
-					Node = ev.Parent,
+					Node = cont,
 					Name = state,
 					ActiveActions = new List<Cdn.EdgeAction>(),
 					Index = d_eventStates.Count,
@@ -1184,15 +1204,13 @@ namespace Cdn.RawC
 			}
 			else
 			{
-				return d_eventStateIdMap[EventStateId(ev.Parent, state)];
+				return d_eventStateIdMap[EventStateId(cont, state)];
 			}
 		}
 
-		private void AddEventState(Cdn.Event ev)
+		private EventStateContainer AddEventStateContainer(Cdn.Node node)
 		{
 			EventStateContainer states;
-
-			var node = ev.Parent;
 
 			if (!d_eventStatesMap.TryGetValue(node, out states))
 			{
@@ -1204,8 +1222,15 @@ namespace Cdn.RawC
 				d_eventStatesMap[node] = states;
 			}
 
-			EventStateContainerAdd(states, ev, ev.GotoState);
-			EventStateContainerAdd(states, ev, ev.Parent.InitialState);
+			return states;
+		}
+
+		private void AddEventState(Cdn.Event ev)
+		{
+			var states = AddEventStateContainer(ev.Parent);
+
+			EventStateContainerAdd(states, ev.Parent, ev.GotoState);
+			EventStateContainerAdd(states, ev.Parent, ev.Parent.InitialState);
 		}
 
 		private void ScanEvent(Cdn.Event ev)
@@ -1259,6 +1284,14 @@ namespace Cdn.RawC
 				d_variables.AddRange(obj.Variables);
 			}
 
+			Cdn.Node grp = obj as Cdn.Node;
+
+			if (grp != null && grp.InitialState != null)
+			{
+				var states = AddEventStateContainer(grp);
+				EventStateContainerAdd(states, grp, grp.InitialState);
+			}
+
 			ScanEvent(obj as Cdn.Event);
 
 			foreach (Cdn.Variable prop in obj.Variables)
@@ -1270,8 +1303,6 @@ namespace Cdn.RawC
 
 				AddFlaggedVariable(prop);
 			}
-
-			Cdn.Node grp = obj as Cdn.Node;
 
 			if (grp == null)
 			{
@@ -1356,6 +1387,22 @@ namespace Cdn.RawC
 			d_initializeMap.TryGetValue(o, out state);
 
 			return state;
+		}
+
+		public IEnumerable<State> FlaggedStates(Cdn.VariableFlags flags, Cdn.VariableFlags exclude)
+		{
+			foreach (var v in FlaggedVariables(flags))
+			{
+				if (!v.HasFlag(exclude))
+				{
+					State s = this.State(v);
+
+					if (s != null)
+					{
+						yield return s;
+					}
+				}
+			}
 		}
 
 		public IEnumerable<State> FlaggedStates(Cdn.VariableFlags flags)
@@ -1445,6 +1492,12 @@ namespace Cdn.RawC
 			}
 		}
 
+		public bool TryEventStateGroupLookup(Cdn.Node node, string state, out EventStateGroup grp)
+		{
+			var key = EventStateId(node, state);
+			return d_eventStateGroups.TryGetValue(key, out grp);
+		}
+
 		public int EventStateGroupsCount
 		{
 			get { return d_eventStateGroups.Count; }
@@ -1514,15 +1567,24 @@ namespace Cdn.RawC
 
 					if (State(v) == null)
 					{
-						var sub = Inline(instmap, v.Expression);
-
-						// Expand the instruction
-						foreach (var i in sub.Instructions)
+						if (variable.HasSlice)
 						{
-							instructions.Add(i);
+							// Need to promote it here. Inlining a slice is
+							// complicated
+							AddState(null, ExpandedState(v));
 						}
+						else
+						{
+							var sub = Inline(instmap, v.Expression);
 
-						continue;
+							// Expand the instruction
+							foreach (var i in sub.Instructions)
+							{
+								instructions.Add(i);
+							}
+
+							continue;
+						}
 					}
 				}
 

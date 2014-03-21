@@ -93,6 +93,7 @@ IntegratorFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(CdnRawcIntegrator), ctype
 CdnRawcNetwork._fields_ = [('prepare', NetworkFuncT),
                            ('init', NetworkFuncT),
                            ('reset', NetworkFuncT),
+                           ('update', NetworkFuncT),
                            ('pre', NetworkFuncTDT),
                            ('prediff', NetworkFuncData),
                            ('diff', NetworkFuncTDT),
@@ -293,6 +294,12 @@ class MetaVariable:
                 idx += 1
         else:
             self._network.data[idx] = v
+
+    def __len__(self):
+        return self.dimension.size
+
+    def __iter__(self):
+        return iter(self._flat_value())
 
     @property
     def dimension(self):

@@ -1,0 +1,14 @@
+node "a{1:2}"
+{
+    initial-state "active"
+
+    a = 0
+
+    a' = "1" state "active"
+    a' = "2" state "inactive"
+
+    event "active" to "inactive" when "a > 0.1" {}
+    event "inactive" to "active" when "a > 0.5" {}
+}
+
+# vi:ts=4:et

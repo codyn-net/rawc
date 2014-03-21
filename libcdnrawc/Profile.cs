@@ -13,27 +13,68 @@ namespace Cdn.RawC
 			DateTime d_ended;
 			TimeSpan d_duration;
 			List<Tag> d_subtags;
+			bool d_frozen;
 
-			public Tag(string name)
+			public Tag(string name) : this(name, true)
+			{
+			}
+
+			public Tag(string name, bool started)
 			{
 				d_name = name;
 				d_started = DateTime.Now;
 				d_ended = DateTime.Now;
 				d_duration = d_ended - d_started;
+				d_frozen = !started;
 				d_subtags = new List<Tag>();
 			}
 
 			public void End()
 			{
-				d_ended = DateTime.Now;
-				d_duration = d_ended - d_started;
-
+				Freeze();
 				Profile.Ended(this);
+			}
+
+			public void Freeze()
+			{
+				if (d_frozen)
+				{
+					return;
+				}
+
+				d_ended = DateTime.Now;
+				d_duration = d_duration.Add(d_ended - d_started);
+
+				d_started = d_ended;
+				d_frozen = true;
+			}
+
+			public void Thaw()
+			{
+				if (!d_frozen)
+				{
+					return;
+				}
+
+				d_started = DateTime.Now;
+				d_ended = DateTime.Now;
+
+				d_frozen = false;
 			}
 
 			public TimeSpan Duration
 			{
-				get { return d_duration; }
+				get
+				{
+					if (d_frozen)
+					{
+						return d_duration;
+					}
+					else
+					{
+						return d_duration.Add(DateTime.Now - d_started);
+					}
+				}
 			}
 
 			public List<Tag> SubTags
@@ -83,7 +124,12 @@ namespace Cdn.RawC
 
 		public static Tag Begin(string name)
 		{
-			var ret = new Tag(name);
+			return Begin(name, true);
+		}
+
+		public static Tag Begin(string name, bool started)
+		{
+			var ret = new Tag(name, started);
 
 			if (d_tags.Count != 0)
 			{

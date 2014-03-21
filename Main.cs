@@ -59,6 +59,10 @@ namespace Cdn.RawC.Application
 				{
 					Bind();
 				}
+				else if (options.SparsityBenchmark)
+				{
+					SparsityBenchmark();
+				}
 				else
 				{
 					Generate();
@@ -111,6 +115,12 @@ namespace Cdn.RawC.Application
 			}
 
 			Profile.Report(Console.Error);
+		}
+
+		private static void SparsityBenchmark()
+		{
+			var benchmarker = new SparsityBenchmarker();
+			benchmarker.Generate();
 		}
 
 		private static void Bind()

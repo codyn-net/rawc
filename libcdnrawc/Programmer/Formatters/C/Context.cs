@@ -93,7 +93,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 			case MathFunctionType.PseudoInverse:
 			{
 				var d2 = node.Children[0].Dimension;
-				var ret = String.Format("CDN_MATH_PSEUDOINVERSE_V_{0}_{1}", d2.Rows, d2.Columns);
+				var ret = Sparsify(String.Format("CDN_MATH_PSEUDOINVERSE_V_{0}_{1}", d2.Rows, d2.Columns), node);
 
 				if (!s_workspaces.ContainsKey(ret))
 				{
@@ -145,9 +145,25 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 				return ret;
 			}
-			default:
-				return String.Format("CDN_MATH_{0}", base.MathFunctionV(type, node).ToUpper());
+			case MathFunctionType.Multiply:
+			{
+				var d1 = node.Children[0].Dimension;
+				var d2 = node.Children[1].Dimension;
+
+				if (d1.Columns == d2.Rows && !(d1.IsOne || d2.IsOne) &&
+						d1.Rows <= 10 && d2.Columns <= 10 &&
+						!(node.Instruction is Instructions.SparseOperator))
+				{
+					return String.Format("CDN_MATH_{0}_NO_BLAS", base.MathFunctionV(type, node).ToUpper());
+				}
+
+				break;
 			}
+			default:
+				break;
+			}
+
+			return String.Format("CDN_MATH_{0}", base.MathFunctionV(type, node).ToUpper());
 		}
 
 		public override bool SupportsPointers
@@ -264,6 +280,42 @@ namespace Cdn.RawC.Programmer.Formatters.C
 				args[1] = b;
 				args[2] = Node.Children[0].Dimension.Columns.ToString();
 				args.Add(L);
+			}
+				break;
+			case MathFunctionType.Sltdl:
+			{
+				var A = args[0];
+				var L = args[1];
+
+				args[0] = A;
+				args[1] = Node.Children[1].Dimension.Rows.ToString();
+				args.Add(L);
+			}
+				break;
+			case MathFunctionType.SltdlDinvLinvt:
+			case MathFunctionType.SltdlLinvt:
+			case MathFunctionType.SltdlLinv:
+			{
+				var b = args[0];
+				var L = args[1];
+				var A = args[2];
+
+				args[0] = A;
+				args[1] = Node.Children[2].Dimension.Rows.ToString();
+				args[2] = b;
+				args.Add(Node.Children[0].Dimension.Columns.ToString());
+				args.Add(L);
+			}
+				break;
+			case MathFunctionType.SltdlDinv:
+			{
+				var b = args[0];
+				var A = args[1];
+
+				args[0] = A;
+				args[1] = Node.Children[1].Dimension.Rows.ToString();
+				args.Add(b);
+				args.Add(Node.Children[0].Dimension.Columns.ToString());
 			}
 				break;
 			case MathFunctionType.Inverse:

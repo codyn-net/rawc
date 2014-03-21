@@ -1,0 +1,18 @@
+initial-state "inactive"
+
+a' = 1 state "active"
+a' = 2 state "inactive"
+
+node "no_int"
+{
+    initial-state "active"
+
+    a = "0"
+
+    edge self
+    {
+        a <= "2" state "inactive"
+    }
+}
+
+# vi:ts=4:et

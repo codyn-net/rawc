@@ -19,11 +19,6 @@ namespace Cdn.RawC
 
 		public void Generate()
 		{
-			if ((!Options.Instance.Compile && !Options.Instance.Validate) || Options.Instance.Verbose)
-			{
-				Log.WriteLine("Generating code for network...");
-			}
-
 			Profile.Do("load network", () => {
 				LoadNetwork();
 			});
@@ -47,6 +42,14 @@ namespace Cdn.RawC
 				// Initialize the knowledge
 				Knowledge.Initialize(d_network);
 			});
+
+			if (!Options.Instance.NoSparsity)
+			{
+				Profile.Do("sparsity", () => {
+					var sparsity = new Sparsity();
+					sparsity.Optimize();
+				});
+			}
 
 			var t = Profile.Begin("collect");
 

@@ -30,6 +30,11 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 
 		protected virtual string Translate(Computation.Block node, Context context)
 		{
+			if (node.Body.Count == 0)
+			{
+				return "";
+			}
+
 			var ret = new StringBuilder();
 
 			ret.AppendLine(context.BeginBlock);
@@ -64,10 +69,31 @@ namespace Cdn.RawC.Programmer.Formatters.CLike
 				var evstate = Knowledge.Instance.EventStates[idx];
 				var container = Knowledge.Instance.EventStatesMap[evstate.Node];
 
-				conditions.Add(String.Format("{0}[{1}] == {2}",
-				                             context.This(context.Program.EventStatesTable),
-				                             container.Index,
-				                             idx));
+				var c = String.Format("{0}[{1}]",
+				                      context.This(context.Program.EventStatesTable),
+				                      container.Index);
+
+				if (RawC.Options.Instance.Verbose)
+				{
+					c = String.Format("{0} {1} {2} {3}",
+					                  c,
+					                  context.BeginComment,
+					                  evstate.Node.FullIdForDisplay,
+					                  context.EndComment);
+				}
+
+				c = String.Format("{0} == {1}", c, evstate.Index);
+
+				if (RawC.Options.Instance.Verbose)
+				{
+					c = String.Format("{0} {1} {2} {3}",
+					                  c,
+					                  context.BeginComment,
+					                  evstate.Name,
+					                  context.EndComment);
+				}
+
+				conditions.Add(c);
 			}
 
 			var cond = String.Join(" || ", conditions);

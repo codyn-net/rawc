@@ -13,6 +13,7 @@ namespace Cdn.RawC.Programmer
 			public Tree.Embedding Embedding;
 			private Knowledge.EventStateGroup d_eventStateGroup;
 			private bool d_eventStateGroupComputed;
+			public uint Label;
 
 			public Node(State state)
 			{
@@ -42,6 +43,12 @@ namespace Cdn.RawC.Programmer
 					}
 
 					return d_eventStateGroup;
+				}
+
+				set
+				{
+					d_eventStateGroup = value;
+					d_eventStateGroupComputed = true;
 				}
 			}
 		}
@@ -155,8 +162,12 @@ namespace Cdn.RawC.Programmer
 		private DataTable d_states;
 		private Dictionary<object, List<Node>> d_unresolved;
 		private Dictionary<object, Node> d_nodeMap;
+		private Dictionary<object, HashSet<Node>> d_objectToNodeMap;
 		private Dictionary<State, Node> d_stateMap;
 		private Dictionary<State, Tree.Embedding> d_embeddingsMap;
+		private bool d_labeled;
+		private Dictionary<uint, HashSet<uint>> d_reachablePairs;
+		private uint d_labeler;
 
 		private DependencyGraph()
 		{
@@ -164,6 +175,7 @@ namespace Cdn.RawC.Programmer
 
 			d_unresolved = new Dictionary<object, List<Node>>();
 			d_nodeMap = new Dictionary<object, Node>();
+			d_objectToNodeMap = new Dictionary<object, HashSet<Node>>();
 			d_stateMap = new Dictionary<State, Node>();
 			d_embeddingsMap = new Dictionary<State, Tree.Embedding>();
 		}
@@ -235,8 +247,68 @@ namespace Cdn.RawC.Programmer
 			wr.Close();
 		}
 
+		private ulong LabelDependencyId(uint p, uint l)
+		{
+			return ((ulong)p) << 32 | (ulong)l;
+		}
+
+		private void Label(Node n, LinkedList<uint> parents)
+		{
+			if (n.Label != 0)
+			{
+				// Everything reachable by n is also reachable by its parents
+				foreach (var p in parents)
+				{
+					d_reachablePairs[p].Add(n.Label);
+
+					foreach (var pair in d_reachablePairs[n.Label])
+					{
+						d_reachablePairs[p].Add(pair);
+					}
+				}
+
+				return;
+			}
+
+			n.Label = d_labeler++;
+			d_reachablePairs[n.Label] = new HashSet<uint>();
+
+			foreach (var p in parents)
+			{
+				d_reachablePairs[p].Add(n.Label);
+			}
+
+			if (n.Label != 0)
+			{
+				parents.AddLast(n.Label);
+			}
+
+			foreach (var dep in n.Dependencies)
+			{
+				Label(dep, parents);
+			}
+
+			parents.RemoveLast();
+		}
+
+		private void Label()
+		{
+			d_labeled = true;
+			d_reachablePairs = new Dictionary<uint, HashSet<uint>>();
+			d_labeler = 0;
+
+			var l = new LinkedList<uint>();
+
+			Label(d_root, l);
+		}
+
 		public bool DependsOn(State state, object obj)
 		{
+			if (!d_labeled)
+			{
+				Label();
+			}
+
 			Node node;
 
 			if (state.Object == obj)
@@ -250,30 +322,20 @@ namespace Cdn.RawC.Programmer
 				return false;
 			}
 
-			HashSet<Node> seen = new HashSet<Node>();
-			Queue<Node> deps = new Queue<Node>();
+			HashSet<Node> others;
 
-			deps.Enqueue(node);
-
-			while (deps.Count > 0)
+			if (!d_objectToNodeMap.TryGetValue(obj, out others))
 			{
-				var n = deps.Dequeue();
+				return false;
+			}
 
-				if (seen.Contains(n))
-				{
-					continue;
-				}
+			var pairs = d_reachablePairs[node.Label];
 
-				seen.Add(n);
-
-				if (n.State.Object == obj || n.State.DataKey == obj)
+			foreach (var o in others)
+			{
+				if (pairs.Contains(o.Label))
 				{
 					return true;
-				}
-
-				foreach (var dep in n.Dependencies)
-				{
-					deps.Enqueue(dep);
 				}
 			}
 
@@ -306,12 +368,31 @@ namespace Cdn.RawC.Programmer
 			}
 		}
 
+		private void AddObjectToNode(Node n, object o)
+		{
+			if (o == null)
+			{
+				return;
+			}
+
+			HashSet<Node> others;
+
+			if (!d_objectToNodeMap.TryGetValue(o, out others))
+			{
+				others = new HashSet<Node>();
+				d_objectToNodeMap[o] = others;
+			}
+
+			others.Add(n);
+		}
+
 		private void CollapseNode(DependencyGraph ret,
 		                          Node node,
 		                          HashSet<State> states,
 		                          Node parent,
 		                          HashSet<Node> seen,
-		                          HashSet<Node> leafs)
+		                          HashSet<Node> leafs,
+		                          HashSet<Node> evgroups)
 		{
 			bool checkleaf = false;
 
@@ -325,11 +406,19 @@ namespace Cdn.RawC.Programmer
 
 					newnode.Embedding = node.Embedding;
 					ret.d_stateMap[node.State] = newnode;
+
+					ret.AddObjectToNode(newnode, node.State.Object);
+					ret.AddObjectToNode(newnode, node.State.DataKey);
 				}
 
 				// Set dependencies
 				parent.Dependencies.Add(newnode);
 				newnode.DependencyFor.Add(parent);
+
+				if (node.EventStateGroup != null)
+				{
+					evgroups.Add(newnode);
+				}
 
 				// The newnode now becomes the new parent
 				parent = newnode;
@@ -346,7 +435,7 @@ namespace Cdn.RawC.Programmer
 
 			foreach (var dependency in node.Dependencies)
 			{
-				CollapseNode(ret, dependency, states, parent, seen, leafs);
+				CollapseNode(ret, dependency, states, parent, seen, leafs, evgroups);
 			}
 
 			if (checkleaf && parent.Dependencies.Count == 0 && parent.State != null)
@@ -362,6 +451,54 @@ namespace Cdn.RawC.Programmer
 			return Collapse(states, out leafs);
 		}
 
+		private void CollapseEventStateGroups(HashSet<Node> evgroups)
+		{
+			foreach (var node in evgroups)
+			{
+				var ingrp = new HashSet<Node>();
+				var q = new Queue<Node>();
+
+				q.Enqueue(node);
+				ingrp.Add(node);
+
+				while (q.Count != 0)
+				{
+					var nn = q.Dequeue();
+
+					bool ok = true;
+
+					if (nn != node)
+					{
+						foreach (var dep in nn.DependencyFor)
+						{
+							if (!ingrp.Contains(dep))
+							{
+								ingrp.Remove(dep);
+								ok = false;
+								break;
+							}
+						}
+					}
+
+					if (!ok)
+					{
+						continue;
+					}
+
+					nn.EventStateGroup = node.EventStateGroup;
+
+					foreach (var n in nn.Dependencies)
+					{
+						if ((n.EventStateGroup == null || n.EventStateGroup == node.EventStateGroup) && !ingrp.Contains(n) && (n.State.Type & (State.Flags.Promoted | State.Flags.EventAction)) != 0)
+						{
+							q.Enqueue(n);
+							ingrp.Add(n);
+						}
+					}
+				}
+			}
+		}
+
 		private DependencyGraph Collapse(HashSet<State> states, out HashSet<Node> leafs)
 		{
 			DependencyGraph ret = new DependencyGraph();
@@ -373,13 +510,17 @@ namespace Cdn.RawC.Programmer
 			// appear
 			leafs = new HashSet<Node>();
 
+			var evgroups = new HashSet<Node>();
+
 			CollapseNode(ret,
 			             d_root,
 			             states,
 			             ret.d_root,
 			             new HashSet<Node>(),
-			             leafs);
+			             leafs,
+			             evgroups);
 
+			ret.CollapseEventStateGroups(evgroups);
 			return ret;
 		}
 
@@ -440,11 +581,38 @@ namespace Cdn.RawC.Programmer
 			return ret;
 		}
 
+		private void Unlabel()
+		{
+			Queue<Node> q = new Queue<Node>();
+			q.Enqueue(d_root);
+
+			while (q.Count > 0)
+			{
+				var n = q.Dequeue();
+				n.Label = 0;
+
+				foreach (var dep in n.Dependencies)
+				{
+					q.Enqueue(dep);
+				}
+			}
+
+			d_labeled = false;
+		}
+
 		public void Add(State state, Dictionary<object, State> mapping)
 		{
+			if (d_labeled)
+			{
+				Unlabel();
+			}
+
 			Node node = new Node(state);
 
 			d_stateMap[state] = node;
+
+			AddObjectToNode(node, state.DataKey);
+			AddObjectToNode(node, state.Object);
 
 			if (!(state is EventSetState))
 			{

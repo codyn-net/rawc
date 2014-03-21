@@ -46,6 +46,12 @@ namespace Cdn.RawC
 		public string DependencyGraph;
 		[CommandLine.Option("bind", Description="Generate binding from first network to second network")]
 		public bool Bind = false;
+		[CommandLine.Option("no-sparsity", Description="Disable optimization of sparse expressions")]
+		public bool NoSparsity = false;
+		[CommandLine.Option("print-sparsity", Description="Print sparsity pattern for given selector")]
+		public string PrintSparsity = null;
+		[CommandLine.Option("sparsity-benchmark", Description="Generate sparsity benchmarking code")]
+		public bool SparsityBenchmark = false;
 
 		private double[] d_validateRange;
 		private Programmer.Formatters.IFormatter d_formatter;
@@ -109,12 +115,6 @@ namespace Cdn.RawC
 			if (d_showFormatters)
 			{
 				return;
-			}
-
-			if (d_files.Count == 0)
-			{
-				Console.Error.WriteLine("Please specify at least one network file");
-				Environment.Exit(1);
 			}
 		}
 

@@ -1,7 +1,7 @@
 Name: codyn-rawc-sharp
 Description: codyn-rawc-sharp
 Version: @VERSION@
-Libraries=@expanded_libdir@/cdnrawc-sharp-@LIBCDNRAWC_SHARP_API_VERSION@/Cdn.RawC.dll
+Libraries=@expanded_libdir@/codyn-rawc-sharp-@LIBCDNRAWC_SHARP_API_VERSION@/Cdn.RawC.dll
 
 Requires: codyn-sharp-3.0
-Libs: -r:@expanded_libdir@/cdnrawc-sharp-@LIBCDNRAWC_SHARP_API_VERSION@/Cdn.RawC.dll
+Libs: -r:@expanded_libdir@/codyn-rawc-sharp-@LIBCDNRAWC_SHARP_API_VERSION@/Cdn.RawC.dll

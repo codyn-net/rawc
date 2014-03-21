@@ -39,21 +39,20 @@ namespace Cdn.RawC.Tree
 
 				int numargs = 0;
 
-				InstructionCustomOperator icop = inst as InstructionCustomOperator;
-				numargs = (int)inst.GetStackManipulation().Pop.Num;
+				var ii = inst as Programmer.Instructions.IInstruction;
+
+				if (ii != null)
+				{
+					numargs = ii.Pop.Length;
+				}
+				else
+				{
+					numargs = (int)inst.GetStackManipulation().Pop.Num;
+				}
 
 				for (int j = 0; j < numargs; ++j)
 				{
 					node.Add(stack.Pop());
-				}
-
-				if (icop != null && !(icop.Operator is OperatorDelayed))
-				{
-					// TODO Support for operators...
-					/*foreach (Cdn.Expression ex in icop.Operator.Expressions)
-					{
-						node.Add(Create(state, ex.Instructions));
-					}*/
 				}
 
 				node.d_children.Reverse();
@@ -172,12 +171,26 @@ namespace Cdn.RawC.Tree
 			{
 				d_label = InstructionCode(instruction);
 
-				if (instruction.GetStackManipulation() != null)
+				var ii = instruction as Programmer.Instructions.IInstruction;
+
+				if (ii != null)
+				{
+					size = (uint)ii.Pop.Length;
+				}
+				else if (instruction.GetStackManipulation() != null)
 				{
 					size = instruction.GetStackManipulation().Pop.Num;
 				}
 
-				d_isCommutative = instruction.IsCommutative;
+				if (ii != null)
+				{
+					// TODO
+					d_isCommutative = false;
+				}
+				else
+				{
+					d_isCommutative = instruction.IsCommutative;
+				}
 			}
 
 			d_isLeaf = size == 0;
@@ -848,6 +861,13 @@ namespace Cdn.RawC.Tree
 
 		private static string InstructionIdentifier(string label, Instruction inst)
 		{
+			var ii = inst as Programmer.Instructions.IInstruction;
+
+			if (ii != null)
+			{
+				return String.Format("{0}[{1},{2}]", label, ii.Dimension.Rows, ii.Dimension.Columns);
+			}
+
 			var smanip = inst.GetStackManipulation();
 
 			if (smanip == null)
@@ -947,6 +967,7 @@ namespace Cdn.RawC.Tree
 			InstructionRand irand;
 			InstructionIndex iindex;
 			InstructionMatrix imat;
+			Programmer.Instructions.SparseOperator isop;
 
 			if (InstructionIs(inst, out icusf))
 			{
@@ -1016,6 +1037,18 @@ namespace Cdn.RawC.Tree
 			{
 				// Functions just store the id
 				yield return InstructionIdentifier((uint)ifunc.Id + 1, inst);
+			}
+			else if (InstructionIs(inst, out isop))
+			{
+				var argdim = Array.ConvertAll(isop.Pop, (a) => String.Format("{0}-by-{1}", a.Rows, a.Columns));
+				var argspar = Array.ConvertAll(isop.ArgSparsity, (a) => {
+					return String.Format("[{0}]", String.Join(", ", Array.ConvertAll(a.Sparsity, (b) => b.ToString())));
+				});
+
+				var argdims = String.Join(", ", argdim);
+				var argspars = String.Join(", ", argspar);
+
+				yield return InstructionIdentifier(String.Format("isop_({0})_({1})_({2})", isop.Original.Id + 1, argdims, argspars), inst);
 			}
 			else if (InstructionIs(inst, out iindex))
 			{
