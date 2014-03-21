@@ -4,5 +4,5 @@ usr/include/cdn-rawc-1.0/cdn-rawc
 usr/lib/cdn-rawc
 usr/lib/libcdnrawc-*
 usr/lib/pkgconfig/cdn-rawc-1.0.pc
-usr/lib/python2.7/dist-packages/cdn-rawc/__init__.py
+usr/lib/python2.7/dist-packages/cdnrawc/__init__.py
 usr/share/cdn-rawc-1.0
