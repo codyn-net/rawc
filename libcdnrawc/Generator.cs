@@ -136,9 +136,25 @@ namespace Cdn.RawC
 					Log.WriteLine("Compiled {0}...", String.Join(", ", Array.ConvertAll<string, string>(files, a => Path.GetFileName(a))));
 				}
 
+				if (!String.IsNullOrEmpty(Options.Instance.Output))
+				{
+					try
+					{
+						Directory.CreateDirectory(Options.Instance.Output);
+					}
+					catch
+					{
+					}
+				}
+
 				foreach (var f in files)
 				{
 					var dest = Path.GetFileName(f);
+
+					if (!String.IsNullOrEmpty(Options.Instance.Output))
+					{
+						dest = Path.Combine(Options.Instance.Output, dest);
+					}
 
 					try
 					{
