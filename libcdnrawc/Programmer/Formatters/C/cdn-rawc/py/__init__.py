@@ -198,6 +198,11 @@ class API:
                                                valuetype,
                                                valuetype]
 
+        self.cdn_rawc_network_update = lib.cdn_rawc_network_update
+        self.cdn_rawc_network_update.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                 ctypes.c_void_p,
+                                                 valuetype]
+
         self.cdn_rawc_network_diff = lib.cdn_rawc_network_diff
         self.cdn_rawc_network_diff.argtypes = [ctypes.POINTER(CdnRawcNetwork),
                                                ctypes.c_void_p,
@@ -604,6 +609,9 @@ class Network:
 
     def post(self, t, dt):
         self.api.cdn_rawc_network_post(self.network, self.storage, t, dt)
+
+    def update(self, t = 0):
+        self.api.cdn_rawc_network_update(self.network, self.storage, t)
 
     def diff(self, t, dt):
         self.api.cdn_rawc_network_diff(self.network, self.storage, t, dt)
