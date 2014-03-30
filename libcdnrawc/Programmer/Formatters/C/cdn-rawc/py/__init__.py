@@ -441,7 +441,9 @@ def load(name, libname=None):
 
     if not libname:
         hadlibname = False
+
         libname = str(name)
+        name = os.path.basename(name)
 
     libdir = os.path.dirname(libname)
     libbase = os.path.basename(libname)
