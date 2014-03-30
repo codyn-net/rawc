@@ -288,7 +288,10 @@ class MetaVariable:
         self._dimension = None
 
     def __getitem__(self, idx):
-        return self._flat_value(idx)
+        if isinstance(idx, tuple):
+          return self._flat_value(idx[0] + idx[1] * self.dimension.rows)
+        else:
+          return self._flat_value(idx)
 
     def __setitem__(self, idx, v):
         idx = idx + self.index
