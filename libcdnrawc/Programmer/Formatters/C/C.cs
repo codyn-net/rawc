@@ -580,7 +580,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			process.StartInfo.Arguments = args.ToString();
 			process.StartInfo.WorkingDirectory = ddir;
 
-			if (!verbose && validating)
+			if ((!verbose && validating) || Cdn.RawC.Options.Instance.Quiet)
 			{
 				process.StartInfo.RedirectStandardOutput = true;
 			}
