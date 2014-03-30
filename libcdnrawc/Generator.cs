@@ -399,7 +399,14 @@ namespace Cdn.RawC
 			{
 				if (node.ChildCount == 0)
 				{
+					var slice = node.Slice;
 					var code = Tree.Node.InstructionCode(node.Instruction, true);
+
+					if (slice != null)
+					{
+						code = String.Format("{0}[{1}]", code, String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+					}
+
 					List<Tree.Node> clst;
 
 					if (!constnodes.TryGetValue(code, out clst))
