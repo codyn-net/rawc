@@ -4,6 +4,15 @@ unset MAKEFLAGS
 
 monoexec=
 
+if [ $(uname) == "Darwin" ]; then
+	mono_framework_path="/Library/Frameworks/Mono.framework/Versions/Current"
+	codyn_framework_path="/Library/Frameworks/Codyn.framework/Resources/mono"
+
+	if [ -d "$mono_framework_path" ]; then
+        export DYLD_FALLBACK_LIBRARY_PATH="$mono_framework_path/lib:$codyn_framework_path/lib:$DYLD_FALLBACK_LIBRARY_PATH:/usr/lib:/usr/local/lib"
+	fi
+fi
+
 if [ ! -z "$CDN_RAWC" ]; then
 	binary="$(which $CDN_RAWC)"
 else
