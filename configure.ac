@@ -13,7 +13,7 @@ AC_PROG_CC
 
 PKG_PROG_PKG_CONFIG
 
-AM_PATH_PYTHON([2.6], [enable_python=yes], [enable_python=no])
+AM_PATH_PYTHON([2.7], [enable_python=yes], [enable_python=no])
 AM_CONDITIONAL([ENABLE_PYTHON], [test x$enable_python = xyes])
 
 LIBCDNRAWC_SHARP_API_VERSION=3.0
