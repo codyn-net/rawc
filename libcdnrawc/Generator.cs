@@ -136,9 +136,25 @@ namespace Cdn.RawC
 					Log.WriteLine("Compiled {0}...", String.Join(", ", Array.ConvertAll<string, string>(files, a => Path.GetFileName(a))));
 				}
 
+				if (!String.IsNullOrEmpty(Options.Instance.Output))
+				{
+					try
+					{
+						Directory.CreateDirectory(Options.Instance.Output);
+					}
+					catch
+					{
+					}
+				}
+
 				foreach (var f in files)
 				{
 					var dest = Path.GetFileName(f);
+
+					if (!String.IsNullOrEmpty(Options.Instance.Output))
+					{
+						dest = Path.Combine(Options.Instance.Output, dest);
+					}
 
 					try
 					{
@@ -383,7 +399,14 @@ namespace Cdn.RawC
 			{
 				if (node.ChildCount == 0)
 				{
+					var slice = node.Slice;
 					var code = Tree.Node.InstructionCode(node.Instruction, true);
+
+					if (slice != null)
+					{
+						code = String.Format("{0}[{1}]", code, String.Join(",", Array.ConvertAll<int, string>(slice, a => a.ToString())));
+					}
+
 					List<Tree.Node> clst;
 
 					if (!constnodes.TryGetValue(code, out clst))

@@ -1,7 +1,7 @@
 dnl Warning: This is an automatically generated file, do not edit!
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
-AC_INIT(cdn-rawc, 3.5.1)
+AC_INIT(cdn-rawc, 3.6)
 AM_INIT_AUTOMAKE([foreign subdir-objects tar-ustar dist-xz no-dist-gzip -Wno-portability])
 
 AM_SILENT_RULES([yes])
@@ -13,7 +13,7 @@ AC_PROG_CC
 
 PKG_PROG_PKG_CONFIG
 
-AM_PATH_PYTHON([2.6], [enable_python=yes], [enable_python=no])
+AM_PATH_PYTHON([2.7], [enable_python=yes], [enable_python=no])
 AM_CONDITIONAL([ENABLE_PYTHON], [test x$enable_python = xyes])
 
 LIBCDNRAWC_SHARP_API_VERSION=3.0

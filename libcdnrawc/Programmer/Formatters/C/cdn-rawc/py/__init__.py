@@ -198,6 +198,11 @@ class API:
                                                valuetype,
                                                valuetype]
 
+        self.cdn_rawc_network_update = lib.cdn_rawc_network_update
+        self.cdn_rawc_network_update.argtypes = [ctypes.POINTER(CdnRawcNetwork),
+                                                 ctypes.c_void_p,
+                                                 valuetype]
+
         self.cdn_rawc_network_diff = lib.cdn_rawc_network_diff
         self.cdn_rawc_network_diff.argtypes = [ctypes.POINTER(CdnRawcNetwork),
                                                ctypes.c_void_p,
@@ -283,7 +288,10 @@ class MetaVariable:
         self._dimension = None
 
     def __getitem__(self, idx):
-        return self._flat_value(idx)
+        if isinstance(idx, tuple):
+          return self._flat_value(idx[0] + idx[1] * self.dimension.rows)
+        else:
+          return self._flat_value(idx)
 
     def __setitem__(self, idx, v):
         idx = idx + self.index
@@ -441,7 +449,9 @@ def load(name, libname=None):
 
     if not libname:
         hadlibname = False
+
         libname = str(name)
+        name = os.path.basename(name)
 
     libdir = os.path.dirname(libname)
     libbase = os.path.basename(libname)
@@ -602,6 +612,9 @@ class Network:
 
     def post(self, t, dt):
         self.api.cdn_rawc_network_post(self.network, self.storage, t, dt)
+
+    def update(self, t = 0):
+        self.api.cdn_rawc_network_update(self.network, self.storage, t)
 
     def diff(self, t, dt):
         self.api.cdn_rawc_network_diff(self.network, self.storage, t, dt)

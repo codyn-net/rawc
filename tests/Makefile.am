@@ -14,7 +14,7 @@ test_names = $(test_cdn_files:.cdn=.test)
 
 TESTS = $(test_names)
 
-$(test_names):
+$(test_names): runtest
 	$(AM_V_GEN) \
 	echo "#!/bin/bash" > "$@"; \
 	echo "srcdir=$(srcdir)" >> "$@"; \

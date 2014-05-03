@@ -1571,7 +1571,10 @@ namespace Cdn.RawC
 						{
 							// Need to promote it here. Inlining a slice is
 							// complicated
-							AddState(null, ExpandedState(v));
+							var s = ExpandedState(v);
+
+							AddState(null, s);
+							AddAux(s, null);
 						}
 						else
 						{
