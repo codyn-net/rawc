@@ -111,6 +111,7 @@ CdnRawcNetwork._fields_ = [('prepare', NetworkFuncT),
                            ('get_events_active_size', ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p)),
                            ('get_events_active', ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p, ctypes.c_uint32)),
                            ('get_events_value', ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32)),
+                           ('get_terminated', ctypes.CFUNCTYPE(ctypes.c_void_p)),
 
                            ('get_dimension', ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.POINTER(CdnRawcDimension), ctypes.c_uint32)),
 

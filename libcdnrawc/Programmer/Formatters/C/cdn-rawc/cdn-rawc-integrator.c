@@ -17,7 +17,7 @@ cdn_rawc_integrator_run (CdnRawcIntegrator *integrator,
 
 	values = cdn_rawc_network_get_data (network, data);
 
-	while (from < to)
+	while (from < to && !cdn_rawc_network_get_terminated (network, data))
 	{
 		cdn_rawc_integrator_step (integrator, network, data, from, step);
 		from += values[network->meta.dt];

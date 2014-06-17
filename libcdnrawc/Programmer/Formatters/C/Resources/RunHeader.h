@@ -10,6 +10,7 @@ void               cdn_rawc_${name}_prepare    (ValueType t);
 void               cdn_rawc_${name}_reset      (ValueType t);
 void               cdn_rawc_${name}_update     (ValueType t);
 void               cdn_rawc_${name}_step       (ValueType t, ValueType dt);
+void               cdn_rawc_${name}_run        (ValueType t, ValueType dt, ValueType maxt);
 
 ValueType          cdn_rawc_${name}_get        (CdnRawc${Name}State index);
 void               cdn_rawc_${name}_set        (CdnRawc${Name}State index,
@@ -18,6 +19,8 @@ void               cdn_rawc_${name}_set        (CdnRawc${Name}State index,
 ValueType         *cdn_rawc_${name}_data       (void);
 CdnRawcIntegrator *cdn_rawc_${name}_integrator (void);
 CdnRawcDimension const *cdn_rawc_${name}_get_dimension (uint32_t i);
+
+uint8_t            cdn_rawc_${name}_get_terminated (void);
 
 CDN_RAWC_END_DECLS
 

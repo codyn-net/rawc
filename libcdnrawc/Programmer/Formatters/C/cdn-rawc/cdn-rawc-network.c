@@ -150,6 +150,12 @@ cdn_rawc_network_get_minimum_timestep (CdnRawcNetwork *network)
 	return network->minimum_timestep;
 }
 
+uint8_t
+cdn_rawc_network_get_terminated (CdnRawcNetwork *network, void *data)
+{
+	return network->get_terminated (data);
+}
+
 #ifdef ENABLE_META_LOOKUP
 static uint8_t
 compare_names (char const *name, char const *cmpto, int len)

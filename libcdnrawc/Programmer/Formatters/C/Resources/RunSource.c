@@ -60,6 +60,23 @@ cdn_rawc_${name}_step (ValueType t, ValueType dt)
 	                          dt);
 }
 
+void
+cdn_rawc_${name}_run (ValueType t, ValueType dt, ValueType maxt)
+{
+	CdnRawcNetwork *network;
+	CdnRawcIntegrator *integrator;
+
+	network = cdn_rawc_${name}_network ();
+	integrator = cdn_rawc_${name}_integrator ();
+
+	cdn_rawc_integrator_run (integrator,
+	                         network,
+	                         data,
+	                         t,
+	                         dt,
+	                         maxt);
+}
+
 CdnRawcIntegrator *
 cdn_rawc_${name}_integrator (void)
 {
@@ -93,4 +110,14 @@ cdn_rawc_${name}_get_dimension (uint32_t i)
 	network = cdn_rawc_${name}_network ();
 	
 	return network->get_dimension (network->dimensions, i);
+}
+
+uint8_t
+cdn_rawc_${name}_get_terminated (void)
+{
+	CdnRawcNetwork *network;
+	
+	network = cdn_rawc_${name}_network ();
+
+	return network->get_terminated (data);
 }
