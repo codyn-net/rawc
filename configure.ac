@@ -1,7 +1,7 @@
 dnl Warning: This is an automatically generated file, do not edit!
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
-AC_INIT(cdn-rawc, 3.6)
+AC_INIT(cdn-rawc, 3.6.1)
 AM_INIT_AUTOMAKE([foreign subdir-objects tar-ustar dist-xz no-dist-gzip -Wno-portability])
 
 AM_SILENT_RULES([yes])
