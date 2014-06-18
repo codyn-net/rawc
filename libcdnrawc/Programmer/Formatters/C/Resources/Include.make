@@ -111,8 +111,10 @@ lib${name}.a: $(STATIC_OBJECTS)
 	 $(LIBTOOL) -static -o $@ $^ $(ST_LIBS) $(onull)
 else
 lib${name}.a: $(STATIC_OBJECTS)
-	$(call vecho,LIBTOOL,$@) 							\
-	$(LIBTOOL) --mode=link gcc -o $@ $^ $(ST_LIBS) $(onull)
+	$(call vecho,AR,$@) 								\
+	rm -f $@;											\
+	$(AR) cru $@ $^ $(onull) &&							\
+	$(RANLIB) $@ $(onull)
 endif
 
 lib${name}.$(SHARED_EXT): $(SHARED_OBJECTS)

@@ -288,7 +288,10 @@ namespace Cdn.RawC.Programmer
 				Label(dep, parents);
 			}
 
-			parents.RemoveLast();
+			if (n.Label != 0)
+			{
+				parents.RemoveLast();
+			}
 		}
 
 		private void Label()

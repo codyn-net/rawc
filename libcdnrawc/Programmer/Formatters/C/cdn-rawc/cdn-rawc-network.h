@@ -43,6 +43,9 @@ void cdn_rawc_network_events_post_update (CdnRawcNetwork *network,
 void cdn_rawc_network_events_fire      (CdnRawcNetwork *network,
                                         void           *data);
 
+uint8_t cdn_rawc_network_get_terminated (CdnRawcNetwork *network,
+                                        void           *data);
+
 ValueType *cdn_rawc_network_get_data        (CdnRawcNetwork *network,
                                              void           *data);
 

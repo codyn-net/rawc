@@ -719,6 +719,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 			writer.WriteLine("\t{0} event_states[{1}];", EventStateType, Knowledge.Instance.EventContainersCount);
 			writer.WriteLine("\t{0} events_active[{1}];", EventType, Knowledge.Instance.EventsCount);
 			writer.WriteLine("\tuint32_t events_active_size;");
+			writer.WriteLine("\tuint8_t terminated;");
 			writer.WriteLine("}} CdnRawcNetwork{0};", CPrefix);
 			writer.WriteLine();
 
@@ -2342,6 +2343,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				"get_events_active",
 				"get_events_active_size",
 				"get_events_value",
+				"get_terminated",
 				"get_dimension",
 			};
 
@@ -2634,7 +2636,7 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				var state = ev.GotoState;
 				var prg = d_program.EventProgram(ev);
 
-				if (!String.IsNullOrEmpty(state) || prg != null)
+				if (!String.IsNullOrEmpty(state) || ev.Terminal || prg != null)
 				{
 					hasit = true;
 					break;
@@ -2701,6 +2703,10 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 					                     idx,
 					                     st.Index);
 					}
+				}
+				else if (ev.Terminal)
+				{
+					writer.WriteLine("\t\t\t\tnetwork->terminated = 1;");
 				}
 
 				if (prg != null)
@@ -2833,6 +2839,14 @@ cdn_rawc_binding_{0}_write (CdnRawcNetwork *input,
 				                 range[0]);
 			}
 
+			writer.WriteLine("}");
+			writer.WriteLine();
+
+			writer.WriteLine("static uint8_t");
+			writer.WriteLine("{0}_get_terminated (void *data)", CPrefixDown);
+			writer.WriteLine("{");
+			WriteNetworkVariable(writer, null, false);
+			writer.WriteLine("\treturn network->terminated;");
 			writer.WriteLine("}");
 			writer.WriteLine();
 
