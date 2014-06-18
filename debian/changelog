@@ -1,3 +1,11 @@
+cdn-rawc (3.6.1-1) UNRELEASED; urgency=low
+
+  * New upstream release
+  * Fixed generation of static library on Linux
+  * Added support for terminal event conditions
+
+ -- Jesse van den Kieboom <jesse.vandenkieboom@epfl.ch>  Wed, 18 Jun 2014 17:52:08 +0200
+
 cdn-rawc (3.6-1) UNRELEASED; urgency=low
 
   * New upstream release
