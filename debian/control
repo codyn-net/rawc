@@ -7,7 +7,9 @@ Build-Depends: debhelper (>= 7),
                pkg-config,
                mono-dmcs,
                codyn3-sharp (>= 3.4),
-               libglib2.0-cil-dev
+               libglib2.0-cil-dev,
+               python,
+               python3
 Standards-Version: 3.8.0
 Section: science
 Homepage: http://biorob.epfl.ch
