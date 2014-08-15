@@ -1,3 +1,10 @@
+cdn-rawc (3.6.2-1) UNRELEASED; urgency=low
+
+  * New upstream release
+  * Install python3 bindings 
+
+ -- Jesse van den Kieboom <jessevdk@gnome.org>  Sat, 16 Aug 2014 01:21:44 +0200
+
 cdn-rawc (3.6.1-1) UNRELEASED; urgency=low
 
   * New upstream release
