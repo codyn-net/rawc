@@ -1,7 +1,7 @@
 dnl Warning: This is an automatically generated file, do not edit!
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.54])
-AC_INIT(cdn-rawc, 3.6.1)
+AC_INIT(cdn-rawc, 3.6.2)
 AM_INIT_AUTOMAKE([foreign subdir-objects tar-ustar dist-xz no-dist-gzip -Wno-portability])
 
 AM_SILENT_RULES([yes])
@@ -13,8 +13,48 @@ AC_PROG_CC
 
 PKG_PROG_PKG_CONFIG
 
-AM_PATH_PYTHON([2.7], [enable_python=yes], [enable_python=no])
-AM_CONDITIONAL([ENABLE_PYTHON], [test x$enable_python = xyes])
+AM_PATH_PYTHON([2.7], [enable_python2=yes], [enable_python2=no])
+AM_CONDITIONAL([ENABLE_PYTHON2], [test x$enable_python2 = xyes])
+
+AC_PATH_PROG([PYTHON3], [python3], no)
+
+if test "x$PYTHON3" != "xno"; then
+	AC_SUBST([PYTHON3_PREFIX], ['${prefix}'])
+
+	if test "x$prefix" = xNONE; then
+		am_py3_prefix=$ac_default_prefix
+	else
+		am_py3_prefix=$prefix
+	fi
+
+	am_cv_python3_version=`$PYTHON3 -c "import sys; sys.stdout.write(sys.version[[:3]])"`
+
+	AC_SUBST([PYTHON3_VERSION], [$am_cv_python3_version])
+
+	python3dir=`$PYTHON3 -c "from distutils import sysconfig; print(sysconfig.get_python_lib(prefix='$am_py3_prefix'))"`
+
+	case $python3dir in
+	$am_py_prefix*)
+		am__strip_prefix=`echo "$am_py3_prefix" | sed 's|.|.|g'`
+		python3dir=`echo "$python3dir" | sed "s,^$am__strip_prefix,$PYTHON3_PREFIX,"`
+		;;
+	*)
+		case $am_py_prefix in
+			/usr|/System*) ;;
+		*)
+			python3dir=$PYTHON3_PREFIX/lib/python$PYTHON3_VERSION/site-packages
+		;;
+		esac
+	;;
+	esac
+
+	AC_SUBST(python3dir)
+	enable_python3=yes
+else
+	enable_python3=no
+fi
+
+AM_CONDITIONAL([ENABLE_PYTHON3], [test x$enable_python3 = xyes])
 
 LIBCDNRAWC_SHARP_API_VERSION=3.0
 AC_SUBST(LIBCDNRAWC_SHARP_API_VERSION)

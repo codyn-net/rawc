@@ -64,9 +64,14 @@ CDN_RAWC_MATH_DEPS =			\
 cdn-rawc-math.h: $(CDN_RAWC_MATH_DEPS)
 	$(PYTHON) $^ > $@
 
-if ENABLE_PYTHON
-pycdnrawcdir = $(pythondir)/cdnrawc
-pycdnrawc_PYTHON = py/__init__.py
+if ENABLE_PYTHON2
+py2cdnrawcdir = $(pythondir)/cdnrawc
+py2cdnrawc_PYTHON = py/__init__.py
+endif
+
+if ENABLE_PYTHON3
+py3cdnrawcdir = $(python3dir)/cdnrawc
+py3cdnrawc_PYTHON = py/__init__.py
 endif
 
 matlabscriptsdir = $(datadir)/cdn-rawc-1.0/matlab
