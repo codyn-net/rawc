@@ -1,6 +1,12 @@
 cdn-rawc (3.6.2-2) trusty; urgency=medium
 
   * Specific trusty release
+  * Changes Maintainer to A. Tuleu
+  * Removes duplicate Section: field
+  * Sets source format to 3.0 (quilt)
+  * Adds missing debian/copyright
+  * Bumps Standards-Version to 3.9.5
+  * Adds missing debian/watch
 
  -- Alexandre Tuleu <alexandre.tuleu.2005@polytechnique.org>  Mon, 02 Feb 2015 12:59:02 +0100
 

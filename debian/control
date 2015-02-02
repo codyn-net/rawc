@@ -1,6 +1,6 @@
 Source: cdn-rawc
 Priority: extra
-Maintainer: Jesse van den Kieboom <jesse.vandenkieboom@epfl.ch>
+Maintainer: Alexandre Tuleu <alexandre.tuleu.2005@polytechnique.org>
 Build-Depends: debhelper (>= 7),
                autotools-dev,
                cdbs,
@@ -10,21 +10,19 @@ Build-Depends: debhelper (>= 7),
                libglib2.0-cil-dev,
                python,
                python3
-Standards-Version: 3.8.0
+Standards-Version: 3.9.5
 Section: science
 Homepage: http://biorob.epfl.ch
 
 Package: cdn-rawc
-Section: science
 Suggests: gcc
 Architecture: any
-Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libglib2.0-cil, libcodyn3 (>= 3.4), libblas-dev, libatlas-base-dev, libtool
+Depends: libmono-system4.0-cil, libmono-corlib4.0-cil, libglib2.0-cil, libcodyn3 (>= 3.4), libblas-dev, libatlas-base-dev, libtool, ${misc:Depends} 
 Description: codyn network low level compiler
  A low level compiler for codyn networks
 
 Package: cdn-rawc-dev
-Section: libdevel
 Architecture: any
-Depends: cdn-rawc, codyn3-sharp (>= 3.4), mono-dmcs
+Depends: cdn-rawc, codyn3-sharp (>= 3.4), mono-dmcs, ${misc:Depends} 
 Description: codyn network low level compiler development files
  A low level compiler for codyn networks (development files)
