@@ -1,3 +1,9 @@
+cdn-rawc (3.6.2-2) trusty; urgency=medium
+
+  * Specific trusty release
+
+ -- Alexandre Tuleu <alexandre.tuleu.2005@polytechnique.org>  Mon, 02 Feb 2015 12:59:02 +0100
+
 cdn-rawc (3.6.2-1) UNRELEASED; urgency=low
 
   * New upstream release
