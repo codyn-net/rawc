@@ -1,0 +1,4 @@
+cdn-rawc: package-name-doesnt-match-sonames
+cdn-rawc: binary-without-manpage
+cdn-rawc: executable-not-elf-or-script
+cdn-rawc: non-dev-pkg-with-shlib-symlink
