@@ -127,7 +127,7 @@ namespace Cdn.RawC.Programmer.Formatters.C
 
 			string val = Translate(number, 20, context);
 
-			if (val.IndexOf('.') == -1)
+			if (val.IndexOf('.') == -1 && val.IndexOf('E') == -1 && val.IndexOf('e') == -1)
 			{
 				return val + ".0" + SpecifierFromContext(context);
 			}
@@ -183,4 +183,3 @@ namespace Cdn.RawC.Programmer.Formatters.C
 		}
 	}
 }
-
